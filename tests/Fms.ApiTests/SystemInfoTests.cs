@@ -39,7 +39,7 @@ public sealed class SystemInfoTests
     }
 
     [Fact]
-    public async Task OnPrem_mode_resolves_the_single_tenant()
+    public async Task OnPrem_mode_reports_its_mode_and_no_tenant_for_anonymous_callers()
     {
         await using var factory = Factory(
             ("Deployment:Mode", "OnPrem"),
@@ -48,7 +48,7 @@ public sealed class SystemInfoTests
 
         var info = await factory.CreateClient().GetFromJsonAsync<SystemInfo>("/api/v1/system/info");
 
-        Assert.True(info!.TenantResolved);
+        Assert.False(info!.TenantResolved);
         Assert.Equal("OnPrem", info.DeploymentMode);
     }
 
@@ -69,12 +69,13 @@ public sealed class SystemInfoTests
     }
 
     [Fact]
-    public async Task Unknown_routes_return_problem_details()
+    public async Task Anonymous_calls_to_unknown_routes_get_401_problem_details()
     {
         await using var factory = Factory();
         var response = await factory.CreateClient().GetAsync("/api/v1/nope");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // The fallback policy requires sign-in, so anonymous callers cannot probe which routes exist.
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 }

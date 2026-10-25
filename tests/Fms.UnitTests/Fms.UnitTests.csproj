@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\Fms.BuildingBlocks\Fms.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\src\Host\Fms.Api\Fms.Api.csproj" />
   </ItemGroup>
 </Project>

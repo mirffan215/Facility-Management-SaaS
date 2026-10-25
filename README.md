@@ -19,3 +19,16 @@ dotnet run --project src/Host/Fms.Api            # SaaS mode, http://localhost:5
 cd web && npm ci && npm run dev                  # http://localhost:5173
 cp .env.example .env && docker compose -f docker-compose.onprem.yml up --build   # on-prem topology
 ```
+
+## Sign-in configuration (example)
+```
+Authentication__Providers__0__Name=entra
+Authentication__Providers__0__Authority=https://login.microsoftonline.com/common/v2.0
+Authentication__Providers__0__IssuerPrefix=https://login.microsoftonline.com/
+Authentication__Providers__0__ExternalTenantClaim=tid
+Authentication__Providers__0__Audience=api://<api-app-id>
+Authentication__Providers__0__ClientId=<spa-client-id>
+Authentication__TenantMappings__0__Provider=entra
+Authentication__TenantMappings__0__ExternalTenantId=<customer Entra directory id>
+Authentication__TenantMappings__0__TenantId=<FMS tenant id>
+```
