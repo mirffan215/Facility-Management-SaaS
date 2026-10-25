@@ -1,0 +1,14 @@
+{
+  "app": { "title": "Facility Management" },
+  "language": { "label": "Language", "en": "English", "ar": "العربية" },
+  "system": {
+    "heading": "System status",
+    "mode": "Deployment mode",
+    "edition": "Edition",
+    "licensed": "Licensed",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading…",
+    "error": "The service is not reachable."
+  }
+}

@@ -1,0 +1,24 @@
+# On-premise reference deployment: single tenant, local file storage, customer-run SQL Server.
+# The database is not used by the API yet (Phase 0); it is included so the topology is final.
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env}
+    volumes: ["sqldata:/var/opt/mssql"]
+  api:
+    build: { context: ., dockerfile: Dockerfile.api }
+    depends_on: [sql]
+    environment:
+      Deployment__Mode: OnPrem
+      Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
+      Deployment__LocalStoragePath: /data/files
+    volumes: ["files:/data/files"]
+    ports: ["8080:8080"]
+  web:
+    build: { context: web }
+    ports: ["5173:80"]
+volumes:
+  sqldata:
+  files:
