@@ -32,3 +32,12 @@ Authentication__TenantMappings__0__Provider=entra
 Authentication__TenantMappings__0__ExternalTenantId=<customer Entra directory id>
 Authentication__TenantMappings__0__TenantId=<FMS tenant id>
 ```
+
+## Storage configuration (examples)
+```
+Storage__Provider=Local                       # on-prem default; uses Deployment__LocalStoragePath
+Storage__Provider=AzureBlob  Storage__AzureBlob__AccountUrl=https://<account>.blob.core.windows.net  Storage__AzureBlob__Container=fms
+Storage__Provider=S3         Storage__S3__Bucket=fms  Storage__S3__Region=eu-west-1
+Storage__Provider=S3         Storage__S3__Bucket=fms  Storage__S3__ServiceUrl=http://minio:9000  Storage__S3__ForcePathStyle=true
+```
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export traces and metrics; logs are JSON on stdout.

@@ -10,6 +10,8 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace Fms.ApiTests;
 
@@ -32,7 +34,13 @@ public sealed class SignInTests : IDisposable
         _otherKey.Dispose();
     }
 
-    private WebApplicationFactory<Program> Factory(bool onPrem = false, Guid? singleTenant = null) =>
+    private sealed class CapturingSink : ILogEventSink
+    {
+        public readonly System.Collections.Concurrent.ConcurrentQueue<LogEvent> Events = new();
+        public void Emit(LogEvent logEvent) => Events.Enqueue(logEvent);
+    }
+
+    private WebApplicationFactory<Program> Factory(bool onPrem = false, Guid? singleTenant = null, ILogEventSink? sink = null) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Deployment:Mode", onPrem ? "OnPrem" : "SaaS");
@@ -56,6 +64,7 @@ public sealed class SignInTests : IDisposable
 
             b.ConfigureServices(services =>
             {
+                if (sink is not null) services.AddSingleton(sink);
                 // No network: hand each scheme the test signing key instead of fetching provider metadata.
                 var parameters = new RsaSecurityKey(_key.ExportParameters(false)) { KeyId = "k1" };
                 foreach (var scheme in new[] { "idp:entra", "idp:corp" })
@@ -201,5 +210,36 @@ public sealed class SignInTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/health/live")).StatusCode);
         var providers = await client.GetFromJsonAsync<AuthProviderInfo[]>("/api/v1/auth/providers");
         Assert.Equal(["entra", "corp"], providers!.Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task Request_logs_carry_the_tenant_and_never_the_token()
+    {
+        var sink = new CapturingSink();
+        await using var f = Factory(sink: sink);
+        var token = Token(EntraIssuer(EntraTenantA), EntraTenantA);
+
+        (await Client(f, token).GetAsync("/api/v1/me")).EnsureSuccessStatusCode();
+
+        var requestLog = Assert.Single(sink.Events, e => e.MessageTemplate.Text.StartsWith("HTTP ", StringComparison.Ordinal) && e.Properties.ContainsKey("RequestPath"));
+        Assert.Equal(FmsTenantA.ToString(), requestLog.Properties["TenantId"].ToString().Trim('"'));
+        Assert.Equal("fms-api", requestLog.Properties["Service"].ToString().Trim('"'));
+        Assert.All(sink.Events, e =>
+        {
+            Assert.DoesNotContain(token, e.RenderMessage(), StringComparison.Ordinal);
+            Assert.All(e.Properties.Values, v => Assert.DoesNotContain(token, v.ToString(), StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public async Task Anonymous_request_logs_have_no_tenant()
+    {
+        var sink = new CapturingSink();
+        await using var f = Factory(sink: sink);
+
+        await f.CreateClient().GetAsync("/api/v1/system/info");
+
+        var requestLog = Assert.Single(sink.Events, e => e.MessageTemplate.Text.StartsWith("HTTP ", StringComparison.Ordinal) && e.Properties["RequestPath"].ToString().Contains("system/info"));
+        Assert.False(requestLog.Properties.ContainsKey("TenantId"));
     }
 }

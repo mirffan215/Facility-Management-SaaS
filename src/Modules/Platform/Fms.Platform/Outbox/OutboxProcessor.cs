@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,15 @@ namespace Fms.Platform.Outbox;
 /// the outcome. Failures back off exponentially and end in a dead-letter state after <see cref="OutboxOptions.MaxAttempts"/>.
 /// A worker that dies mid-message loses its lease and the message is picked up again.
 /// </summary>
+public static class OutboxMetrics
+{
+    public static readonly Meter Meter = new("Fms.Outbox");
+    public static readonly Counter<long> Claimed = Meter.CreateCounter<long>("fms.outbox.claimed", description: "Messages claimed by a worker");
+    public static readonly Counter<long> Succeeded = Meter.CreateCounter<long>("fms.outbox.succeeded", description: "Messages handled successfully");
+    public static readonly Counter<long> Retried = Meter.CreateCounter<long>("fms.outbox.retried", description: "Failed attempts that will be retried");
+    public static readonly Counter<long> DeadLettered = Meter.CreateCounter<long>("fms.outbox.dead_lettered", description: "Messages given up on");
+}
+
 public sealed class OutboxProcessor(
     IServiceScopeFactory scopes, IOptions<OutboxOptions> options, TimeProvider clock, ILogger<OutboxProcessor> log)
 {
@@ -69,6 +79,7 @@ public sealed class OutboxProcessor(
             OUTPUT inserted.Id, inserted.TenantId, inserted.Type, inserted.PayloadJson, inserted.Attempts
             """).ToListAsync(ct);
 
+        OutboxMetrics.Claimed.Add(rows.Count);
         return rows.Select(r => new Claimed(r.Id, r.TenantId, r.Type, r.PayloadJson, r.Attempts)).ToList();
     }
 
@@ -83,6 +94,7 @@ public sealed class OutboxProcessor(
                           ?? throw new InvalidOperationException($"No handler is registered for message type '{message.Type}'.");
 
             await handler.HandleAsync(new OutboxMessageContext(message.Id, message.TenantId, message.Type, message.PayloadJson, message.Attempts), ct);
+            OutboxMetrics.Succeeded.Add(1, new KeyValuePair<string, object?>("type", message.Type));
             await MarkAsync(message.Id, m => m.SetProperty(x => x.ProcessedAt, clock.GetUtcNow()).SetProperty(x => x.LockedUntil, (DateTimeOffset?)null).SetProperty(x => x.LastError, (string?)null), ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
@@ -100,12 +112,14 @@ public sealed class OutboxProcessor(
 
         if (message.Attempts >= o.MaxAttempts)
         {
+            OutboxMetrics.DeadLettered.Add(1, new KeyValuePair<string, object?>("type", message.Type));
             log.LogError(ex, "Outbox message {MessageId} ({Type}) dead-lettered after {Attempts} attempts", message.Id, message.Type, message.Attempts);
             await MarkAsync(message.Id, m => m.SetProperty(x => x.DeadLetteredAt, now).SetProperty(x => x.LockedUntil, (DateTimeOffset?)null).SetProperty(x => x.LastError, error), ct);
             return;
         }
 
         var delay = TimeSpan.FromTicks(Math.Min(o.MaxRetryDelay.Ticks, o.BaseRetryDelay.Ticks * (1L << Math.Min(message.Attempts - 1, 20))));
+        OutboxMetrics.Retried.Add(1, new KeyValuePair<string, object?>("type", message.Type));
         log.LogWarning(ex, "Outbox message {MessageId} ({Type}) failed on attempt {Attempts}; retrying in {Delay}", message.Id, message.Type, message.Attempts, delay);
         await MarkAsync(message.Id, m => m.SetProperty(x => x.AvailableAt, now + delay).SetProperty(x => x.LockedUntil, (DateTimeOffset?)null).SetProperty(x => x.LastError, error), ct);
     }

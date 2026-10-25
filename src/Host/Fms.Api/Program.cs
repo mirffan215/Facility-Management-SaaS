@@ -4,15 +4,21 @@ using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Security;
 using Fms.Platform;
 using Fms.Platform.Services;
+using Fms.BuildingBlocks.Cloud;
 using Fms.BuildingBlocks.Deployment;
+using Fms.BuildingBlocks.Observability;
 using Fms.BuildingBlocks.Tenancy;
 using Microsoft.Extensions.Options;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddFmsObservability("fms-api");
 
 builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o));
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+builder.Services.AddFmsStorage(builder.Configuration);
 builder.Services.AddFmsAuthentication(builder.Configuration);
 builder.Services.AddFmsPermissions();
 if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } connectionString)
@@ -26,6 +32,7 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseSerilogRequestLogging();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();

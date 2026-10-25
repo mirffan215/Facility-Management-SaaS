@@ -1,14 +1,21 @@
+using Fms.BuildingBlocks.Cloud;
+using Fms.BuildingBlocks.Deployment;
+using Fms.BuildingBlocks.Observability;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform;
 using Fms.Platform.Outbox;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+builder.AddFmsObservability("fms-worker");
+
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("ConnectionStrings:Default is required.");
 
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o));
+builder.Services.AddFmsStorage(builder.Configuration);
 builder.Services.AddFmsPlatform(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddHostedService<OutboxWorker>();

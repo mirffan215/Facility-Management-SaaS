@@ -59,7 +59,7 @@ public sealed class StorageAndCacheTests
             using var read = (await backend.GetAsync(key))!;
             Assert.Equal("hello", await new StreamReader(read).ReadToEndAsync());
 
-            await Assert.ThrowsAsync<IOException>(() => backend.PutAsync(key, Bytes("again")));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => backend.PutAsync(key, Bytes("again")));
             await Assert.ThrowsAsync<ArgumentException>(() => backend.GetAsync("../outside.txt"));
         }
         finally

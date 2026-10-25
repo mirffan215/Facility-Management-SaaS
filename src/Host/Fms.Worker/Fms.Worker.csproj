@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
   <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Fms.BuildingBlocks.Observability\Fms.BuildingBlocks.Observability.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\Fms.BuildingBlocks.Cloud\Fms.BuildingBlocks.Cloud.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <ProjectReference Include="..\..\Modules\Platform\Fms.Platform\Fms.Platform.csproj" />
   </ItemGroup>

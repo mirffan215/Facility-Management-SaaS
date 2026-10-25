@@ -279,3 +279,70 @@ public sealed class OutboxTests(SqlServerFixture sql)
         Assert.Contains(pending, remaining);
     }
 }
+
+[Collection(SqlCollection.Name)]
+public sealed class OutboxMetricsTests(SqlServerFixture sql)
+{
+    [Fact]
+    public async Task Outbox_publishes_claim_success_retry_and_dead_letter_counts()
+    {
+        var totals = new System.Collections.Concurrent.ConcurrentDictionary<string, long>();
+        using var listener = new System.Diagnostics.Metrics.MeterListener();
+        listener.InstrumentPublished = (instrument, l) => { if (instrument.Meter.Name == "Fms.Outbox") l.EnableMeasurementEvents(instrument); };
+        listener.SetMeasurementEventCallback<long>((instrument, value, _, _) => totals.AddOrUpdate(instrument.Name, value, (_, old) => old + value));
+        listener.Start();
+
+        var connection = await sql.CreateIsolatedDatabaseAsync();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddScoped<TenantContext>();
+        services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+        services.AddSingleton<Fms.BuildingBlocks.Identity.ICurrentUser, NoUser>();
+        services.AddFmsPlatform(connection);
+        services.AddSingleton<Behaviour>();
+        services.AddOutboxHandler<ScriptedHandler>();
+        services.AddOptions<OutboxOptions>().Configure(o => { o.MaxAttempts = 2; o.BaseRetryDelay = TimeSpan.Zero; });
+        await using var provider = services.BuildServiceProvider();
+        var processor = provider.GetRequiredService<OutboxProcessor>();
+        var behaviour = provider.GetRequiredService<Behaviour>();
+
+        async Task SendAsync()
+        {
+            await using var scope = provider.CreateAsyncScope();
+            scope.ServiceProvider.GetRequiredService<TenantContext>().SetTenant(TenantA);
+            scope.ServiceProvider.GetRequiredService<IOutbox>().Enqueue("scripted", new { });
+            await scope.ServiceProvider.GetRequiredService<PlatformDbContext>().SaveChangesAsync();
+        }
+
+        await SendAsync();
+        await processor.ProcessBatchAsync();                   // success
+        behaviour.Fail = true;
+        await SendAsync();
+        await processor.ProcessBatchAsync();                   // attempt 1 fails: retry
+        await processor.ProcessBatchAsync();                   // attempt 2 fails: dead letter
+        listener.RecordObservableInstruments();
+
+        Assert.Equal(1, totals["fms.outbox.succeeded"]);
+        Assert.Equal(1, totals["fms.outbox.retried"]);
+        Assert.Equal(1, totals["fms.outbox.dead_lettered"]);
+        Assert.Equal(3, totals["fms.outbox.claimed"]);
+    }
+
+    private sealed class Behaviour { public bool Fail { get; set; } }
+
+    private sealed class ScriptedHandler(Behaviour behaviour) : IOutboxHandler
+    {
+        public string MessageType => "scripted";
+        public Task HandleAsync(OutboxMessageContext message, CancellationToken ct) =>
+            behaviour.Fail ? throw new InvalidOperationException("scripted failure") : Task.CompletedTask;
+    }
+
+    private sealed class NoUser : Fms.BuildingBlocks.Identity.ICurrentUser
+    {
+        public bool IsAuthenticated => false;
+        public string? Subject => null;
+        public string? Provider => null;
+        public Guid? TenantId => null;
+        public Guid? UserId => null;
+    }
+}

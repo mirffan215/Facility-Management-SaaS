@@ -102,8 +102,15 @@ public sealed class LocalFileBlobBackend(string rootDirectory) : IBlobBackend
     {
         var path = Resolve(key);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        await using var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        await content.CopyToAsync(file, ct);
+        try
+        {
+            await using var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            await content.CopyToAsync(file, ct);
+        }
+        catch (IOException) when (File.Exists(path))
+        {
+            throw new InvalidOperationException("Storage key already exists; objects are write-once.");
+        }
     }
 
     public Task<Stream?> GetAsync(string key, CancellationToken ct = default)

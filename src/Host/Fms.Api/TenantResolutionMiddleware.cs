@@ -1,5 +1,7 @@
 using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Tenancy;
+using Serilog;
+using Serilog.Context;
 
 namespace Fms.Api;
 
@@ -9,14 +11,23 @@ namespace Fms.Api;
 /// </summary>
 public sealed class TenantResolutionMiddleware(RequestDelegate next)
 {
-    public Task InvokeAsync(HttpContext context, TenantContext tenant)
+    public async Task InvokeAsync(HttpContext context, TenantContext tenant, IDiagnosticContext diagnostics)
     {
         if (context.User.Identity?.IsAuthenticated == true
             && Guid.TryParse(context.User.FindFirst(FmsClaims.TenantId)?.Value, out var tenantId))
         {
             tenant.SetTenant(tenantId);
+            diagnostics.Set("TenantId", tenantId);
+
+            // Every log line written while handling this request carries the tenant (and never the token).
+            using (LogContext.PushProperty("TenantId", tenantId))
+            {
+                await next(context);
+            }
+
+            return;
         }
 
-        return next(context);
+        await next(context);
     }
 }

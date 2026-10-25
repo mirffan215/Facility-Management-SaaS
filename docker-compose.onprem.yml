@@ -43,6 +43,9 @@ services:
     depends_on: { migrator: { condition: service_completed_successfully } }
     environment:
       ConnectionStrings__Default: Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True
+      Deployment__Mode: OnPrem
+      Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
+      Deployment__LocalStoragePath: /data/files
     volumes: ["files:/data/files"]
   web:
     build: { context: web }
