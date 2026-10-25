@@ -2,6 +2,7 @@ using Fms.BuildingBlocks.Audit;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Domain;
+using Fms.Platform.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fms.Platform.Persistence;
@@ -15,6 +16,7 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -68,6 +70,17 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
             e.HasIndex(x => new { x.UserId, x.RoleId }).IsUnique();
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<OutboxMessage>(e =>
+        {
+            e.ToTable("OutboxMessages");
+            e.Property(x => x.Type).HasMaxLength(100).IsRequired();
+            e.Property(x => x.PayloadJson).IsRequired();
+            e.Property(x => x.LockedBy).HasMaxLength(100);
+            e.Property(x => x.LastError).HasMaxLength(2000);
+            e.HasIndex(x => new { x.ProcessedAt, x.DeadLetteredAt, x.AvailableAt });
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         });
 

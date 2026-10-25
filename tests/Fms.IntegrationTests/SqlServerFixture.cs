@@ -81,6 +81,28 @@ public sealed class SqlServerFixture : IAsyncLifetime
             tenant);
     }
 
+    /// <summary>A fresh migrated database with both tenants, for tests that must not see other tests' rows (e.g. workers that claim any due message).</summary>
+    public async Task<string> CreateIsolatedDatabaseAsync()
+    {
+        var database = "FmsIso" + Guid.NewGuid().ToString("N")[..10];
+        var owner = new SqlConnectionStringBuilder(OwnerConnectionString) { InitialCatalog = database }.ConnectionString;
+
+        await using (var owned = Context(owner, null, platform: true))
+        {
+            await owned.Database.MigrateAsync();
+            owned.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
+            owned.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
+            await owned.SaveChangesAsync();
+        }
+
+        await using var conn = new SqlConnection(owner);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand($"CREATE USER [{AppLogin}] FOR LOGIN [{AppLogin}]; ALTER ROLE db_datareader ADD MEMBER [{AppLogin}]; ALTER ROLE db_datawriter ADD MEMBER [{AppLogin}];", conn);
+        await cmd.ExecuteNonQueryAsync();
+
+        return new SqlConnectionStringBuilder(owner) { UserID = AppLogin, Password = AppPassword }.ConnectionString;
+    }
+
     public static User NewUser(string subject = "sub", string provider = "entra") =>
         new() { Provider = provider, Subject = subject, CreatedAt = DateTimeOffset.UtcNow, LastSignInAt = DateTimeOffset.UtcNow };
 }

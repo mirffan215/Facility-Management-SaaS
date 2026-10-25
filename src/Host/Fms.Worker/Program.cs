@@ -1,0 +1,54 @@
+using Fms.BuildingBlocks.Tenancy;
+using Fms.Platform;
+using Fms.Platform.Outbox;
+
+var builder = Host.CreateApplicationBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("ConnectionStrings:Default is required.");
+
+builder.Services.AddScoped<TenantContext>();
+builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+builder.Services.AddFmsPlatform(connectionString);
+builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
+builder.Services.AddHostedService<OutboxWorker>();
+
+// Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
+
+await builder.Build().RunAsync();
+
+/// <summary>Polls the outbox. Busy when there is work, idle-waits when there is none; stops cleanly on shutdown.</summary>
+internal sealed class OutboxWorker(OutboxProcessor processor, Microsoft.Extensions.Options.IOptions<OutboxOptions> options, ILogger<OutboxWorker> log)
+    : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var lastPurge = DateTimeOffset.MinValue;
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var processed = await processor.ProcessBatchAsync(stoppingToken);
+
+                if (DateTimeOffset.UtcNow - lastPurge > TimeSpan.FromHours(1))
+                {
+                    lastPurge = DateTimeOffset.UtcNow;
+                    var purged = await processor.PurgeAsync(stoppingToken);
+                    if (purged > 0) log.LogInformation("Purged {Count} finished outbox messages", purged);
+                }
+
+                if (processed == 0) await Task.Delay(options.Value.PollInterval, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                // Database briefly unavailable, etc.: keep the worker alive and try again.
+                log.LogError(ex, "Outbox polling failed");
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            }
+        }
+    }
+}

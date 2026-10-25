@@ -38,6 +38,12 @@ services:
       # Authentication__Providers__0__Audience: api://fms
     volumes: ["files:/data/files"]
     ports: ["8080:8080"]
+  worker:
+    build: { context: ., dockerfile: Dockerfile.worker }
+    depends_on: { migrator: { condition: service_completed_successfully } }
+    environment:
+      ConnectionStrings__Default: Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True
+    volumes: ["files:/data/files"]
   web:
     build: { context: web }
     ports: ["5173:80"]

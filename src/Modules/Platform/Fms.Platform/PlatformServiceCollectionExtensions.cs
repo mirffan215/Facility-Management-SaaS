@@ -2,6 +2,7 @@ using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Security;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.Platform.Outbox;
 using Fms.Platform.Persistence;
 using Fms.Platform.Services;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,10 @@ public static class PlatformServiceCollectionExtensions
     /// Registers the platform database and replaces the config-backed tenant directory with the database-backed one.
     /// The application connects as a least-privileged login; migrations run separately under the migrator.
     /// </summary>
+    /// <summary>Registers a message handler. Handlers must be idempotent: delivery is at least once.</summary>
+    public static IServiceCollection AddOutboxHandler<THandler>(this IServiceCollection services) where THandler : class, IOutboxHandler =>
+        services.AddScoped<IOutboxHandler, THandler>();
+
     public static IServiceCollection AddFmsPlatform(this IServiceCollection services, string connectionString)
     {
         services.TryAddSingleton(TimeProvider.System);
@@ -28,6 +33,8 @@ public static class PlatformServiceCollectionExtensions
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IAuditPort, AuditPort>();
         services.AddScoped<AccessAdministration>();
+        services.AddScoped<IOutbox, Outbox.Outbox>();
+        services.AddSingleton<OutboxProcessor>();
         services.AddHealthChecks().AddDbContextCheck<PlatformDbContext>("platform-db", tags: ["ready"]);
         return services;
     }
