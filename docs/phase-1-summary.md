@@ -27,8 +27,8 @@ Failures are RFC 7807 problem details: 400 validation (with per-field `errors`),
 rule conflicts), 413 (file too large), 415 (file type not allowed).
 
 ## Tests
-299 .NET tests pass locally: 119 unit, 19 API, 161 integration on real SQL Server (including 28 storage-backend contract tests). Every
-rule above has a test, plus tenant isolation at three levels (service, API and raw SQL as the restricted login) for locations, assets,
+299 .NET tests pass locally: 119 unit, 19 API, 161 integration on real SQL Server (including 28 storage-backend contract tests). The
+main rules above are covered (not every limit: the 5,000-node tree cap and the asset-class depth limit are not), plus tenant isolation at three levels (service, API and raw SQL as the restricted login) for locations, assets,
 meters and documents. Mutation checks (removing the retire-with-parts guard and the archive-with-assets guard) fail the tests as they should.
 
 ## Not done / known gaps
