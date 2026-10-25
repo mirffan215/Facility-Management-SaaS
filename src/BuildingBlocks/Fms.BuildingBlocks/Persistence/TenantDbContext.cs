@@ -9,7 +9,7 @@ namespace Fms.BuildingBlocks.Persistence;
 /// save, and refuses updates/deletes of <see cref="IAppendOnly"/> entities. Derived contexts must call
 /// <c>base.OnModelCreating</c> AFTER configuring their entities.
 /// </summary>
-public abstract class TenantDbContext(DbContextOptions options, ITenantContext tenant) : DbContext(options)
+public abstract class TenantDbContext(DbContextOptions options, ITenantContext tenant, PendingWrites? pending = null) : DbContext(options)
 {
     public const string TenantFilterName = "TenantScope";
 
@@ -52,6 +52,8 @@ public abstract class TenantDbContext(DbContextOptions options, ITenantContext t
 
     private void Enforce()
     {
+        pending?.DrainInto(this);
+
         foreach (var entry in ChangeTracker.Entries().Where(e => e.State is EntityState.Modified or EntityState.Deleted))
         {
             if (entry.Entity is IAppendOnly)

@@ -251,7 +251,7 @@ namespace Fms.Platform.Persistence.Migrations
                     b.ToTable("UserRoles", (string)null);
                 });
 
-            modelBuilder.Entity("Fms.Platform.Outbox.OutboxMessage", b =>
+            modelBuilder.Entity("Fms.BuildingBlocks.Messaging.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -376,7 +376,7 @@ namespace Fms.Platform.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Fms.Platform.Outbox.OutboxMessage", b =>
+            modelBuilder.Entity("Fms.BuildingBlocks.Messaging.OutboxMessage", b =>
                 {
                     b.HasOne("Fms.Platform.Domain.Tenant", null)
                         .WithMany()

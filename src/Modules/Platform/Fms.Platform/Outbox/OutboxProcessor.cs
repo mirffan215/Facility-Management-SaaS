@@ -1,3 +1,4 @@
+using Fms.BuildingBlocks.Messaging;
 using System.Diagnostics.Metrics;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Persistence;

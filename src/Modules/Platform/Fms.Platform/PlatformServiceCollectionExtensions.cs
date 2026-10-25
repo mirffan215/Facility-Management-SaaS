@@ -1,3 +1,4 @@
+using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Security;
@@ -31,9 +32,10 @@ public static class PlatformServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Scoped<ITenantDirectory, DbTenantDirectory>());
         services.AddScoped<IUserProvisioner, UserProvisioner>();
         services.AddScoped<IPermissionService, PermissionService>();
-        services.AddScoped<IAuditPort, AuditPort>();
+        services.AddScoped<PendingWrites>();
+        services.AddScoped<IAuditPort, Fms.BuildingBlocks.Audit.AuditPort>();
         services.AddScoped<AccessAdministration>();
-        services.AddScoped<IOutbox, Outbox.Outbox>();
+        services.AddScoped<IOutbox, Fms.BuildingBlocks.Messaging.Outbox>();
         services.AddSingleton<OutboxProcessor>();
         services.AddHealthChecks().AddDbContextCheck<PlatformDbContext>("platform-db", tags: ["ready"]);
         return services;

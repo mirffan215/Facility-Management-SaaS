@@ -21,7 +21,7 @@ public sealed class AccessControlTests(SqlServerFixture sql)
     }
 
     private AccessAdministration Access(Fms.Platform.Persistence.PlatformDbContext db, Guid? actor) =>
-        new(db, new FakeUser(actor), new AuditPort(db, new FakeUser(actor), TimeProvider.System), TimeProvider.System);
+        new(db, new FakeUser(actor), new Fms.BuildingBlocks.Audit.AuditPort(sql.PendingFor(db), new FakeUser(actor), TimeProvider.System), TimeProvider.System);
 
     private async Task<Guid> NewUserAsync(Guid tenant)
     {

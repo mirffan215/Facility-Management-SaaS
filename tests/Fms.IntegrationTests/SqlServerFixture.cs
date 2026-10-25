@@ -65,9 +65,20 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
-    public PlatformDbContext App(Guid? tenantId, bool platform = false) => Context(AppConnectionString, tenantId, platform);
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<PlatformDbContext, PendingWrites> _pending = new();
 
-    private static PlatformDbContext Context(string connectionString, Guid? tenantId, bool platform)
+    /// <summary>A context as the app would build it, with its own pending-writes buffer (see <see cref="PendingFor"/>).</summary>
+    public PlatformDbContext App(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = Context(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
+    public PendingWrites PendingFor(PlatformDbContext db) => _pending.TryGetValue(db, out var p) ? p : throw new InvalidOperationException("Context was not created by the fixture.");
+
+    private static PlatformDbContext Context(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
     {
         var tenant = new TenantContext();
         if (tenantId is { } id) tenant.SetTenant(id);
@@ -78,7 +89,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 .UseSqlServer(connectionString)
                 .AddInterceptors(new TenantSessionContextInterceptor(tenant))
                 .Options,
-            tenant);
+            tenant, pending);
     }
 
     /// <summary>A fresh migrated database with both tenants, for tests that must not see other tests' rows (e.g. workers that claim any due message).</summary>

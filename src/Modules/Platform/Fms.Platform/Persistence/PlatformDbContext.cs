@@ -2,13 +2,13 @@ using Fms.BuildingBlocks.Audit;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Domain;
-using Fms.Platform.Outbox;
+using Fms.BuildingBlocks.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fms.Platform.Persistence;
 
-public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> options, ITenantContext tenant)
-    : TenantDbContext(options, tenant)
+public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> options, ITenantContext tenant, PendingWrites? pending = null)
+    : TenantDbContext(options, tenant, pending)
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantIdentityMapping> TenantIdentityMappings => Set<TenantIdentityMapping>();

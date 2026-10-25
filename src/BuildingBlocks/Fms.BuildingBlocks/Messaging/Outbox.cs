@@ -1,8 +1,8 @@
 using System.Text.Json;
+using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
-using Fms.Platform.Persistence;
 
-namespace Fms.Platform.Outbox;
+namespace Fms.BuildingBlocks.Messaging;
 
 /// <summary>A durable message written in the same transaction as the business change that caused it.</summary>
 public sealed class OutboxMessage : ITenantOwned
@@ -24,26 +24,21 @@ public sealed class OutboxMessage : ITenantOwned
 public interface IOutbox
 {
     /// <summary>
-    /// Adds a message to the current unit of work. It is stored when (and only when) the caller's SaveChanges commits, and is
-    /// delivered at least once to the handler registered for <paramref name="type"/>, in the sender's tenant.
+    /// Queues a message. It is stored in the same transaction as the next SaveChanges of whichever module context the caller
+    /// saves (so it exists if and only if that change commits), and is delivered at least once to the handler registered for
+    /// <paramref name="type"/>, in the sender's tenant.
     /// </summary>
     void Enqueue(string type, object payload);
 }
 
-public sealed class Outbox(PlatformDbContext db, TimeProvider clock) : IOutbox
+public sealed class Outbox(PendingWrites pending, TimeProvider clock) : IOutbox
 {
     public void Enqueue(string type, object payload)
     {
         if (string.IsNullOrWhiteSpace(type) || type.Length > 100) throw new ArgumentException("Message type is required (max 100).", nameof(type));
 
         var now = clock.GetUtcNow();
-        db.OutboxMessages.Add(new OutboxMessage
-        {
-            Type = type,
-            PayloadJson = JsonSerializer.Serialize(payload),
-            CreatedAt = now,
-            AvailableAt = now,
-        });
+        pending.Add(new OutboxMessage { Type = type, PayloadJson = JsonSerializer.Serialize(payload), CreatedAt = now, AvailableAt = now });
     }
 }
 

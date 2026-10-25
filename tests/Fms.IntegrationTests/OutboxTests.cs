@@ -1,3 +1,4 @@
+using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform;
 using Fms.Platform.Domain;

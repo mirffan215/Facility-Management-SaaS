@@ -1,15 +1,14 @@
-using Fms.BuildingBlocks.Audit;
 using Fms.BuildingBlocks.Identity;
+using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Security;
-using Fms.Platform.Persistence;
 
-namespace Fms.Platform.Services;
+namespace Fms.BuildingBlocks.Audit;
 
-/// <summary>Adds the audit event to the context so it commits or rolls back with the business change.</summary>
-public sealed class AuditPort(PlatformDbContext db, ICurrentUser user, TimeProvider clock) : IAuditPort
+/// <summary>Buffers the audit event so it is saved in the same transaction as the business change, in whichever module context saves.</summary>
+public sealed class AuditPort(PendingWrites pending, ICurrentUser user, TimeProvider clock) : IAuditPort
 {
     public void Record(string action, string entityType, string? entityId = null, string? changeSummaryJson = null) =>
-        db.AuditEvents.Add(new AuditEvent
+        pending.Add(new AuditEvent
         {
             OccurredAt = clock.GetUtcNow(),
             ActorId = user.UserId,
