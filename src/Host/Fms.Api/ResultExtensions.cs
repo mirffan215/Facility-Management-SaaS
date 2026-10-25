@@ -12,6 +12,8 @@ public static class ResultExtensions
         ResultStatus.Invalid => Results.ValidationProblem(result.Errors!.ToDictionary(e => e.Key, e => e.Value), title: "Validation failed"),
         ResultStatus.Conflict => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: result.Message ?? "Conflict"),
         ResultStatus.Forbidden => Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: result.Message ?? "Forbidden"),
+        ResultStatus.TooLarge => Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge, title: result.Message ?? "Payload too large"),
+        ResultStatus.UnsupportedType => Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: result.Message ?? "Unsupported media type"),
         _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError),
     };
 }

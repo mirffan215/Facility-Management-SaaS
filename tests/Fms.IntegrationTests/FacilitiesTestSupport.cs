@@ -3,7 +3,10 @@ using Fms.BuildingBlocks.Audit;
 using Fms.BuildingBlocks.Identity;
 using Fms.Facilities.Domain;
 using Fms.Facilities.Persistence;
+using Fms.BuildingBlocks.Storage;
+using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities.Services;
+using Microsoft.Extensions.Options;
 
 namespace Fms.IntegrationTests;
 
@@ -25,14 +28,17 @@ internal sealed class FacilitiesScope : IAsyncDisposable
     public required AssetClassService Classes { get; init; }
     public required AssetService Assets { get; init; }
     public required MeterService Meters { get; init; }
+    public required DocumentService Documents { get; init; }
     public Guid UserId { get; init; }
     public required Guid Tenant { get; init; }
 
-    public static FacilitiesScope For(SqlServerFixture sql, Guid tenant, TimeProvider? clock = null)
+    public static FacilitiesScope For(SqlServerFixture sql, Guid tenant, TimeProvider? clock = null, IFileScanner? scanner = null, FacilitiesOptions? options = null)
     {
         clock ??= TimeProvider.System;
         var db = sql.Facilities(tenant);
         var user = new TestUser();
+        var tenantContext = new TenantContext();
+        tenantContext.SetTenant(tenant);
         var audit = new AuditPort(sql.PendingFor(db), user, clock);
         return new FacilitiesScope
         {
@@ -43,6 +49,7 @@ internal sealed class FacilitiesScope : IAsyncDisposable
             Classes = new AssetClassService(db, audit),
             Assets = new AssetService(db, audit, clock),
             Meters = new MeterService(db, audit, user, clock),
+            Documents = new DocumentService(db, new TenantScopedFileStore(sql.Blobs, tenantContext), scanner ?? new NoOpFileScanner(), audit, user, Options.Create(options ?? new FacilitiesOptions()), clock),
             UserId = user.UserId!.Value,
         };
     }

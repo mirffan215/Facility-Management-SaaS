@@ -21,6 +21,8 @@ public static class FacilitiesServiceCollectionExtensions
         services.AddScoped<AssetClassService>();
         services.AddScoped<AssetService>();
         services.AddScoped<MeterService>();
+        services.AddScoped<DocumentService>();
+        services.AddSingleton<IFileScanner, NoOpFileScanner>();
         services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<FacilitiesOptions>, FacilitiesOptionsValidator>();
         services.AddOptions<FacilitiesOptions>().BindConfiguration(FacilitiesOptions.SectionName).ValidateOnStart();
         services.AddSingleton<AssetLabelService>();

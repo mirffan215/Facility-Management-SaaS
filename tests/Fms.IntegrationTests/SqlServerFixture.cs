@@ -1,4 +1,5 @@
 using Fms.BuildingBlocks.Persistence;
+using Fms.BuildingBlocks.Storage;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities.Persistence;
 using Fms.Platform.Domain;
@@ -30,6 +31,9 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public static readonly Guid TenantA = Guid.NewGuid();
     public static readonly Guid TenantB = Guid.NewGuid();
+
+    /// <summary>Shared in-memory file storage for service-level document tests (the API tests use the app's own storage).</summary>
+    public InMemoryBlobBackend Blobs { get; } = new();
 
     public string OwnerConnectionString { get; private set; } = "";
     public string AppConnectionString { get; private set; } = "";

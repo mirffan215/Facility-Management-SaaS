@@ -14,6 +14,7 @@ public sealed class FacilitiesDbContext(DbContextOptions<FacilitiesDbContext> op
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<AssetClass> AssetClasses => Set<AssetClass>();
     public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<AssetDocument> AssetDocuments => Set<AssetDocument>();
     public DbSet<Meter> Meters => Set<Meter>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<MeterReadingVoid> MeterReadingVoids => Set<MeterReadingVoid>();
@@ -71,6 +72,19 @@ public sealed class FacilitiesDbContext(DbContextOptions<FacilitiesDbContext> op
             e.HasOne<AssetClass>().WithMany().HasForeignKey(x => x.AssetClassId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Location>().WithMany().HasForeignKey(x => x.LocationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.ParentAssetId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<AssetDocument>(e =>
+        {
+            e.ToTable("AssetDocuments");
+            e.Property(x => x.FileName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            e.Property(x => x.StorageKey).HasMaxLength(300).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.DeleteReason).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.DeletedAt });
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
         });
 
         b.Entity<Meter>(e =>

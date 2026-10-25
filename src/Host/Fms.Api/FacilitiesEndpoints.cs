@@ -1,6 +1,8 @@
 using Fms.BuildingBlocks.Security;
 using Fms.Facilities.Domain;
 using Fms.Facilities.Services;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Options;
 
 namespace Fms.Api;
 
@@ -15,6 +17,7 @@ public static class FacilitiesEndpoints
         MapAssetClasses(v1.MapGroup("/asset-classes"));
         MapAssets(v1.MapGroup("/assets"));
         MapMeters(v1);
+        MapDocuments(v1);
     }
 
     private static void MapLocations(RouteGroupBuilder g)
@@ -162,6 +165,54 @@ public static class FacilitiesEndpoints
                 (await s.VoidAsync(readingId, r, ct)).ToHttp())
             .RequirePermission(Permissions.MetersManage);
     }
+
+    private static void MapDocuments(RouteGroupBuilder v1)
+    {
+        v1.MapGet("/assets/{assetId:guid}/documents", async (Guid assetId, DocumentService s, CancellationToken ct) => (await s.ListAsync(assetId, ct)).ToHttp())
+            .RequirePermission(Permissions.DocumentsRead);
+
+        // multipart/form-data: file (required), kind, description. The body limit is set from configuration before the form is read.
+        v1.MapPost("/assets/{assetId:guid}/documents", async (Guid assetId, HttpContext http, DocumentService s, IOptions<FacilitiesOptions> options, CancellationToken ct) =>
+            {
+                if (!http.Request.HasFormContentType) return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Send the file as multipart/form-data.");
+
+                // Kestrel enforces this while reading; hosts without the feature (tests) fall back to the service's own byte count.
+                if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit) limit.MaxRequestBodySize = options.Value.MaxDocumentBytes + 1024 * 1024;
+                IFormCollection form;
+                try { form = await http.Request.ReadFormAsync(ct); }
+                catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge) { return Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge, title: "File too large."); }
+                catch (InvalidDataException) { return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "The upload could not be read."); }
+
+                if (form.Files.Count != 1 || form.Files[0].Name != "file")
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Send exactly one file in the 'file' field."] });
+
+                var kind = DocumentKind.Other;
+                if (form.TryGetValue("kind", out var kindText) && !Enum.TryParse(kindText.ToString(), ignoreCase: true, out kind))
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["kind"] = ["Unknown document kind."] });
+
+                var file = form.Files[0];
+                await using var stream = file.OpenReadStream();
+                var result = await s.UploadAsync(assetId, kind, form["description"].ToString(), file.FileName, stream, ct);
+                return result.ToHttp(d => Results.Created($"/api/v1/documents/{d.Id}", d));
+            })
+            .RequirePermission(Permissions.DocumentsManage);
+
+        v1.MapGet("/documents/{id:guid}/download", async (Guid id, HttpContext http, DocumentService s, CancellationToken ct) =>
+            {
+                var result = await s.DownloadAsync(id, ct);
+                if (!result.IsOk) return result.ToHttp();
+
+                // Files are only ever served as downloads, never rendered in the app's origin.
+                http.Response.Headers.CacheControl = "private, no-store";
+                http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+                return Results.File(result.Value!.Content, result.Value.Document.ContentType, result.Value.Document.FileName);
+            })
+            .RequirePermission(Permissions.DocumentsRead);
+
+        v1.MapPost("/documents/{id:guid}/delete", async (Guid id, DeleteDocumentRequest r, DocumentService s, CancellationToken ct) => (await s.DeleteAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.DocumentsManage);
+    }
 }
 
 public sealed record BatchReadingsRequest(List<BatchReadingItem>? Readings);
+

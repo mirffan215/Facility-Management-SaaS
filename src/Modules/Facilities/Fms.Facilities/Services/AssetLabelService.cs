@@ -12,12 +12,19 @@ public sealed class FacilitiesOptions
     /// camera opens the asset. Empty gives fms://asset/{tag}, readable only by the FMS mobile client.
     /// </summary>
     public string? PublicBaseUrl { get; set; }
+
+    /// <summary>Largest accepted file, in bytes. Default 25 MB.</summary>
+    public long MaxDocumentBytes { get; set; } = 25L * 1024 * 1024;
+
+    public int MaxDocumentsPerAsset { get; set; } = 200;
 }
 
 public sealed class FacilitiesOptionsValidator : IValidateOptions<FacilitiesOptions>
 {
     public ValidateOptionsResult Validate(string? name, FacilitiesOptions o) =>
-        string.IsNullOrWhiteSpace(o.PublicBaseUrl) || (Uri.TryCreate(o.PublicBaseUrl, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" && string.IsNullOrEmpty(uri.Query))
+        o.MaxDocumentBytes is < 1024 or > 100L * 1024 * 1024 || o.MaxDocumentsPerAsset is < 1 or > 1000
+            ? ValidateOptionsResult.Fail("Facilities:MaxDocumentBytes must be 1 KB to 100 MB and MaxDocumentsPerAsset 1 to 1000.")
+            : string.IsNullOrWhiteSpace(o.PublicBaseUrl) || (Uri.TryCreate(o.PublicBaseUrl, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" && string.IsNullOrEmpty(uri.Query))
             ? ValidateOptionsResult.Success
             : ValidateOptionsResult.Fail("Facilities:PublicBaseUrl must be an absolute http(s) URL without a query string.");
 }

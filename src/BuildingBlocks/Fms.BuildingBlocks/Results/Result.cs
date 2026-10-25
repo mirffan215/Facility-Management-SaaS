@@ -1,6 +1,6 @@
 namespace Fms.BuildingBlocks.Results;
 
-public enum ResultStatus { Ok, NotFound, Invalid, Conflict, Forbidden }
+public enum ResultStatus { Ok, NotFound, Invalid, Conflict, Forbidden, TooLarge, UnsupportedType }
 
 /// <summary>Outcome of a use case, so services report expected failures without exceptions and the API maps them uniformly.</summary>
 public sealed record Result<T>(ResultStatus Status, T? Value = default, string? Message = null, IReadOnlyDictionary<string, string[]>? Errors = null)
