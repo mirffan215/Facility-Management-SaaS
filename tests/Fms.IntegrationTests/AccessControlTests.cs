@@ -148,6 +148,9 @@ public sealed class AccessControlTests(SqlServerFixture sql)
         await using var read = sql.App(TenantA);
         var perms = await new PermissionService(read, new FakeUser(target)).GetCurrentAsync();
 
-        Assert.Equal([Permissions.RolesRead, Permissions.UsersRead], perms.Order());
+        var expected = SystemRoles.Definitions[SystemRoles.FacilityManager].Union(SystemRoles.Definitions[SystemRoles.Technician]).Order();
+        Assert.Equal(expected, perms.Order());
+        Assert.Contains(Permissions.RolesRead, perms);
+        Assert.DoesNotContain(Permissions.UsersManage, perms);
     }
 }

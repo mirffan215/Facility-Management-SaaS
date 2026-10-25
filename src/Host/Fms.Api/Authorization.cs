@@ -52,3 +52,22 @@ internal sealed class PermissionPolicyOptions : Microsoft.Extensions.Options.ICo
         }
     }
 }
+
+public static class AnyPermissionExtensions
+{
+    /// <summary>Allows the request when the user holds at least one of the permissions (e.g. form definitions readable by anyone who can read the entity).</summary>
+    public static TBuilder RequireAnyPermission<TBuilder>(this TBuilder builder, params string[] permissions) where TBuilder : IEndpointConventionBuilder
+    {
+        foreach (var p in permissions)
+        {
+            if (!Permissions.All.Contains(p)) throw new ArgumentException($"Unknown permission '{p}'.", nameof(permissions));
+        }
+
+        return builder.AddEndpointFilter(async (context, next) =>
+        {
+            var service = context.HttpContext.RequestServices.GetService<IPermissionService>();
+            var granted = service is null ? new HashSet<string>() : await service.GetCurrentAsync(context.HttpContext.RequestAborted);
+            return permissions.Any(granted.Contains) ? await next(context) : Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
+        });
+    }
+}

@@ -4,5 +4,6 @@
     <ProjectReference Include="..\..\BuildingBlocks\Fms.BuildingBlocks.Cloud\Fms.BuildingBlocks.Cloud.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <ProjectReference Include="..\..\Modules\Platform\Fms.Platform\Fms.Platform.csproj" />
+    <ProjectReference Include="..\..\Modules\Facilities\Fms.Facilities\Fms.Facilities.csproj" />
   </ItemGroup>
 </Project>

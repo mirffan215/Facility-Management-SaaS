@@ -11,7 +11,23 @@ public static class Permissions
     public const string RolesRead = "roles.read";
     public const string AuditRead = "audit.read";
 
-    public static IReadOnlyList<string> All { get; } = [UsersRead, UsersManage, RolesRead, AuditRead];
+    public const string LocationsRead = "locations.read";
+    public const string LocationsManage = "locations.manage";
+    public const string AssetsRead = "assets.read";
+    public const string AssetsManage = "assets.manage";
+    public const string MetersRead = "meters.read";
+    public const string MetersRecord = "meters.record";
+    public const string MetersManage = "meters.manage";
+    public const string DocumentsRead = "documents.read";
+    public const string DocumentsManage = "documents.manage";
+    public const string CustomFieldsManage = "customfields.manage";
+
+    public static IReadOnlyList<string> All { get; } =
+    [
+        UsersRead, UsersManage, RolesRead, AuditRead,
+        LocationsRead, LocationsManage, AssetsRead, AssetsManage, MetersRead, MetersRecord, MetersManage,
+        DocumentsRead, DocumentsManage, CustomFieldsManage,
+    ];
 
     public static string PolicyName(string permission) => "perm:" + permission;
 }

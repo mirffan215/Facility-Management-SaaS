@@ -3,6 +3,7 @@ using Fms.BuildingBlocks.Cloud;
 using Fms.BuildingBlocks.Deployment;
 using Fms.BuildingBlocks.Observability;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.Facilities;
 using Fms.Platform;
 using Fms.Platform.Outbox;
 
@@ -18,6 +19,7 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantCon
 builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o));
 builder.Services.AddFmsStorage(builder.Configuration);
 builder.Services.AddFmsPlatform(connectionString);
+builder.Services.AddFmsFacilities(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddHostedService<OutboxWorker>();
 

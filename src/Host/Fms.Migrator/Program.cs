@@ -1,6 +1,7 @@
 using Fms.BuildingBlocks.Deployment;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.Facilities.Persistence;
 using Fms.Platform.Domain;
 using Fms.Platform.Persistence;
 using Fms.Platform.Security;
@@ -23,6 +24,12 @@ await using var db = new PlatformDbContext(new DbContextOptionsBuilder<PlatformD
 
 Console.WriteLine("Applying migrations...");
 await db.Database.MigrateAsync();
+
+// Module databases migrate after the platform (they extend its row-level-security policy) and keep their own history tables.
+await using var facilitiesDb = new FacilitiesDbContext(
+    new DbContextOptionsBuilder<FacilitiesDbContext>().UseSqlServer(migratorConnection, FacilitiesDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+await facilitiesDb.Database.MigrateAsync();
 
 var deployment = config.GetSection(DeploymentOptions.SectionName).Get<DeploymentOptions>() ?? new DeploymentOptions();
 if (deployment.Mode == DeploymentMode.OnPrem)

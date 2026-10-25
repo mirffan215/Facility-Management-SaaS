@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\Platform\Fms.Platform\Fms.Platform.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Facilities\Fms.Facilities\Fms.Facilities.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Fms.BuildingBlocks.Cloud\Fms.BuildingBlocks.Cloud.csproj" />
     <ProjectReference Include="..\..\src\Host\Fms.Api\Fms.Api.csproj" />
     <ProjectReference Include="..\..\src\Host\Fms.Migrator\Fms.Migrator.csproj" />

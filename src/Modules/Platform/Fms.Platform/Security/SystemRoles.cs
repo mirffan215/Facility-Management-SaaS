@@ -14,9 +14,18 @@ public static class SystemRoles
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Definitions { get; } = new Dictionary<string, IReadOnlyList<string>>
     {
         [Administrator] = Permissions.All,
-        [FacilityManager] = [Permissions.UsersRead, Permissions.RolesRead],
-        [Technician] = [],
-        [Requester] = [],
-        [Viewer] = [],
+        [FacilityManager] =
+        [
+            Permissions.UsersRead, Permissions.RolesRead,
+            Permissions.LocationsRead, Permissions.LocationsManage, Permissions.AssetsRead, Permissions.AssetsManage,
+            Permissions.MetersRead, Permissions.MetersRecord, Permissions.MetersManage,
+            Permissions.DocumentsRead, Permissions.DocumentsManage, Permissions.CustomFieldsManage,
+        ],
+        [Technician] =
+        [
+            Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.MetersRecord, Permissions.DocumentsRead,
+        ],
+        [Requester] = [Permissions.LocationsRead],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead],
     };
 }

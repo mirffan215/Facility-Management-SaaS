@@ -10,11 +10,13 @@ namespace Fms.BuildingBlocks.Persistence;
 /// </summary>
 public static class TenantSecurityMigrationExtensions
 {
+    // Policy and predicate function live in schema 'security'; the table's own schema is a parameter.
     private const string Policy = "security.TenantIsolation";
 
-    public static MigrationBuilder ProtectTenantTable(this MigrationBuilder migrationBuilder, string table)
+    public static MigrationBuilder ProtectTenantTable(this MigrationBuilder migrationBuilder, string table, string schema = "dbo")
     {
         ValidateName(table);
+        ValidateName(schema);
 
         migrationBuilder.Sql("IF SCHEMA_ID(N'security') IS NULL EXEC(N'CREATE SCHEMA security');");
         migrationBuilder.Sql("""
@@ -27,11 +29,11 @@ public static class TenantSecurityMigrationExtensions
             """);
 
         var predicates = $"""
-            ADD FILTER PREDICATE security.TenantPredicate(TenantId) ON dbo.[{table}],
-            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON dbo.[{table}] AFTER INSERT,
-            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON dbo.[{table}] AFTER UPDATE,
-            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON dbo.[{table}] BEFORE UPDATE,
-            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON dbo.[{table}] BEFORE DELETE
+            ADD FILTER PREDICATE security.TenantPredicate(TenantId) ON {schema}.[{table}],
+            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON {schema}.[{table}] AFTER INSERT,
+            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON {schema}.[{table}] AFTER UPDATE,
+            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON {schema}.[{table}] BEFORE UPDATE,
+            ADD BLOCK PREDICATE security.TenantPredicate(TenantId) ON {schema}.[{table}] BEFORE DELETE
             """;
 
         migrationBuilder.Sql($"""
@@ -44,17 +46,18 @@ public static class TenantSecurityMigrationExtensions
         return migrationBuilder;
     }
 
-    public static MigrationBuilder UnprotectTenantTable(this MigrationBuilder migrationBuilder, string table)
+    public static MigrationBuilder UnprotectTenantTable(this MigrationBuilder migrationBuilder, string table, string schema = "dbo")
     {
         ValidateName(table);
+        ValidateName(schema);
         migrationBuilder.Sql($"""
-            IF EXISTS (SELECT 1 FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'dbo.{table}'))
+            IF EXISTS (SELECT 1 FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'{schema}.{table}'))
             ALTER SECURITY POLICY {Policy}
-                DROP FILTER PREDICATE ON dbo.[{table}],
-                DROP BLOCK PREDICATE ON dbo.[{table}] AFTER INSERT,
-                DROP BLOCK PREDICATE ON dbo.[{table}] AFTER UPDATE,
-                DROP BLOCK PREDICATE ON dbo.[{table}] BEFORE UPDATE,
-                DROP BLOCK PREDICATE ON dbo.[{table}] BEFORE DELETE;
+                DROP FILTER PREDICATE ON {schema}.[{table}],
+                DROP BLOCK PREDICATE ON {schema}.[{table}] AFTER INSERT,
+                DROP BLOCK PREDICATE ON {schema}.[{table}] AFTER UPDATE,
+                DROP BLOCK PREDICATE ON {schema}.[{table}] BEFORE UPDATE,
+                DROP BLOCK PREDICATE ON {schema}.[{table}] BEFORE DELETE;
             """);
         return migrationBuilder;
     }

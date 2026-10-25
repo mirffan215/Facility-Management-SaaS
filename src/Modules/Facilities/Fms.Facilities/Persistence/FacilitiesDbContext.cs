@@ -1,0 +1,62 @@
+using Fms.BuildingBlocks.Persistence;
+using Fms.BuildingBlocks.Tenancy;
+using Fms.Facilities.Domain;
+using Microsoft.EntityFrameworkCore;
+
+namespace Fms.Facilities.Persistence;
+
+public sealed class FacilitiesDbContext(DbContextOptions<FacilitiesDbContext> options, ITenantContext tenant, PendingWrites? pending = null)
+    : TenantDbContext(options, tenant, pending)
+{
+    public const string Schema = "facilities";
+
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+    public DbSet<AssetClass> AssetClasses => Set<AssetClass>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        b.HasDefaultSchema(Schema);
+        PendingWrites.MapSharedTables(b);
+
+        b.Entity<Location>(e =>
+        {
+            e.ToTable("Locations");
+            e.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.NameAr).HasMaxLength(200);
+            e.Property(x => x.Path).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.TimeZone).HasMaxLength(64);
+            e.Property(x => x.AreaSquareMetres).HasPrecision(12, 2);
+            e.Property(x => x.CustomFieldsJson).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.Code }).IsUnique().HasFilter("[IsArchived] = 0");
+            e.HasIndex(x => new { x.TenantId, x.Path });
+            e.HasIndex(x => new { x.TenantId, x.ParentId });
+            e.HasOne<Location>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<AssetClass>(e =>
+        {
+            e.ToTable("AssetClasses");
+            e.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.NameAr).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.Code }).IsUnique().HasFilter("[IsArchived] = 0");
+            e.HasOne<AssetClass>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<CustomFieldDefinition>(e =>
+        {
+            e.ToTable("CustomFieldDefinitions");
+            e.Property(x => x.Key).HasMaxLength(50).IsRequired();
+            e.Property(x => x.LabelEn).HasMaxLength(200).IsRequired();
+            e.Property(x => x.LabelAr).HasMaxLength(200);
+            e.Property(x => x.ChoicesJson).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.Target, x.Key }).IsUnique().HasFilter("[IsArchived] = 0");
+            e.HasOne<AssetClass>().WithMany().HasForeignKey(x => x.AssetClassId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        base.OnModelCreating(b);
+    }
+}

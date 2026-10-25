@@ -7,5 +7,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <ProjectReference Include="..\..\Modules\Platform\Fms.Platform\Fms.Platform.csproj" />
+    <ProjectReference Include="..\..\Modules\Facilities\Fms.Facilities\Fms.Facilities.csproj" />
   </ItemGroup>
 </Project>
