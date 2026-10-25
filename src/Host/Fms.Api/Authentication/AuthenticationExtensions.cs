@@ -139,5 +139,6 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentU
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated == true;
     public string? Subject => User?.FindFirst("sub")?.Value;
     public string? Provider => User?.FindFirst(FmsClaims.Provider)?.Value;
+    public Guid? UserId => accessor.HttpContext?.Items[UserProvisioningMiddleware.UserIdItem] as Guid?;
     public Guid? TenantId => Guid.TryParse(User?.FindFirst(FmsClaims.TenantId)?.Value, out var id) ? id : null;
 }

@@ -12,21 +12,25 @@
 | API | `/health/live`, `/health/ready`, `/api/v1/system/info`, `/api/v1/auth/providers`, `/api/v1/me`, RFC 7807 problem details |
 | Sign-in | OIDC bearer authentication for multiple providers (Entra ID, Google, generic OIDC), server-side tenant mapping, forged `fms_*` claims stripped, fallback policy requires sign-in and a tenant (ADR-0004) |
 | Web | React/TS/Vite shell, i18n (English, Arabic), RTL via `dir`, logical CSS, translation-key parity test |
+| Database | `Fms.Platform` module: `Tenants`, `TenantIdentityMappings`, `Users`, `AuditEvents`; EF Core migration; **SQL Server row-level security** (SESSION_CONTEXT filter and block predicates) on tenant tables; **append-only trigger** on `AuditEvents`; DB-backed tenant directory; users created on first sign-in, deactivated users refused; `/health/ready` checks the DB |
+| Migrator | `Fms.Migrator` one-shot host: applies migrations, seeds the on-prem tenant, creates the least-privileged app login; idempotent |
 | Packaging | `Dockerfile.api`, `web/Dockerfile`, `docker-compose.onprem.yml`, CI workflow |
 
 ## Tests
-46 .NET tests (29 unit, 17 API) and 2 web tests pass locally. Covered: cross-tenant read, write, storage, cache and tenant-switch
+72 .NET tests (29 unit, 17 API, 26 integration on real SQL Server via Testcontainers) and 2 web tests pass locally. Covered: cross-tenant read, write, storage, cache and tenant-switch
 attempts; signed-token acceptance; and rejection of unsigned, forged-signature, expired, wrong-audience, wrong-issuer and
 unmapped-tenant tokens, plus forged `fms_tid` claims. Token tests use a local signing key, not a real identity provider.
+Integration tests connect as a restricted login (not the owner). Disabling the security policy and trigger makes 9 of the
+isolation tests fail, so they do guard those controls. They need Docker.
 
 ## Not done yet (known gaps, still Phase 0 or later)
 - **Web sign-in**: the React app has no login screen yet (needs PKCE client, e.g. oidc-client-ts, tested against a real provider).
-- **Users and roles**: no user table, roles or permissions; a token proves identity only. Tenant directory is configuration-backed
-  (`Authentication:TenantMappings`), not yet database-backed. Sign-in has not been tried against real Entra/Google.
+- **Roles and permissions**: users exist but have no roles or permissions yet; a token proves identity only. Tenant onboarding is manual (rows in `Tenants`
+  and `TenantIdentityMappings`); no admin API or UI. Without a connection string the API falls back to the config-backed directory
+  (`Authentication:TenantMappings`) for local dev and tests. Sign-in has not been tried against real Entra/Google.
 - **On-prem local accounts** (sites with no identity provider) are not supported.
-- **SQL Server**: tenant isolation tests use the EF in-memory provider. No migrations, no SQL Server context, no Testcontainers
-  tests, no SQL row-level security yet.
 - **Azure Blob / S3 backends, durable queue, outbox, worker and migrator hosts**, OpenTelemetry/Serilog, Bicep/Helm.
 - **Licensing**: on-prem provider is a placeholder that reports unlicensed; signed license validation is roadmap phase 8.
-- **Docker images and compose file were not built or run here** (no Docker in this environment); CI builds the images.
+- **Docker images and the compose stack were not built here**: this sandbox's proxy certificate is untrusted inside build containers, so
+  NuGet/npm fail there. The migrator and API were run directly against a SQL Server container instead. CI builds the images.
 - Hijri/Gregorian date handling and Arabic documents are not started.

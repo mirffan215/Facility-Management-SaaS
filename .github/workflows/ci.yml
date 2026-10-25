@@ -20,6 +20,7 @@ jobs:
         run: |
           dotnet list Fms.sln package --vulnerable --include-transitive 2>&1 | tee vuln.txt
           ! grep -q "has the following vulnerable packages" vuln.txt
+      # Integration tests start SQL Server with Testcontainers; Docker is available on ubuntu-latest.
       - run: dotnet test Fms.sln --no-build -c Release
 
   web:
@@ -40,4 +41,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -f Dockerfile.api -t fms-api .
+      - run: docker build -f Dockerfile.migrator -t fms-migrator .
       - run: docker build -t fms-web web

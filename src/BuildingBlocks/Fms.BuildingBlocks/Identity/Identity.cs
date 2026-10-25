@@ -25,4 +25,7 @@ public interface ICurrentUser
 
     string? Provider { get; }
     Guid? TenantId { get; }
+
+    /// <summary>The FMS user record, once the user has been provisioned for this request.</summary>
+    Guid? UserId { get; }
 }

@@ -16,8 +16,6 @@ public abstract class TenantDbContext(DbContextOptions options, ITenantContext t
     protected Guid CurrentTenantId => tenant.TenantId ?? Guid.Empty;
     protected bool IsPlatformScope => tenant.IsPlatform;
 
-    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -1,5 +1,5 @@
 # On-premise reference deployment: single tenant, local file storage, customer-run SQL Server.
-# The database is not used by the API yet (Phase 0); it is included so the topology is final.
+# The migrator (owner login) applies migrations and creates the least-privileged application login; the API uses only that login.
 services:
   sql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -7,13 +7,33 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env}
     volumes: ["sqldata:/var/opt/mssql"]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 12
+  migrator:
+    build: { context: ., dockerfile: Dockerfile.migrator }
+    depends_on: { sql: { condition: service_healthy } }
+    restart: "no"
+    environment:
+      ConnectionStrings__Migrator: Server=sql;Database=Fms;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Deployment__Mode: OnPrem
+      Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
+      Deployment__TenantName: ${FMS_TENANT_NAME:-Default}
+      FMS_APP_LOGIN: fms_app
+      FMS_APP_LOGIN_PASSWORD: ${FMS_APP_LOGIN_PASSWORD:?copy .env.example to .env}
   api:
     build: { context: ., dockerfile: Dockerfile.api }
-    depends_on: [sql]
+    depends_on: { migrator: { condition: service_completed_successfully } }
     environment:
+      ConnectionStrings__Default: Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True
       Deployment__Mode: OnPrem
       Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
       Deployment__LocalStoragePath: /data/files
+      # Configure at least one identity provider, e.g.:
+      # Authentication__Providers__0__Name: corp
+      # Authentication__Providers__0__Authority: https://idp.example.com
+      # Authentication__Providers__0__Audience: api://fms
     volumes: ["files:/data/files"]
     ports: ["8080:8080"]
   web:

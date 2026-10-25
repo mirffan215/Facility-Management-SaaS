@@ -17,6 +17,7 @@ public sealed class TenantIsolationTests
     private sealed class TestDb(DbContextOptions options, ITenantContext tenant) : TenantDbContext(options, tenant)
     {
         public DbSet<Widget> Widgets => Set<Widget>();
+        public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     }
 
     private static readonly Guid TenantA = Guid.NewGuid();
