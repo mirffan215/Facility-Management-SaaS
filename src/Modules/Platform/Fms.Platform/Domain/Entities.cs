@@ -33,3 +33,30 @@ public sealed class User : ITenantOwned
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastSignInAt { get; set; }
 }
+
+/// <summary>A named set of permissions within a tenant. System roles are defined in code and kept in sync; they cannot be edited.</summary>
+public sealed class Role : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public string Name { get; set; } = "";
+    public bool IsSystem { get; set; }
+}
+
+public sealed class RolePermission : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid RoleId { get; set; }
+    public string Permission { get; set; } = "";
+}
+
+public sealed class UserRole : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid UserId { get; set; }
+    public Guid RoleId { get; set; }
+    public Guid? GrantedBy { get; set; }
+    public DateTimeOffset GrantedAt { get; set; }
+}

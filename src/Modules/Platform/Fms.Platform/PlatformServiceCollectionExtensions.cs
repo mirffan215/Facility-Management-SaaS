@@ -1,5 +1,6 @@
 using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Persistence;
+using Fms.BuildingBlocks.Security;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Persistence;
 using Fms.Platform.Services;
@@ -24,6 +25,9 @@ public static class PlatformServiceCollectionExtensions
 
         services.Replace(ServiceDescriptor.Scoped<ITenantDirectory, DbTenantDirectory>());
         services.AddScoped<IUserProvisioner, UserProvisioner>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IAuditPort, AuditPort>();
+        services.AddScoped<AccessAdministration>();
         services.AddHealthChecks().AddDbContextCheck<PlatformDbContext>("platform-db", tags: ["ready"]);
         return services;
     }

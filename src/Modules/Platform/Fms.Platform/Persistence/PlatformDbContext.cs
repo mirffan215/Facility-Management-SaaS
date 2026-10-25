@@ -12,6 +12,9 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantIdentityMapping> TenantIdentityMappings => Set<TenantIdentityMapping>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -39,6 +42,32 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
             e.Property(x => x.Email).HasMaxLength(320);
             e.Property(x => x.DisplayName).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.Provider, x.Subject }).IsUnique();
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<Role>(e =>
+        {
+            e.ToTable("Roles");
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<RolePermission>(e =>
+        {
+            e.ToTable("RolePermissions");
+            e.Property(x => x.Permission).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.RoleId, x.Permission }).IsUnique();
+            e.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<UserRole>(e =>
+        {
+            e.ToTable("UserRoles");
+            e.HasIndex(x => new { x.UserId, x.RoleId }).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         });
 

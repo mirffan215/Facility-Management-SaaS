@@ -1,7 +1,10 @@
 using Fms.BuildingBlocks.Deployment;
+using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Domain;
 using Fms.Platform.Persistence;
+using Fms.Platform.Security;
+using Fms.Platform.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +18,8 @@ var migratorConnection = config.GetConnectionString("Migrator")
 
 var tenantContext = new TenantContext();
 using var platformScope = tenantContext.BeginPlatformScope();
-await using var db = new PlatformDbContext(new DbContextOptionsBuilder<PlatformDbContext>().UseSqlServer(migratorConnection).Options, tenantContext);
+await using var db = new PlatformDbContext(new DbContextOptionsBuilder<PlatformDbContext>().UseSqlServer(migratorConnection)
+    .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 
 Console.WriteLine("Applying migrations...");
 await db.Database.MigrateAsync();
@@ -30,6 +34,28 @@ if (deployment.Mode == DeploymentMode.OnPrem)
         await db.SaveChangesAsync();
         Console.WriteLine($"Seeded on-prem tenant {id}.");
     }
+}
+
+// Keep every tenant's system roles current and, when asked, make the first administrator. A new tenant has nobody who can
+// grant roles, so this is the only way in; later admins are made through the API.
+foreach (var tenantId in await db.Tenants.Select(t => t.Id).ToListAsync())
+{
+    await SystemRoleSync.EnsureAsync(db, tenantId);
+}
+
+if (config["FMS_INITIAL_ADMIN"] is { Length: > 0 } initialAdmin)
+{
+    var parts = initialAdmin.Split(':', 2);
+    var tenantId = deployment.Mode == DeploymentMode.OnPrem
+        ? deployment.SingleTenantId!.Value
+        : Guid.Parse(config["FMS_INITIAL_ADMIN_TENANT"] ?? throw new InvalidOperationException("FMS_INITIAL_ADMIN_TENANT is required in SaaS mode."));
+    if (parts.Length != 2 || parts.Any(string.IsNullOrWhiteSpace))
+    {
+        throw new InvalidOperationException("FMS_INITIAL_ADMIN must be '<provider>:<subject>'.");
+    }
+
+    await InitialAdmin.EnsureAsync(db, tenantId, parts[0], parts[1]);
+    Console.WriteLine($"Administrator '{initialAdmin}' ready in tenant {tenantId}.");
 }
 
 var appLogin = config["FMS_APP_LOGIN"];

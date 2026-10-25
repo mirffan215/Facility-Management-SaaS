@@ -2,6 +2,8 @@ using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Platform.Domain;
 using Fms.Platform.Persistence;
+using Fms.Platform.Services;
+using Fms.Platform.Security;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MsSql;
@@ -42,6 +44,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
             owner.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owner.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owner.SaveChangesAsync();
+            await SystemRoleSync.EnsureAsync(owner, TenantA);
+            await SystemRoleSync.EnsureAsync(owner, TenantB);
         }
 
         await using (var conn = new SqlConnection(OwnerConnectionString))

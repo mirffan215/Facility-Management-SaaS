@@ -21,6 +21,8 @@ services:
       Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
       Deployment__TenantName: ${FMS_TENANT_NAME:-Default}
       FMS_APP_LOGIN: fms_app
+      # First administrator, as <provider>:<subject> (the identity provider's stable user id). Later admins are made through the API.
+      FMS_INITIAL_ADMIN: ${FMS_INITIAL_ADMIN:-}
       FMS_APP_LOGIN_PASSWORD: ${FMS_APP_LOGIN_PASSWORD:?copy .env.example to .env}
   api:
     build: { context: ., dockerfile: Dockerfile.api }
