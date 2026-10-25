@@ -22,6 +22,8 @@ internal sealed class FacilitiesScope : IAsyncDisposable
     public required FacilitiesDbContext Db { get; init; }
     public required LocationService Locations { get; init; }
     public required CustomFieldService CustomFields { get; init; }
+    public required AssetClassService Classes { get; init; }
+    public required AssetService Assets { get; init; }
     public required Guid Tenant { get; init; }
 
     public static FacilitiesScope For(SqlServerFixture sql, Guid tenant, TimeProvider? clock = null)
@@ -35,6 +37,8 @@ internal sealed class FacilitiesScope : IAsyncDisposable
             Tenant = tenant,
             Locations = new LocationService(db, audit, clock),
             CustomFields = new CustomFieldService(db, audit),
+            Classes = new AssetClassService(db, audit),
+            Assets = new AssetService(db, audit, clock),
         };
     }
 
@@ -57,6 +61,28 @@ internal sealed class FacilitiesScope : IAsyncDisposable
         var space = await NewAsync(LocationType.Space, floor.Id);
         return (site, building, floor, space);
     }
+
+    public async Task<AssetClassDto> NewClassAsync(string? code = null, Guid? parent = null)
+    {
+        var r = await Classes.CreateAsync(new SaveAssetClassRequest(parent, code ?? Code("C"), "Class " + Guid.NewGuid().ToString("N")[..6], null, null));
+        Assert.True(r.IsOk, r.Message ?? string.Join(";", r.Errors?.Select(e => $"{e.Key}:{string.Join(',', e.Value)}") ?? []));
+        return r.Value!;
+    }
+
+    public static CreateAssetRequest AssetRequest(Guid classId, Guid locationId, string? code = null, Guid? parent = null, bool active = false,
+        DateOnly? install = null, DateOnly? warranty = null, string? name = null, string? serial = null, Dictionary<string, JsonElement>? fields = null) =>
+        new(code ?? Code("A"), name ?? "Asset", null, classId, locationId, parent, null, null, null, serial, install, warranty, fields, active);
+
+    public async Task<AssetDto> NewAssetAsync(Guid classId, Guid locationId, string? code = null, Guid? parent = null, bool active = false, string? name = null)
+    {
+        var r = await Assets.CreateAsync(AssetRequest(classId, locationId, code, parent, active, name: name));
+        Assert.True(r.IsOk, r.Message ?? string.Join(";", r.Errors?.Select(e => $"{e.Key}:{string.Join(',', e.Value)}") ?? []));
+        return r.Value!;
+    }
+
+    public static SaveAssetRequest ToSave(AssetDto a) =>
+        new(a.Code, a.Name, a.NameAr, a.AssetClassId, a.LocationId, a.ParentAssetId, a.Criticality, a.Manufacturer, a.Model, a.SerialNumber,
+            a.InstallDate, a.WarrantyExpiry, a.CustomFields.ToDictionary(k => k.Key, k => k.Value), a.RowVersion);
 
     public static Dictionary<string, JsonElement> Fields(object values) =>
         JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(JsonSerializer.Serialize(values))!;

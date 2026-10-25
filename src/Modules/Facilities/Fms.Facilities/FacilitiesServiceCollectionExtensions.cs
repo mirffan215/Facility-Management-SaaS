@@ -18,6 +18,11 @@ public static class FacilitiesServiceCollectionExtensions
 
         services.AddScoped<LocationService>();
         services.AddScoped<CustomFieldService>();
+        services.AddScoped<AssetClassService>();
+        services.AddScoped<AssetService>();
+        services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<FacilitiesOptions>, FacilitiesOptionsValidator>();
+        services.AddOptions<FacilitiesOptions>().BindConfiguration(FacilitiesOptions.SectionName).ValidateOnStart();
+        services.AddSingleton<AssetLabelService>();
         services.AddHealthChecks().AddDbContextCheck<FacilitiesDbContext>("facilities-db", tags: ["ready"]);
         return services;
     }

@@ -178,6 +178,8 @@ public sealed class LocationService(FacilitiesDbContext db, IAuditPort audit, Ti
 
         if (await db.Locations.AnyAsync(l => l.ParentId == id && !l.IsArchived, ct))
             return Result<LocationDto>.Conflict("Archive or move the locations inside it first.");
+        if (await db.Assets.AnyAsync(a => a.LocationId == id && a.Status != AssetStatus.Retired, ct))
+            return Result<LocationDto>.Conflict("Move or retire the assets in it first.");
 
         location.IsArchived = true;
         location.UpdatedAt = clock.GetUtcNow();

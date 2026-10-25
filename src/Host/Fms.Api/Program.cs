@@ -35,6 +35,13 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Responses are data, never pages: browsers must not guess a content type (e.g. treat an uploaded file as HTML).
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    await next(context);
+});
+
 app.UseExceptionHandler();
 app.UseSerilogRequestLogging();
 app.UseStatusCodePages();

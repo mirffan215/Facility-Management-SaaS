@@ -12,6 +12,8 @@ public static class FacilitiesEndpoints
     {
         MapLocations(v1.MapGroup("/locations"));
         MapCustomFields(v1.MapGroup("/custom-fields"));
+        MapAssetClasses(v1.MapGroup("/asset-classes"));
+        MapAssets(v1.MapGroup("/assets"));
     }
 
     private static void MapLocations(RouteGroupBuilder g)
@@ -61,5 +63,60 @@ public static class FacilitiesEndpoints
 
         g.MapPost("/{id:guid}/restore", async (Guid id, CustomFieldService s, CancellationToken ct) => (await s.SetArchivedAsync(id, false, ct)).ToHttp())
             .RequirePermission(Permissions.CustomFieldsManage);
+    }
+
+    private static void MapAssetClasses(RouteGroupBuilder g)
+    {
+        g.MapGet("", async (AssetClassService s, bool? includeArchived, CancellationToken ct) => Results.Ok(await s.ListAsync(includeArchived ?? false, ct)))
+            .RequirePermission(Permissions.AssetsRead);
+
+        g.MapPost("", async (SaveAssetClassRequest r, AssetClassService s, CancellationToken ct) =>
+                (await s.CreateAsync(r, ct)).ToHttp(c => Results.Created($"/api/v1/asset-classes/{c.Id}", c)))
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapPut("/{id:guid}", async (Guid id, SaveAssetClassRequest r, AssetClassService s, CancellationToken ct) => (await s.UpdateAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapPost("/{id:guid}/archive", async (Guid id, RowVersionRequest r, AssetClassService s, CancellationToken ct) => (await s.SetArchivedAsync(id, true, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapPost("/{id:guid}/restore", async (Guid id, RowVersionRequest r, AssetClassService s, CancellationToken ct) => (await s.SetArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsManage);
+    }
+
+    private static void MapAssets(RouteGroupBuilder g)
+    {
+        g.MapGet("", async (AssetService s, Guid? locationId, bool? includeSublocations, Guid? classId, AssetStatus? status, Criticality? criticality,
+                    Guid? parentAssetId, string? q, DateOnly? warrantyExpiresBefore, bool? includeRetired, int? page, int? pageSize, CancellationToken ct) =>
+                Results.Ok(await s.ListAsync(new AssetQuery(locationId, includeSublocations ?? true, classId, status, criticality, parentAssetId, q,
+                    warrantyExpiresBefore, includeRetired ?? false, page, pageSize), ct)))
+            .RequirePermission(Permissions.AssetsRead);
+
+        g.MapGet("/{id:guid}", async (Guid id, AssetService s, CancellationToken ct) => (await s.GetAsync(id, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsRead);
+
+        g.MapGet("/by-tag/{tag}", async (string tag, AssetService s, CancellationToken ct) => (await s.GetByTagAsync(tag, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsRead);
+
+        g.MapGet("/{id:guid}/qr.svg", async (Guid id, AssetService s, AssetLabelService labels, CancellationToken ct) =>
+            {
+                var asset = await s.GetAsync(id, ct);
+                if (!asset.IsOk) return asset.ToHttp();
+                return Results.Text(labels.QrSvg(AssetTag.Normalize(asset.Value!.TagCode)!), "image/svg+xml");
+            })
+            .RequirePermission(Permissions.AssetsRead);
+
+        g.MapPost("", async (CreateAssetRequest r, AssetService s, CancellationToken ct) =>
+                (await s.CreateAsync(r, ct)).ToHttp(a => Results.Created($"/api/v1/assets/{a.Id}", a)))
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapPut("/{id:guid}", async (Guid id, SaveAssetRequest r, AssetService s, CancellationToken ct) => (await s.UpdateAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapPost("/{id:guid}/status", async (Guid id, ChangeAssetStatusRequest r, AssetService s, CancellationToken ct) => (await s.ChangeStatusAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapPost("/{id:guid}/reissue-tag", async (Guid id, RowVersionRequest r, AssetService s, CancellationToken ct) => (await s.ReissueTagAsync(id, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.AssetsManage);
     }
 }

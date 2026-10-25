@@ -3,6 +3,8 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\Fms.BuildingBlocks\Fms.BuildingBlocks.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="QRCoder" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
