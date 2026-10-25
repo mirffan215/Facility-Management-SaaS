@@ -10,6 +10,7 @@ Status: design phase. See [docs/](docs/).
 - [Deployment models: SaaS vs on-premise](docs/deployment-models.md)
 - [Roadmap](docs/roadmap.md)
 - [Phase 0 summary](docs/phase-0-summary.md)
+- [Phase 1 summary](docs/phase-1-summary.md) (locations, assets, meters, documents, API list)
 - [ADRs](docs/adr/)
 
 ## Quick start
@@ -41,3 +42,10 @@ Storage__Provider=S3         Storage__S3__Bucket=fms  Storage__S3__Region=eu-wes
 Storage__Provider=S3         Storage__S3__Bucket=fms  Storage__S3__ServiceUrl=http://minio:9000  Storage__S3__ForcePathStyle=true
 ```
 Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export traces and metrics; logs are JSON on stdout.
+
+## Facilities settings
+```
+Facilities__PublicBaseUrl=https://fms.example.com     # QR labels encode https://fms.example.com/a/<tag>
+Facilities__MaxDocumentBytes=26214400                  # default 25 MB
+Facilities__MaxDocumentsPerAsset=200
+```

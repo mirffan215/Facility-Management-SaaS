@@ -22,3 +22,12 @@ Work order lifecycle: `Draft -> Requested -> Approved -> Assigned -> InProgress 
 (plus `Cancelled`, `Reopened`). Transitions are workflow-configurable per tenant within fixed safety rules.
 
 Sensitive fields (vendor bank details, ID numbers of visitors) use column-level encryption.
+
+## Implemented in Phase 1 (schema `facilities`)
+```
+Location (Site > Building > Floor > Space; materialised Path)          CustomFieldDefinition (Target, Key, Type, Choices, AssetClassId?)
+AssetClass (nested)  1-* Asset (Code, TagCode, Status, Criticality, ParentAssetId?, LocationId, CustomFieldsJson, RowVersion)
+Asset 1-* AssetDocument (hash, detected type, soft delete)
+Asset 1-* Meter (Cumulative | Gauge)  1-* MeterReading (append-only)  1-0..1 MeterReadingVoid (append-only)
+```
+See ADR-0008 for the rules behind these.
