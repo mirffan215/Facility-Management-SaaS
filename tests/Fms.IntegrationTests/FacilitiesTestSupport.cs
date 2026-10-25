@@ -24,13 +24,16 @@ internal sealed class FacilitiesScope : IAsyncDisposable
     public required CustomFieldService CustomFields { get; init; }
     public required AssetClassService Classes { get; init; }
     public required AssetService Assets { get; init; }
+    public required MeterService Meters { get; init; }
+    public Guid UserId { get; init; }
     public required Guid Tenant { get; init; }
 
     public static FacilitiesScope For(SqlServerFixture sql, Guid tenant, TimeProvider? clock = null)
     {
         clock ??= TimeProvider.System;
         var db = sql.Facilities(tenant);
-        var audit = new AuditPort(sql.PendingFor(db), new TestUser(), clock);
+        var user = new TestUser();
+        var audit = new AuditPort(sql.PendingFor(db), user, clock);
         return new FacilitiesScope
         {
             Db = db,
@@ -39,6 +42,8 @@ internal sealed class FacilitiesScope : IAsyncDisposable
             CustomFields = new CustomFieldService(db, audit),
             Classes = new AssetClassService(db, audit),
             Assets = new AssetService(db, audit, clock),
+            Meters = new MeterService(db, audit, user, clock),
+            UserId = user.UserId!.Value,
         };
     }
 
@@ -83,6 +88,13 @@ internal sealed class FacilitiesScope : IAsyncDisposable
     public static SaveAssetRequest ToSave(AssetDto a) =>
         new(a.Code, a.Name, a.NameAr, a.AssetClassId, a.LocationId, a.ParentAssetId, a.Criticality, a.Manufacturer, a.Model, a.SerialNumber,
             a.InstallDate, a.WarrantyExpiry, a.CustomFields.ToDictionary(k => k.Key, k => k.Value), a.RowVersion);
+
+    public async Task<MeterDto> NewMeterAsync(Guid assetId, MeterKind kind = MeterKind.Cumulative, string? name = null, decimal? min = null, decimal? max = null)
+    {
+        var r = await Meters.CreateAsync(assetId, new CreateMeterRequest(name ?? "Meter " + Guid.NewGuid().ToString("N")[..6], null, kind == MeterKind.Cumulative ? "kWh" : "°C", kind, min, max));
+        Assert.True(r.IsOk, r.Message ?? string.Join(";", r.Errors?.Select(e => $"{e.Key}:{string.Join(',', e.Value)}") ?? []));
+        return r.Value!;
+    }
 
     public static Dictionary<string, JsonElement> Fields(object values) =>
         JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(JsonSerializer.Serialize(values))!;

@@ -14,6 +14,9 @@ public sealed class FacilitiesDbContext(DbContextOptions<FacilitiesDbContext> op
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<AssetClass> AssetClasses => Set<AssetClass>();
     public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<Meter> Meters => Set<Meter>();
+    public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
+    public DbSet<MeterReadingVoid> MeterReadingVoids => Set<MeterReadingVoid>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -68,6 +71,36 @@ public sealed class FacilitiesDbContext(DbContextOptions<FacilitiesDbContext> op
             e.HasOne<AssetClass>().WithMany().HasForeignKey(x => x.AssetClassId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Location>().WithMany().HasForeignKey(x => x.LocationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.ParentAssetId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<Meter>(e =>
+        {
+            e.ToTable("Meters");
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.NameAr).HasMaxLength(200);
+            e.Property(x => x.Unit).HasMaxLength(20).IsRequired();
+            e.Property(x => x.MinValue).HasPrecision(18, 4);
+            e.Property(x => x.MaxValue).HasPrecision(18, 4);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.Name }).IsUnique().HasFilter("[IsArchived] = 0");
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<MeterReading>(e =>
+        {
+            e.ToTable("MeterReadings");
+            e.Property(x => x.Value).HasPrecision(18, 4);
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.MeterId, x.ReadAt });
+            e.HasIndex(x => new { x.TenantId, x.MeterId, x.ClientId }).IsUnique().HasFilter("[ClientId] IS NOT NULL");
+            e.HasOne<Meter>().WithMany().HasForeignKey(x => x.MeterId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<MeterReadingVoid>(e =>
+        {
+            e.ToTable("MeterReadingVoids");
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => x.ReadingId).IsUnique();
+            e.HasOne<MeterReading>().WithMany().HasForeignKey(x => x.ReadingId).OnDelete(DeleteBehavior.Restrict);
         });
 
         b.Entity<CustomFieldDefinition>(e =>

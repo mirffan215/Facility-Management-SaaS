@@ -14,6 +14,7 @@ public static class FacilitiesEndpoints
         MapCustomFields(v1.MapGroup("/custom-fields"));
         MapAssetClasses(v1.MapGroup("/asset-classes"));
         MapAssets(v1.MapGroup("/assets"));
+        MapMeters(v1);
     }
 
     private static void MapLocations(RouteGroupBuilder g)
@@ -119,4 +120,48 @@ public static class FacilitiesEndpoints
         g.MapPost("/{id:guid}/reissue-tag", async (Guid id, RowVersionRequest r, AssetService s, CancellationToken ct) => (await s.ReissueTagAsync(id, r.RowVersion, ct)).ToHttp())
             .RequirePermission(Permissions.AssetsManage);
     }
+
+    private static void MapMeters(RouteGroupBuilder v1)
+    {
+        v1.MapGet("/assets/{assetId:guid}/meters", async (Guid assetId, MeterService s, bool? includeArchived, CancellationToken ct) =>
+                (await s.ListForAssetAsync(assetId, includeArchived ?? false, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersRead);
+
+        v1.MapPost("/assets/{assetId:guid}/meters", async (Guid assetId, CreateMeterRequest r, MeterService s, CancellationToken ct) =>
+                (await s.CreateAsync(assetId, r, ct)).ToHttp(m => Results.Created($"/api/v1/meters/{m.Id}", m)))
+            .RequirePermission(Permissions.MetersManage);
+
+        var g = v1.MapGroup("/meters");
+
+        g.MapGet("/{id:guid}", async (Guid id, MeterService s, CancellationToken ct) => (await s.GetAsync(id, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersRead);
+
+        g.MapPut("/{id:guid}", async (Guid id, UpdateMeterRequest r, MeterService s, CancellationToken ct) => (await s.UpdateAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersManage);
+
+        g.MapPost("/{id:guid}/archive", async (Guid id, RowVersionRequest r, MeterService s, CancellationToken ct) => (await s.SetArchivedAsync(id, true, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersManage);
+
+        g.MapPost("/{id:guid}/restore", async (Guid id, RowVersionRequest r, MeterService s, CancellationToken ct) => (await s.SetArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersManage);
+
+        g.MapGet("/{id:guid}/readings", async (Guid id, MeterService s, DateTimeOffset? from, DateTimeOffset? to, bool? includeVoided, int? page, int? pageSize, CancellationToken ct) =>
+                (await s.ListReadingsAsync(id, new ReadingQuery(from, to, includeVoided ?? false, page, pageSize), ct)).ToHttp())
+            .RequirePermission(Permissions.MetersRead);
+
+        // 201 for a new reading, 200 when the same ClientId was already stored (a safe retry).
+        g.MapPost("/{id:guid}/readings", async (Guid id, RecordReadingRequest r, MeterService s, CancellationToken ct) =>
+                (await s.RecordAsync(id, r, ct)).ToHttp(x => x.WasDuplicate ? Results.Ok(x.Reading) : Results.Created($"/api/v1/meters/{id}/readings", x.Reading)))
+            .RequirePermission(Permissions.MetersRecord);
+
+        g.MapPost("/readings/batch", async (BatchReadingsRequest r, MeterService s, CancellationToken ct) =>
+                (await s.RecordBatchAsync(r.Readings, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersRecord);
+
+        v1.MapPost("/meter-readings/{readingId:guid}/void", async (Guid readingId, VoidReadingRequest r, MeterService s, CancellationToken ct) =>
+                (await s.VoidAsync(readingId, r, ct)).ToHttp())
+            .RequirePermission(Permissions.MetersManage);
+    }
 }
+
+public sealed record BatchReadingsRequest(List<BatchReadingItem>? Readings);
