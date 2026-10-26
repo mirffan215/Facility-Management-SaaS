@@ -1,14 +1,310 @@
 {
-  "app": { "title": "إدارة المرافق" },
-  "language": { "label": "اللغة", "en": "English", "ar": "العربية" },
-  "system": {
-    "heading": "حالة النظام",
-    "mode": "نمط النشر",
-    "edition": "الإصدار",
-    "licensed": "مرخّص",
-    "yes": "نعم",
-    "no": "لا",
+  "app": {
+    "title": "إدارة المرافق"
+  },
+  "language": {
+    "label": "اللغة",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "calendar": {
+    "label": "التقويم",
+    "gregorian": "ميلادي",
+    "hijri": "هجري"
+  },
+  "nav": {
+    "main": "التنقل الرئيسي",
+    "locations": "المواقع",
+    "assets": "الأصول",
+    "import": "الاستيراد",
+    "setup": "الإعداد"
+  },
+  "auth": {
+    "prompt": "سجّل الدخول للمتابعة.",
+    "signInWith": "تسجيل الدخول عبر {{provider}}",
+    "signOut": "تسجيل الخروج",
+    "expired": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+    "failed": "تعذّر إكمال تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+    "noProviders": "لا توجد طريقة تسجيل دخول مُعدّة. تواصل مع المسؤول.",
+    "unreachable": "تعذّر الوصول إلى الخدمة. تحقق من اتصالك وأعد المحاولة."
+  },
+  "common": {
+    "actions": "الإجراءات",
+    "all": "الكل",
+    "archive": "أرشفة",
+    "archived": "مؤرشف",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "choose": "اختر…",
+    "collapse": "طيّ",
+    "confirm": "تأكيد",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "expand": "توسيع",
     "loading": "جارٍ التحميل…",
-    "error": "تعذّر الوصول إلى الخدمة."
+    "next": "التالي",
+    "no": "لا",
+    "noResults": "لا توجد نتائج مطابقة.",
+    "notSet": "غير محدد",
+    "pageOf": "صفحة {{page}} من {{pages}}",
+    "pagination": "الصفحات",
+    "previous": "السابق",
+    "reason": "السبب",
+    "reasonOptional": "السبب (اختياري)",
+    "reload": "إعادة تحميل",
+    "restore": "استعادة",
+    "results": "{{count}} نتيجة",
+    "save": "حفظ",
+    "search": "بحث",
+    "skipToContent": "انتقل إلى المحتوى",
+    "yes": "نعم"
+  },
+  "errors": {
+    "checkFields": "يرجى مراجعة الحقول المظللة.",
+    "conflict": "تم تغيير هذا العنصر من قبل شخص آخر. أعد التحميل وحاول مرة أخرى.",
+    "forbidden": "ليست لديك صلاحية لتنفيذ هذا الإجراء.",
+    "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "network": "تعذّر الوصول إلى الخدمة. تحقق من اتصالك.",
+    "noAccess": "ليس لحسابك وصول إلى أي قسم بعد. اطلب من المسؤول منحك دورًا.",
+    "noAccessTitle": "لا يوجد وصول",
+    "notFound": "غير موجود.",
+    "pageNotFound": "الصفحة غير موجودة",
+    "tooLarge": "الملف كبير جدًا (الحد الأقصى ٢٥ ميغابايت).",
+    "unsupportedType": "نوع الملف هذا غير مسموح به."
+  },
+  "customFields": {
+    "title": "معلومات إضافية"
+  },
+  "locationType": {
+    "Site": "موقع",
+    "Building": "مبنى",
+    "Floor": "طابق",
+    "Space": "مساحة"
+  },
+  "locations": {
+    "addChild": "إضافة {{type}}",
+    "address": "العنوان",
+    "archiveTitle": "أرشفة {{name}}؟",
+    "area": "المساحة (م²)",
+    "code": "الرمز",
+    "codeHint": "أحرف أو أرقام أو '.' أو '_' أو '-'. فريد بين المواقع النشطة.",
+    "editTitle": "تعديل الموقع",
+    "empty": "لا توجد مواقع بعد.",
+    "move": "نقل",
+    "moveTitle": "نقل {{name}}",
+    "name": "الاسم",
+    "nameAr": "الاسم (بالعربية)",
+    "newParent": "الموقع الأب الجديد",
+    "newSite": "موقع جديد",
+    "newTitle": "{{type}} جديد",
+    "selectOne": "اختر موقعًا لعرض تفاصيله.",
+    "timeZone": "المنطقة الزمنية",
+    "timeZoneHint": "مثال: Asia/Riyadh.",
+    "tree": "شجرة المواقع",
+    "type": "النوع",
+    "under": "داخل {{parent}}",
+    "viewAssets": "عرض الأصول هنا"
+  },
+  "assetStatus": {
+    "Planned": "مخطَّط",
+    "Active": "قيد التشغيل",
+    "UnderMaintenance": "تحت الصيانة",
+    "OutOfService": "خارج الخدمة",
+    "Retired": "مُخرَج من الخدمة نهائيًا"
+  },
+  "criticality": {
+    "Low": "منخفضة",
+    "Medium": "متوسطة",
+    "High": "عالية",
+    "Critical": "حرجة"
+  },
+  "warranty": {
+    "None": "بدون ضمان",
+    "Active": "ضمن الضمان",
+    "ExpiringSoon": "ينتهي قريبًا",
+    "Expired": "منتهي"
+  },
+  "assets": {
+    "changeStatus": "تغيير الحالة",
+    "class": "الفئة",
+    "code": "رقم الأصل",
+    "codeHint": "يُطبع على الملصقات. لا يمكن إعادة استخدامه حتى بعد إخراج الأصل من الخدمة.",
+    "criticality": "الأهمية",
+    "editTitle": "تعديل الأصل",
+    "empty": "لا توجد أصول مطابقة.",
+    "export": "تصدير CSV",
+    "includeRetired": "تضمين الأصول المُخرَجة",
+    "installDate": "تاريخ التركيب",
+    "location": "الموقع",
+    "manufacturer": "الشركة المصنّعة",
+    "model": "الطراز",
+    "name": "الاسم",
+    "nameAr": "الاسم (بالعربية)",
+    "new": "أصل جديد",
+    "newStatus": "الحالة الجديدة",
+    "newTitle": "أصل جديد",
+    "noParts": "لا توجد أجزاء.",
+    "partOf": "جزء من",
+    "partOfHint": "اكتب رقم الأصل الذي يتبع له هذا الأصل.",
+    "partOfNotFound": "لا يوجد أصل بهذا الرقم.",
+    "parts": "الأجزاء",
+    "retireWarning": "الأصل المُخرَج من الخدمة سجل مغلق ولا يمكن تعديله.",
+    "searchHint": "الرقم أو الاسم أو الرقم التسلسلي…",
+    "sections": "أقسام الأصل",
+    "serial": "الرقم التسلسلي",
+    "startActive": "البدء في الخدمة (وإلا يكون مخطَّطًا)",
+    "status": "الحالة",
+    "statusReason": "السبب: {{reason}}",
+    "warranty": "الضمان",
+    "warrantyExpiry": "انتهاء الضمان",
+    "tabs": {
+      "details": "التفاصيل",
+      "meters": "العدّادات",
+      "documents": "الملفات",
+      "label": "الملصق"
+    }
+  },
+  "meterKind": {
+    "Cumulative": "تراكمي",
+    "Gauge": "لحظي"
+  },
+  "readingSource": {
+    "Manual": "يدوي",
+    "Mobile": "جوال",
+    "Import": "استيراد",
+    "Device": "جهاز"
+  },
+  "meters": {
+    "add": "إضافة عدّاد",
+    "empty": "لا توجد عدّادات لهذا الأصل بعد.",
+    "history": "سجل القراءات",
+    "isReset": "تم استبدال العدّاد أو إعادة ضبطه (يسمح بقيمة أقل)",
+    "kind": "النوع",
+    "kindHint": {
+      "Cumulative": "إجمالي متراكم يرتفع فقط، مثل الطاقة أو ساعات التشغيل.",
+      "Gauge": "قيمة تتحرك في الاتجاهين، مثل درجة الحرارة."
+    },
+    "max": "أقصى قيمة معقولة",
+    "min": "أدنى قيمة معقولة",
+    "name": "الاسم",
+    "nameAr": "الاسم (بالعربية)",
+    "noReadings": "لا توجد قراءات",
+    "note": "ملاحظة",
+    "readAt": "وقت القياس",
+    "readAtOptional": "وقت القياس (فارغ = الآن)",
+    "record": "تسجيل قراءة",
+    "recorded": "تم تسجيل القراءة.",
+    "reset": "إعادة ضبط",
+    "showVoided": "إظهار القراءات الملغاة",
+    "source": "المصدر",
+    "title": "العدّادات",
+    "unit": "الوحدة",
+    "unitHint": "مثال: kWh أو h أو °C. لا يمكن تغييرها لاحقًا.",
+    "value": "القيمة",
+    "void": "إلغاء",
+    "voidTitle": "إلغاء القراءة {{value}}؟",
+    "voided": "ملغاة"
+  },
+  "docKind": {
+    "Manual": "دليل",
+    "Warranty": "ضمان",
+    "Certificate": "شهادة",
+    "Photo": "صورة",
+    "Drawing": "مخطط",
+    "Other": "أخرى"
+  },
+  "documents": {
+    "deleteTitle": "حذف {{name}}؟",
+    "description": "الوصف",
+    "download": "تنزيل",
+    "empty": "لا توجد ملفات بعد.",
+    "file": "الملف",
+    "fileHint": "PDF أو صورة أو Word أو Excel أو نص. حتى ٢٥ ميغابايت.",
+    "fileName": "الملف",
+    "kind": "النوع",
+    "size": "الحجم",
+    "title": "الملفات",
+    "upload": "رفع",
+    "uploadedAt": "تاريخ الرفع"
+  },
+  "label": {
+    "print": "طباعة الملصق",
+    "qrAlt": "رمز QR للأصل {{code}}",
+    "reissue": "إعادة إصدار رمز الملصق",
+    "reissueWarning": "سيحل رمز جديد محل الرمز الحالي. الملصقات المطبوعة بالرمز القديم ستتوقف عن العمل.",
+    "title": "ملصق الأصل"
+  },
+  "import": {
+    "allOrNothing": "لا يُحفظ شيء ما لم تكن جميع الصفوف صحيحة.",
+    "check": "فحص الملف",
+    "code": "الرمز",
+    "done": "تم استيراد {{count}} صفًا.",
+    "exportCurrent": "تنزيل البيانات الحالية",
+    "file": "ملف CSV",
+    "fileHint": "ملف CSV بترميز UTF-8، حتى ٢ ميغابايت و٢٬٠٠٠ صف.",
+    "hint": {
+      "locations": "الأعمدة: type, code, parentCode, name, nameAr, address, timeZone, areaSquareMetres. يجب أن يكون الموقع الأب موجودًا أو مذكورًا في صف سابق.",
+      "assets": "الأعمدة: code, name, nameAr, classCode, locationCode, parentAssetCode, criticality, status, manufacturer, model, serialNumber, installDate, warrantyExpiry. يجب أن تكون الفئات والمواقع موجودة مسبقًا."
+    },
+    "intro": "أنشئ عدة مواقع أو أصول من جدول بيانات محفوظ بصيغة CSV.",
+    "line": "السطر",
+    "onlyErrors": "إظهار الصفوف التي بها مشكلات فقط",
+    "outcome": {
+      "Created": "سليم",
+      "Error": "مشكلة"
+    },
+    "problem": "المشكلة",
+    "problems": "{{count}} صفًا به مشكلات. لم يُحفظ شيء.",
+    "report": "تقرير الاستيراد",
+    "result": "النتيجة",
+    "run": "استيراد",
+    "target": {
+      "locations": "المواقع",
+      "assets": "الأصول"
+    },
+    "template": "تنزيل القالب",
+    "title": "الاستيراد",
+    "what": "ما الذي سيتم استيراده",
+    "wouldCreate": "الملف صالح. سيتم إنشاء {{count}} صفًا."
+  },
+  "fieldType": {
+    "Text": "نص",
+    "Number": "رقم",
+    "Date": "تاريخ",
+    "Boolean": "نعم/لا",
+    "Choice": "اختيار"
+  },
+  "fieldTarget": {
+    "Asset": "الأصول",
+    "Location": "المواقع"
+  },
+  "setup": {
+    "title": "الإعداد",
+    "sections": "أقسام الإعداد",
+    "classes": "فئات الأصول",
+    "fields": "الحقول المخصصة",
+    "classesHint": "تصنيفات مثل التكييف أو الكهرباء أو المصاعد. ينتمي كل أصل إلى فئة واحدة.",
+    "newClass": "فئة أصول جديدة",
+    "parentClass": "الفئة الأم",
+    "noClasses": "لا توجد فئات أصول بعد. أنشئ فئة قبل إضافة الأصول.",
+    "fieldsHint": "معلومات إضافية تُسجَّل على المواقع أو الأصول. لا يمكن تغيير المفتاح والنوع بعد الإنشاء.",
+    "newField": "حقل مخصص جديد",
+    "appliesTo": "ينطبق على",
+    "key": "المفتاح",
+    "keyHint": "أحرف إنجليزية صغيرة وأرقام و'_'، ويبدأ بحرف.",
+    "labelEn": "التسمية (بالإنجليزية)",
+    "labelAr": "التسمية (بالعربية)",
+    "type": "النوع",
+    "onlyForClass": "لفئة محددة فقط",
+    "allClasses": "كل الفئات",
+    "choices": "الخيارات",
+    "choicesHint": "خيار واحد في كل سطر.",
+    "required": "إلزامي",
+    "requiredBadge": "إلزامي",
+    "noFields": "لا توجد حقول مخصصة بعد."
+  },
+  "scan": {
+    "title": "مسح ملصق الأصل",
+    "notFound": "لا يوجد أصل مطابق لهذا الملصق. ربما تم استبداله أو أنه يتبع جهة أخرى."
   }
 }

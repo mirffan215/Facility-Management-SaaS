@@ -12,3 +12,6 @@ dist/
 test-results/
 playwright-report/
 *.tsbuildinfo
+web/e2e/screens/
+web/test-results/
+web/playwright-report/

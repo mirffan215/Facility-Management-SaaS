@@ -20,7 +20,7 @@ builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(Deployme
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
 builder.Services.AddFmsStorage(builder.Configuration);
-builder.Services.AddFmsAuthentication(builder.Configuration);
+builder.Services.AddFmsAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddFmsPermissions();
 if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } connectionString)
 {

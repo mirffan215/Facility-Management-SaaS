@@ -31,9 +31,28 @@ rule conflicts), 413 (file too large), 415 (file type not allowed).
 main rules above are covered (not every limit: the 5,000-node tree cap and the asset-class depth limit are not), plus tenant isolation at three levels (service, API and raw SQL as the restricted login) for locations, assets,
 meters and documents. Mutation checks (removing the retire-with-parts guard and the archive-with-assets guard) fail the tests as they should.
 
+## Web app (Phase 1b)
+Sign-in (OIDC + PKCE) and screens for everything above, in English and Arabic (right-to-left, Hijri/Gregorian toggle), permission-aware:
+location tree (create, edit, move, archive), asset list with filters and CSV export, asset page (details, parts, meters with reading entry and
+voiding, files, QR label with print), bulk import with check-first and a per-line problem report, setup (asset classes, custom fields), and
+the `/a/<tag>` address that QR labels open. See ADR-0009 for the decisions and `web/` for the code.
+
+Tested at three levels: 49 unit/component tests; a 16-step full-stack browser journey (`scripts/e2e-full.sh`: real SQL Server, migrator, API, web
+build and a fake OpenID Connect provider doing real PKCE) covering sign-in, setup, locations, assets, meters, files, labels, QR scan, status, export,
+import, Arabic/RTL/Hijri, a role-restricted user, sign-out and axe accessibility scans in both languages; and the 338 .NET tests. The accessibility
+scan was checked by deliberately breaking colour contrast, which made it fail.
+
+Bugs the browser tests found and fixed: required-field markers inside label text; language not remembered across reloads (and no right-to-left
+on first load); built files colliding with the `/assets/<id>` page URL; nginx silently dropping the security headers on the main page; QR labels
+having no page to open; an empty Arabic name pushed to the wrong edge; mixed Arabic/English breadcrumbs scrambling their order.
+
 ## Not done / known gaps
-- **No web screens yet.** The React app still has no sign-in, so locations, assets and meters can only be used through the API. The
-  sign-in screen and these screens are the next step.
+- **No screens for user and role administration** (the API exists); people get roles through the API for now. A new user with no role sees a
+  clear "no access" message. No screens yet for editing/archiving meters, editing asset classes or custom-field definitions (create and archive only).
+- **Sessions end when the token expires** (no silent renewal yet); the person signs in again. Not yet tried against real Entra or Google, only
+  the fake provider. The web container image and nginx config were run against the built files here, but the Docker image build itself was not.
+- **No offline mode** for the technician PWA yet (the API supports idempotent offline sync; the screens do not use it). Dark mode is styled but
+  not scanned for contrast. The JavaScript bundle is one file (about 148 KB gzipped); route-level splitting is a later optimisation.
 - **No malware scanning.** `IFileScanner` is a seam; the default accepts everything. Do not accept files from untrusted uploaders until a
   real scanner is plugged in. There is no per-tenant storage quota, no retention/purge policy for kept bytes, and an upload whose database
   save fails leaves an orphaned (harmless, write-once) object.

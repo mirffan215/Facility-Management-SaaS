@@ -17,7 +17,8 @@ Status: design phase. See [docs/](docs/).
 ```
 dotnet test Fms.sln
 dotnet run --project src/Host/Fms.Api            # SaaS mode, http://localhost:5080
-cd web && npm ci && npm run dev                  # http://localhost:5173
+cd web && npm ci && npm run dev                  # http://localhost:5173 (proxies /api to :5080)
+scripts/e2e-full.sh                              # full-stack browser test (needs Docker, .NET, Node, Chromium)
 cp .env.example .env && docker compose -f docker-compose.onprem.yml up --build   # on-prem topology
 ```
 
@@ -49,3 +50,13 @@ Facilities__PublicBaseUrl=https://fms.example.com     # QR labels encode https:/
 Facilities__MaxDocumentBytes=26214400                  # default 25 MB
 Facilities__MaxDocumentsPerAsset=200
 ```
+
+## Web app sign-in
+Register the web app at your identity provider as a **public client using authorization code + PKCE** with redirect URI
+`https://<your host>/auth/callback`, then add to the API's provider settings (see "Sign-in configuration"):
+```
+Authentication__Providers__0__ClientId=<web app client id>
+Authentication__Providers__0__Scope=openid profile email api://<api-app-id>/access_as_user
+```
+The web container takes `API_UPSTREAM` (default `http://api:8080`) and `CSP_CONNECT_SRC` (set it to your provider's origin, e.g.
+`https://login.example.com`, to tighten the content-security policy).

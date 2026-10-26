@@ -19,13 +19,15 @@ public static class AuthenticationExtensions
     /// routes each token to its provider by issuer; the provider then validates signature, issuer, audience and lifetime.
     /// After validation the server strips any FMS claims the token carried and sets the tenant from the tenant directory.
     /// </summary>
-    public static IServiceCollection AddFmsAuthentication(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddFmsAuthentication(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.AddSingleton<IValidateOptions<AuthOptions>, AuthOptionsValidator>();
         services.AddOptions<AuthOptions>().Bind(configuration.GetSection(AuthOptions.SectionName)).ValidateOnStart();
         services.AddSingleton<ITenantDirectory, ConfiguredTenantDirectory>();
 
-        var providers = configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>()?.Providers ?? [];
+        var bound = configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>();
+        var providers = bound?.Providers ?? [];
+        var allowHttp = bound?.AllowInsecureAuthority == true && environment.IsDevelopment();
 
         var builder = services.AddAuthentication(RouterScheme);
         builder.AddScheme<AuthenticationSchemeOptions, NoAuthHandler>(NoneScheme, null);
@@ -34,7 +36,7 @@ public static class AuthenticationExtensions
 
         foreach (var provider in providers)
         {
-            builder.AddJwtBearer(provider.SchemeName, o => Configure(o, provider));
+            builder.AddJwtBearer(provider.SchemeName, o => Configure(o, provider, allowHttp));
         }
 
         services.AddAuthorization(o =>
@@ -71,11 +73,11 @@ public static class AuthenticationExtensions
         return providers.FirstOrDefault(p => IsValidIssuer(issuer, p))?.SchemeName;
     }
 
-    private static void Configure(JwtBearerOptions o, IdentityProviderOptions provider)
+    private static void Configure(JwtBearerOptions o, IdentityProviderOptions provider, bool allowHttp)
     {
         o.Authority = provider.Authority;
         o.MapInboundClaims = false;
-        o.RequireHttpsMetadata = true;
+        o.RequireHttpsMetadata = !allowHttp;
         o.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,

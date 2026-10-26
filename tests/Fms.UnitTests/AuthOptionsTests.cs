@@ -7,7 +7,15 @@ public sealed class AuthOptionsTests
     private static IdentityProviderOptions Provider(string name = "p") =>
         new() { Name = name, Authority = "https://idp.example", Audience = "api" };
 
-    private static bool Valid(AuthOptions o) => new AuthOptionsValidator().Validate(null, o).Succeeded;
+    private sealed class Env(string name) : Microsoft.Extensions.Hosting.IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = name;
+        public string ApplicationName { get; set; } = "t";
+        public string ContentRootPath { get; set; } = "/";
+        public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
+    }
+
+    private static bool Valid(AuthOptions o, string environment = "Production") => new AuthOptionsValidator(new Env(environment)).Validate(null, o).Succeeded;
 
     [Fact]
     public void No_providers_is_valid() => Assert.True(Valid(new AuthOptions()));
@@ -53,4 +61,16 @@ public sealed class AuthOptionsTests
             Providers = [Provider()],
             TenantMappings = [new TenantMapping { Provider = "nope", ExternalTenantId = "x", TenantId = Guid.NewGuid() }],
         }));
+
+    [Fact]
+    public void Http_authority_needs_the_insecure_switch_and_the_development_environment()
+    {
+        var http = new IdentityProviderOptions { Name = "p", Authority = "http://localhost:9099", Audience = "api" };
+
+        Assert.False(Valid(new AuthOptions { Providers = [http] }, "Development"));
+        Assert.True(Valid(new AuthOptions { Providers = [http], AllowInsecureAuthority = true }, "Development"));
+        Assert.False(Valid(new AuthOptions { Providers = [http], AllowInsecureAuthority = true }, "Production"));
+        Assert.False(Valid(new AuthOptions { AllowInsecureAuthority = true }, "Production")); // the switch itself is refused outside Development
+        Assert.False(Valid(new AuthOptions { Providers = [new IdentityProviderOptions { Name = "p", Authority = "ftp://x", Audience = "a" }], AllowInsecureAuthority = true }, "Development"));
+    }
 }

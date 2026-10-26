@@ -36,6 +36,9 @@ services:
       # Authentication__Providers__0__Name: corp
       # Authentication__Providers__0__Authority: https://idp.example.com
       # Authentication__Providers__0__Audience: api://fms
+      # Authentication__Providers__0__ClientId: <the web app's client id at the provider, public client with PKCE>
+      # Authentication__Providers__0__Scope: openid profile email api://fms/access_as_user
+      # Facilities__PublicBaseUrl: https://fms.example.com   # what QR labels encode; the address people reach the web app at
     volumes: ["files:/data/files"]
     ports: ["8080:8080"]
   worker:
@@ -48,7 +51,13 @@ services:
       Deployment__LocalStoragePath: /data/files
     volumes: ["files:/data/files"]
   web:
+    # One origin for the browser: static files plus /api proxied to the API. Set CSP_CONNECT_SRC to your identity provider's origin
+    # (for example https://login.example.com) to tighten the content-security policy from "any https" to just that.
     build: { context: web }
+    depends_on: [api]
+    environment:
+      API_UPSTREAM: http://api:8080
+      CSP_CONNECT_SRC: ${FMS_CSP_CONNECT_SRC:-https:}
     ports: ["5173:80"]
 volumes:
   sqldata:

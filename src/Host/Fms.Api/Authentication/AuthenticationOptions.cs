@@ -6,6 +6,12 @@ public sealed class AuthOptions
 {
     public const string SectionName = "Authentication";
 
+    /// <summary>
+    /// Lets a provider's authority be plain http, for a local fake identity provider in automated browser tests. Honoured ONLY when the
+    /// environment is Development; anywhere else, setting it stops the application from starting.
+    /// </summary>
+    public bool AllowInsecureAuthority { get; set; }
+
     public List<IdentityProviderOptions> Providers { get; set; } = [];
 
     /// <summary>SaaS: which provider tenant belongs to which FMS tenant. Ignored on-prem (one tenant).</summary>
@@ -50,11 +56,17 @@ public sealed class TenantMapping
     public Guid TenantId { get; set; }
 }
 
-public sealed class AuthOptionsValidator : IValidateOptions<AuthOptions>
+public sealed class AuthOptionsValidator(Microsoft.Extensions.Hosting.IHostEnvironment environment) : IValidateOptions<AuthOptions>
 {
     public ValidateOptionsResult Validate(string? name, AuthOptions options)
     {
         var errors = new List<string>();
+        var insecureOk = options.AllowInsecureAuthority && environment.IsDevelopment();
+        if (options.AllowInsecureAuthority && !environment.IsDevelopment())
+        {
+            errors.Add("Authentication:AllowInsecureAuthority is only allowed in the Development environment.");
+        }
+
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var p in options.Providers)
@@ -68,7 +80,8 @@ public sealed class AuthOptionsValidator : IValidateOptions<AuthOptions>
                 errors.Add($"Identity provider name '{p.Name}' is used twice.");
             }
 
-            if (!Uri.TryCreate(p.Authority, UriKind.Absolute, out var authority) || authority.Scheme != Uri.UriSchemeHttps)
+            if (!Uri.TryCreate(p.Authority, UriKind.Absolute, out var authority)
+                || !(authority.Scheme == Uri.UriSchemeHttps || (insecureOk && authority.Scheme == Uri.UriSchemeHttp)))
             {
                 errors.Add($"Provider '{p.Name}': Authority must be an absolute https URL.");
             }

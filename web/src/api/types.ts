@@ -1,0 +1,165 @@
+// Shapes returned by the FMS API (camelCase JSON, enums as strings). Keep in step with docs/phase-1-summary.md.
+
+export type LocationType = 'Site' | 'Building' | 'Floor' | 'Space';
+export type AssetStatus = 'Planned' | 'Active' | 'UnderMaintenance' | 'OutOfService' | 'Retired';
+export type Criticality = 'Low' | 'Medium' | 'High' | 'Critical';
+export type WarrantyState = 'None' | 'Active' | 'ExpiringSoon' | 'Expired';
+export type MeterKind = 'Cumulative' | 'Gauge';
+export type ReadingSource = 'Manual' | 'Mobile' | 'Import' | 'Device';
+export type DocumentKind = 'Manual' | 'Warranty' | 'Certificate' | 'Photo' | 'Drawing' | 'Other';
+export type CustomFieldTarget = 'Location' | 'Asset';
+export type CustomFieldType = 'Text' | 'Number' | 'Date' | 'Boolean' | 'Choice';
+
+export type CustomFieldValues = Record<string, string | number | boolean>;
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface Me {
+  subject: string | null;
+  provider: string | null;
+  tenantId: string | null;
+  userId: string | null;
+  permissions: string[] | null;
+}
+
+export interface ProviderInfo {
+  name: string;
+  authority: string;
+  clientId: string | null;
+  scope: string | null;
+}
+
+export interface Location {
+  id: string;
+  parentId: string | null;
+  type: LocationType;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  address: string | null;
+  timeZone: string | null;
+  areaSquareMetres: number | null;
+  customFields: CustomFieldValues;
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export interface LocationNode {
+  id: string;
+  parentId: string | null;
+  type: LocationType;
+  code: string;
+  name: string;
+  nameAr: string | null;
+}
+
+export interface AssetClass {
+  id: string;
+  parentId: string | null;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export interface Asset {
+  id: string;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  assetClassId: string;
+  locationId: string;
+  parentAssetId: string | null;
+  status: AssetStatus;
+  statusReason: string | null;
+  criticality: Criticality;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  installDate: string | null;
+  warrantyExpiry: string | null;
+  warranty: WarrantyState;
+  tagCode: string;
+  customFields: CustomFieldValues;
+  retiredAt: string | null;
+  rowVersion: string;
+}
+
+export interface CustomFieldDefinition {
+  id: string;
+  target: CustomFieldTarget;
+  key: string;
+  labelEn: string;
+  labelAr: string | null;
+  dataType: CustomFieldType;
+  isRequired: boolean;
+  choices: string[];
+  assetClassId: string | null;
+  sortOrder: number;
+  isArchived: boolean;
+}
+
+export interface Meter {
+  id: string;
+  assetId: string;
+  name: string;
+  nameAr: string | null;
+  unit: string;
+  kind: MeterKind;
+  minValue: number | null;
+  maxValue: number | null;
+  isArchived: boolean;
+  lastValue: number | null;
+  lastReadAt: string | null;
+  rowVersion: string;
+}
+
+export interface MeterReading {
+  id: string;
+  meterId: string;
+  value: number;
+  readAt: string;
+  recordedAt: string;
+  recordedBy: string | null;
+  source: ReadingSource;
+  note: string | null;
+  isReset: boolean;
+  clientId: string | null;
+  isVoided: boolean;
+}
+
+export interface AssetDocument {
+  id: string;
+  assetId: string;
+  kind: DocumentKind;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  sha256: string;
+  description: string | null;
+  uploadedAt: string;
+  uploadedBy: string | null;
+  isDeleted: boolean;
+}
+
+export interface ImportRowResult {
+  line: number;
+  outcome: 'Created' | 'Error';
+  code: string | null;
+  errors: string[];
+}
+
+export interface ImportReport {
+  dryRun: boolean;
+  committed: boolean;
+  total: number;
+  created: number;
+  failed: number;
+  rows: ImportRowResult[];
+}

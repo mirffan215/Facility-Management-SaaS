@@ -1,14 +1,310 @@
 {
-  "app": { "title": "Facility Management" },
-  "language": { "label": "Language", "en": "English", "ar": "العربية" },
-  "system": {
-    "heading": "System status",
-    "mode": "Deployment mode",
-    "edition": "Edition",
-    "licensed": "Licensed",
-    "yes": "Yes",
-    "no": "No",
+  "app": {
+    "title": "Facility Management"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "calendar": {
+    "label": "Calendar",
+    "gregorian": "Gregorian",
+    "hijri": "Hijri"
+  },
+  "nav": {
+    "main": "Main navigation",
+    "locations": "Locations",
+    "assets": "Assets",
+    "import": "Import",
+    "setup": "Setup"
+  },
+  "auth": {
+    "prompt": "Sign in to continue.",
+    "signInWith": "Sign in with {{provider}}",
+    "signOut": "Sign out",
+    "expired": "Your session ended. Please sign in again.",
+    "failed": "Sign-in could not be completed. Please try again.",
+    "noProviders": "No sign-in method is configured. Ask your administrator.",
+    "unreachable": "The service cannot be reached. Check your connection and try again."
+  },
+  "common": {
+    "actions": "Actions",
+    "all": "All",
+    "archive": "Archive",
+    "archived": "Archived",
+    "back": "Back",
+    "cancel": "Cancel",
+    "choose": "Choose…",
+    "collapse": "Collapse",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "expand": "Expand",
     "loading": "Loading…",
-    "error": "The service is not reachable."
+    "next": "Next",
+    "no": "No",
+    "noResults": "No matches.",
+    "notSet": "Not set",
+    "pageOf": "Page {{page}} of {{pages}}",
+    "pagination": "Pages",
+    "previous": "Previous",
+    "reason": "Reason",
+    "reasonOptional": "Reason (optional)",
+    "reload": "Reload",
+    "restore": "Restore",
+    "results": "{{count}} results",
+    "save": "Save",
+    "search": "Search",
+    "skipToContent": "Skip to content",
+    "yes": "Yes"
+  },
+  "errors": {
+    "checkFields": "Please check the highlighted fields.",
+    "conflict": "This was changed by someone else. Reload and try again.",
+    "forbidden": "You do not have permission to do this.",
+    "generic": "Something went wrong. Please try again.",
+    "network": "The service cannot be reached. Check your connection.",
+    "noAccess": "Your account has no access to any section yet. Ask your administrator to give you a role.",
+    "noAccessTitle": "No access",
+    "notFound": "Not found.",
+    "pageNotFound": "Page not found",
+    "tooLarge": "The file is too large (limit 25 MB).",
+    "unsupportedType": "This file type is not allowed."
+  },
+  "customFields": {
+    "title": "Additional information"
+  },
+  "locationType": {
+    "Site": "Site",
+    "Building": "Building",
+    "Floor": "Floor",
+    "Space": "Space"
+  },
+  "locations": {
+    "addChild": "Add {{type}}",
+    "address": "Address",
+    "archiveTitle": "Archive {{name}}?",
+    "area": "Area (m²)",
+    "code": "Code",
+    "codeHint": "Letters, digits, '.', '_' or '-'. Unique among active locations.",
+    "editTitle": "Edit location",
+    "empty": "No locations yet.",
+    "move": "Move",
+    "moveTitle": "Move {{name}}",
+    "name": "Name",
+    "nameAr": "Name (Arabic)",
+    "newParent": "New parent",
+    "newSite": "New site",
+    "newTitle": "New {{type}}",
+    "selectOne": "Select a location to see its details.",
+    "timeZone": "Time zone",
+    "timeZoneHint": "For example Asia/Riyadh.",
+    "tree": "Location tree",
+    "type": "Type",
+    "under": "Inside {{parent}}",
+    "viewAssets": "View assets here"
+  },
+  "assetStatus": {
+    "Planned": "Planned",
+    "Active": "Active",
+    "UnderMaintenance": "Under maintenance",
+    "OutOfService": "Out of service",
+    "Retired": "Retired"
+  },
+  "criticality": {
+    "Low": "Low",
+    "Medium": "Medium",
+    "High": "High",
+    "Critical": "Critical"
+  },
+  "warranty": {
+    "None": "No warranty",
+    "Active": "In warranty",
+    "ExpiringSoon": "Expiring soon",
+    "Expired": "Expired"
+  },
+  "assets": {
+    "changeStatus": "Change status",
+    "class": "Class",
+    "code": "Asset number",
+    "codeHint": "Printed on labels. Cannot be reused, even after retirement.",
+    "criticality": "Criticality",
+    "editTitle": "Edit asset",
+    "empty": "No assets match.",
+    "export": "Export CSV",
+    "includeRetired": "Include retired",
+    "installDate": "Install date",
+    "location": "Location",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "name": "Name",
+    "nameAr": "Name (Arabic)",
+    "new": "New asset",
+    "newStatus": "New status",
+    "newTitle": "New asset",
+    "noParts": "No parts.",
+    "partOf": "Part of",
+    "partOfHint": "Type the asset number of the assembly this belongs to.",
+    "partOfNotFound": "No asset with that number.",
+    "parts": "Parts",
+    "retireWarning": "A retired asset is a closed record and cannot be edited.",
+    "searchHint": "Number, name, serial…",
+    "sections": "Asset sections",
+    "serial": "Serial number",
+    "startActive": "Start in service (otherwise Planned)",
+    "status": "Status",
+    "statusReason": "Reason: {{reason}}",
+    "warranty": "Warranty",
+    "warrantyExpiry": "Warranty expires",
+    "tabs": {
+      "details": "Details",
+      "meters": "Meters",
+      "documents": "Files",
+      "label": "Label"
+    }
+  },
+  "meterKind": {
+    "Cumulative": "Cumulative",
+    "Gauge": "Gauge"
+  },
+  "readingSource": {
+    "Manual": "Manual",
+    "Mobile": "Mobile",
+    "Import": "Import",
+    "Device": "Device"
+  },
+  "meters": {
+    "add": "Add meter",
+    "empty": "This asset has no meters yet.",
+    "history": "Reading history",
+    "isReset": "Meter was replaced or rolled over (allows a lower value)",
+    "kind": "Kind",
+    "kindHint": {
+      "Cumulative": "A running total that only goes up, such as energy or run hours.",
+      "Gauge": "A value that moves both ways, such as temperature."
+    },
+    "max": "Plausible maximum",
+    "min": "Plausible minimum",
+    "name": "Name",
+    "nameAr": "Name (Arabic)",
+    "noReadings": "No readings",
+    "note": "Note",
+    "readAt": "Measured",
+    "readAtOptional": "Measured at (blank = now)",
+    "record": "Record reading",
+    "recorded": "Reading recorded.",
+    "reset": "Reset",
+    "showVoided": "Show voided readings",
+    "source": "Source",
+    "title": "Meters",
+    "unit": "Unit",
+    "unitHint": "For example kWh, h or °C. Cannot be changed later.",
+    "value": "Value",
+    "void": "Void",
+    "voidTitle": "Void the reading {{value}}?",
+    "voided": "Voided"
+  },
+  "docKind": {
+    "Manual": "Manual",
+    "Warranty": "Warranty",
+    "Certificate": "Certificate",
+    "Photo": "Photo",
+    "Drawing": "Drawing",
+    "Other": "Other"
+  },
+  "documents": {
+    "deleteTitle": "Delete {{name}}?",
+    "description": "Description",
+    "download": "Download",
+    "empty": "No files yet.",
+    "file": "File",
+    "fileHint": "PDF, image, Word, Excel or text. Up to 25 MB.",
+    "fileName": "File",
+    "kind": "Kind",
+    "size": "Size",
+    "title": "Files",
+    "upload": "Upload",
+    "uploadedAt": "Uploaded"
+  },
+  "label": {
+    "print": "Print label",
+    "qrAlt": "QR code for asset {{code}}",
+    "reissue": "Reissue label code",
+    "reissueWarning": "A new code replaces the current one. Labels already printed with the old code will stop working.",
+    "title": "Asset label"
+  },
+  "import": {
+    "allOrNothing": "Nothing is saved unless every row is valid.",
+    "check": "Check file",
+    "code": "Code",
+    "done": "Imported {{count}} rows.",
+    "exportCurrent": "Download current data",
+    "file": "CSV file",
+    "fileHint": "UTF-8 CSV, up to 2 MB and 2,000 rows.",
+    "hint": {
+      "locations": "Columns: type, code, parentCode, name, nameAr, address, timeZone, areaSquareMetres. A parent must already exist or appear earlier in the file.",
+      "assets": "Columns: code, name, nameAr, classCode, locationCode, parentAssetCode, criticality, status, manufacturer, model, serialNumber, installDate, warrantyExpiry. Classes and locations must already exist."
+    },
+    "intro": "Create many locations or assets from a spreadsheet saved as CSV.",
+    "line": "Line",
+    "onlyErrors": "Show only rows with problems",
+    "outcome": {
+      "Created": "OK",
+      "Error": "Problem"
+    },
+    "problem": "Problem",
+    "problems": "{{count}} rows have problems. Nothing was saved.",
+    "report": "Import report",
+    "result": "Result",
+    "run": "Import",
+    "target": {
+      "locations": "Locations",
+      "assets": "Assets"
+    },
+    "template": "Download template",
+    "title": "Import",
+    "what": "What to import",
+    "wouldCreate": "The file is valid. {{count}} rows will be created."
+  },
+  "fieldType": {
+    "Text": "Text",
+    "Number": "Number",
+    "Date": "Date",
+    "Boolean": "Yes/No",
+    "Choice": "Choice"
+  },
+  "fieldTarget": {
+    "Asset": "Assets",
+    "Location": "Locations"
+  },
+  "setup": {
+    "title": "Setup",
+    "sections": "Setup sections",
+    "classes": "Asset classes",
+    "fields": "Custom fields",
+    "classesHint": "Categories such as HVAC, Electrical or Lifts. Every asset belongs to one.",
+    "newClass": "New asset class",
+    "parentClass": "Parent class",
+    "noClasses": "No asset classes yet. Create one before adding assets.",
+    "fieldsHint": "Extra information to capture on locations or assets. Keys and types cannot be changed once created.",
+    "newField": "New custom field",
+    "appliesTo": "Applies to",
+    "key": "Key",
+    "keyHint": "Lowercase letters, digits and '_', starting with a letter.",
+    "labelEn": "Label (English)",
+    "labelAr": "Label (Arabic)",
+    "type": "Type",
+    "onlyForClass": "Only for class",
+    "allClasses": "All classes",
+    "choices": "Choices",
+    "choicesHint": "One per line.",
+    "required": "Required",
+    "requiredBadge": "Required",
+    "noFields": "No custom fields yet."
+  },
+  "scan": {
+    "title": "Scan asset label",
+    "notFound": "No asset matches this label. It may have been replaced or belong to another organisation."
   }
 }
