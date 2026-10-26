@@ -15,6 +15,7 @@ Status: design phase. See [docs/](docs/).
 - [Phase 2b summary](docs/phase-2b-summary.md) (service levels, working calendars, notifications and email)
 - [Phase 2c summary](docs/phase-2c-summary.md) (checklists, time and costs, signatures, photos)
 - [Phase 2d summary](docs/phase-2d-summary.md) (technician PWA, offline sync, retry-safe writes)
+- [Phase 3 summary](docs/phase-3-summary.md) (preventive maintenance: schedules, generation, meter triggers, forecast, compliance)
 - [ADRs](docs/adr/)
 
 ## Quick start

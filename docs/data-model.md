@@ -48,4 +48,8 @@ and "require completion signature".
 
 Phase 2d adds, in `dbo`: `IdempotencyKey` (per person, request hash, stored answer for 2xx, purged after 7 days).
 
+Phase 3 adds, in `work`: `PmTemplate`, `PmSchedule` (target asset or class, time basis Fixed/Floating/None, interval, start, lead days, meter name and interval, assignee),
+`PmPlan` (one schedule on one asset: next due, last completed, open work order, meter and baseline) and `PmOccurrence` (one generated visit: due date, trigger Time/Meter,
+outcome Open/Completed/Skipped, on-time flag; the history compliance is computed from). All four are tenant-protected by row-level security. Work orders gain nothing: generated ones are `Type = Planned`.
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

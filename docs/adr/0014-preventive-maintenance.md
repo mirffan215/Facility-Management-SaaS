@@ -1,0 +1,22 @@
+# ADR-0014: Preventive maintenance (Phase 3)
+Status: Proposed. Builds on [ADR-0010](0010-work-orders-and-requests.md) (work orders) and [ADR-0011](0011-sla-and-notifications.md) (calendars, notifications).
+
+## Decisions
+- **Lives in the Work module** (schema `work`), not a new module. Preventive work *is* work orders; it reuses numbering, history, notifications, checklists and evidence.
+  Only the facility lookup (assets, meters, readings) crosses a module boundary, through `IFacilityLookup`.
+- **Three levels.** A *template* says what the work is (instructions, priority, category, checklist). A *schedule* says when, and for what (one asset, or every asset of a class).
+  A *plan* is one schedule on one asset: its next due date, last completion, open work order and meter baseline. A schedule for a class gets a plan per asset, added and retired automatically as assets join or leave the class.
+- **Fixed or floating, chosen per schedule** (the customer's decision). Fixed counts on the calendar from the schedule's start date (a late visit does not move the next one; the next date is the first one after both the visit's due date and the day it was finished, so a late job never leaves an already-overdue duplicate). Floating counts from the day the job was finished. Cancelling counts as "skipped" and moves on like a completion, without recording a completion date.
+- **Created ahead of time.** A worker (every 5 minutes) creates the work order `LeadDays` before it is due. Only one work order is open per plan; the next is created only after the last is finished. The forecast shows later visits as *projected*, computed from the rules, so the calendar looks ahead beyond the lead window (max 400 days, 2000 items).
+- **Safe under parallel workers.** Creation re-reads the plan in a transaction, takes the per-tenant numbering lock, and relies on the plan's row version plus a unique index (plan, due date) for calendar visits. A second worker loses quietly.
+- **Meter triggers.** A schedule may add "every N units on meter X". The asset's meter is found by name. The baseline is the reading when the plan was made, and is reset to the meter's value at each service. A lower reading than the baseline (replaced or reset meter) restarts counting from there instead of firing. A missing meter is flagged on the plan, never guessed. With both a calendar and a meter, whichever comes first creates the work; a meter-triggered visit does not disturb calendar dates still ahead. Meter visits may repeat on the same day, so the unique index covers calendar visits only. The forecast estimates a meter's due date from the last 30 days' pace and shows it as an estimate.
+- **No SLA on planned work.** SLAs are for reported faults. Preventive work orders have a due date (end of the due day in the tenant's default work-calendar time zone, else UTC) but start no response/resolution clocks. They are created *Approved* (or *Assigned* when the schedule names a technician who still has the work permission); a schedule is itself the approval, made by someone with `pm.manage`.
+- **Actor.** The requester recorded is the schedule's creator. The audit event for a generated work order carries no actor when the worker runs it (system action), and marks `preventive: true` with the schedule and trigger.
+- **Compliance definitions** (from the occurrence history, by due date). *Due so far* = done + skipped + still open past the due date. *On time* = finished on or before the due date. *On-time rate* = on time ÷ due so far. Visits not yet due are *upcoming* and count for nobody. *Planned share* = planned work orders ÷ all non-cancelled work orders raised in the period. Default period: the last 12 months to the end of the current month.
+- **Permissions.** `pm.read` (managers, technicians, viewers), `pm.manage` (facility managers; administrators have everything).
+
+## Consequences
+- One generation pass per plan, all in the application; there is no database job. If the worker is down, visits are created late (the due date is unchanged and shows as overdue) and are never lost or duplicated.
+- "Today" depends on the tenant's default work calendar zone; sites in different zones share it. Per-site zones for PM are a later refinement.
+- Completion history is the `PmOccurrence` table, so compliance can be recomputed; editing a schedule does not rewrite history.
+- The meter is matched by name, so renaming a meter makes its plan show "meter missing" until the schedule is updated.
