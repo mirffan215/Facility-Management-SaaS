@@ -53,6 +53,25 @@ public static class Permissions
     /// <summary>Maintain vendors and contracts, assign work orders to vendors, and invite vendor users.</summary>
     public const string VendorsManage = "vendors.manage";
 
+    /// <summary>See every purchase request and order. Without it a person sees only the requests they raised.</summary>
+    public const string PurchasingRead = "purchasing.read";
+
+    public const string PurchasingRequest = "purchasing.request";
+
+    /// <summary>Approve requests up to the first, second and third limit set in the purchasing settings. Each level includes those below it. Nobody approves their own request.</summary>
+    public const string PurchasingApprove1 = "purchasing.approve1";
+
+    public const string PurchasingApprove2 = "purchasing.approve2";
+    public const string PurchasingApprove3 = "purchasing.approve3";
+
+    /// <summary>Turn an approved request into an order, acknowledge and cancel orders.</summary>
+    public const string PurchasingOrder = "purchasing.order";
+
+    public const string PurchasingReceive = "purchasing.receive";
+
+    /// <summary>Set the approval limits.</summary>
+    public const string PurchasingManage = "purchasing.manage";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
@@ -62,6 +81,7 @@ public static class Permissions
         PmRead, PmManage,
         InventoryRead, InventoryManage, InventoryIssue, InventoryApprove,
         VendorsRead, VendorsManage,
+        PurchasingRead, PurchasingRequest, PurchasingApprove1, PurchasingApprove2, PurchasingApprove3, PurchasingOrder, PurchasingReceive, PurchasingManage,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;

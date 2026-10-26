@@ -27,6 +27,8 @@ public static class InventoryServiceCollectionExtensions
         services.AddScoped<StockTakeService>();
         services.AddScoped<IOutboxHandler, WorkOrderEndedHandler>();
         services.AddScoped<IOutboxHandler, LowStockHandler>();
+        services.AddScoped<IOutboxHandler, GoodsReceivedHandler>();
+        services.AddScoped<IInventoryCatalog, InventoryCatalog>();
         services.AddHealthChecks().AddDbContextCheck<InventoryDbContext>("inventory-db", tags: ["ready"]);
         return services;
     }

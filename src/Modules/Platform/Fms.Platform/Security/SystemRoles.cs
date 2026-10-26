@@ -25,12 +25,14 @@ public static class SystemRoles
             Permissions.PmRead, Permissions.PmManage,
             Permissions.InventoryRead, Permissions.InventoryManage, Permissions.InventoryIssue, Permissions.InventoryApprove,
             Permissions.VendorsRead, Permissions.VendorsManage,
+            Permissions.PurchasingRead, Permissions.PurchasingRequest, Permissions.PurchasingApprove1, Permissions.PurchasingApprove2,
+            Permissions.PurchasingOrder, Permissions.PurchasingReceive, Permissions.PurchasingManage,
         ],
         [Technician] =
         [
             Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.MetersRecord, Permissions.DocumentsRead,
             Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.PmRead,
-            Permissions.InventoryRead, Permissions.InventoryIssue,
+            Permissions.InventoryRead, Permissions.InventoryIssue, Permissions.PurchasingRequest,
         ],
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest],
         [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead],
