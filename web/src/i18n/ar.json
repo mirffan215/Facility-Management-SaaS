@@ -23,7 +23,8 @@
     "jobs": "مهامي",
     "pm": "الوقائية",
     "inventory": "المخزون",
-    "vendors": "الموردون"
+    "vendors": "الموردون",
+    "purchasing": "المشتريات"
   },
   "auth": {
     "prompt": "سجّل الدخول للمتابعة.",
@@ -554,6 +555,12 @@
       "contract": {
         "Expiring": "ينتهي العقد {{number}} خلال {{days}} يوم",
         "Expired": "انتهى العقد {{number}}"
+      },
+      "purchase": {
+        "Submitted": "{{number}} بانتظار اعتمادك",
+        "Approved": "تم اعتماد {{number}}",
+        "Rejected": "تم رفض {{number}}",
+        "Ordered": "تم إصدار أمر شراء لـ {{number}}"
       }
     },
     "unreadSuffix": "غير مقروء"
@@ -1026,5 +1033,86 @@
     "Certificate": "شهادة",
     "Insurance": "تأمين",
     "Other": "أخرى"
+  },
+  "purchasing": {
+    "title": "المشتريات",
+    "intro": "اطلب ما تحتاجه، واحصل على اعتماده بالمستوى المناسب، ثم اطلبه من مورد واستلمه في المخزون.",
+    "sections": "أقسام المشتريات",
+    "tab": {
+      "requests": "الطلبات",
+      "orders": "أوامر الشراء",
+      "settings": "حدود الاعتماد"
+    },
+    "waitingForMe": "بانتظار اعتمادي",
+    "nothingWaiting": "لا شيء بانتظارك.",
+    "newRequest": "طلب جديد",
+    "noRequests": "لا توجد طلبات بعد.",
+    "number": "الرقم",
+    "requestTitle": "العنوان",
+    "total": "الإجمالي",
+    "level": "المستوى",
+    "requestedBy": "مقدم الطلب",
+    "review": "مراجعة",
+    "request": "الطلب",
+    "editRequest": "تعديل {{number}}",
+    "justification": "سبب الحاجة",
+    "lineNumber": "البند {{number}}",
+    "stockItem": "صنف مخزون (يدخل المخزن عند وصوله)",
+    "deliverTo": "التسليم إلى مخزن",
+    "description": "الوصف",
+    "estimatedPrice": "السعر التقديري (للوحدة)",
+    "addLine": "إضافة بند",
+    "saveDraft": "حفظ كمسودة",
+    "submit": "حفظ وإرسال للاعتماد",
+    "lines": "البنود",
+    "byOn": "{{name}} · {{date}}",
+    "needsLevel": "يحتاج اعتمادًا من المستوى {{level}}",
+    "decidedBy": "قرر {{name}} في {{date}}",
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "cancelRequest": "إلغاء الطلب",
+    "makeOrder": "إنشاء أمر شراء",
+    "issueOrder": "إصدار أمر الشراء",
+    "expectedOn": "موعد الوصول المتوقع",
+    "agreedPrices": "الأسعار المتفق عليها",
+    "agreedPricesHint": "غيّر السعر إذا عرض المورد سعرًا مختلفًا. لا يجوز أن يتجاوز الأمر الإجمالي المعتمد إلا بنسبة السماح.",
+    "approvedTotal": "المعتمد {{total}}",
+    "order": "أمر الشراء",
+    "noOrders": "لا توجد أوامر شراء بعد.",
+    "expectedBy": "متوقع بحلول {{date}}",
+    "ordered": "المطلوب",
+    "received": "المستلم",
+    "unitPrice": "سعر الوحدة",
+    "receiveNow": "استلام الآن",
+    "receiveFor": "الكمية المستلمة من {{item}}",
+    "deliveryNote": "إشعار التسليم",
+    "recordReceipt": "تسجيل الاستلام",
+    "receipts": "الاستلامات",
+    "acknowledge": "تأكيد التسلّم من المورد",
+    "cancelOrder": "إلغاء أمر الشراء",
+    "limits": "حدود الاعتماد",
+    "limitsHint": "يُعتمد الطلب بالمستوى الذي يتطلبه إجماليه. كل مستوى اعتماد يشمل ما دونه، ولا أحد يعتمد طلبه بنفسه.",
+    "level1": "الحد الأول",
+    "level1Hint": "حتى هذا الإجمالي يكفي معتمد من المستوى الأول.",
+    "level2": "الحد الثاني",
+    "level2Hint": "حتى هذا الإجمالي يكفي معتمد من المستوى الثاني؛ وما فوقه يلزم المستوى الثالث.",
+    "tolerance": "نسبة السماح في السعر (%)",
+    "toleranceHint": "مقدار ما يجوز أن يتجاوز به الأمر الإجمالي المعتمد.",
+    "saved": "تم الحفظ."
+  },
+  "requestStatus": {
+    "Draft": "مسودة",
+    "Submitted": "بانتظار الاعتماد",
+    "Approved": "معتمد",
+    "Rejected": "مرفوض",
+    "Cancelled": "ملغى",
+    "Ordered": "تم الطلب"
+  },
+  "orderStatus": {
+    "Issued": "صادر",
+    "Acknowledged": "مؤكد من المورد",
+    "PartiallyReceived": "مستلم جزئيًا",
+    "Received": "مستلم",
+    "Cancelled": "ملغى"
   }
 }

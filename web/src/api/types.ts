@@ -740,3 +740,97 @@ export interface VendorAssignment {
   responseMinutes: number | null;
   resolutionMinutes: number | null;
 }
+
+// ---------------- purchasing ----------------
+
+export type RequestStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Cancelled' | 'Ordered';
+export type OrderStatus = 'Issued' | 'Acknowledged' | 'PartiallyReceived' | 'Received' | 'Cancelled';
+
+export interface PurchasingSettings {
+  level1Limit: number;
+  level2Limit: number;
+  overrunTolerancePercent: number;
+  currencyCode: string;
+  rowVersion: string | null;
+}
+
+export interface RequestLine {
+  id: string;
+  position: number;
+  itemId: string | null;
+  itemCode: string | null;
+  storeId: string | null;
+  storeName: string | null;
+  description: string;
+  unit: string;
+  quantity: number;
+  estimatedUnitPrice: number;
+  total: number;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  number: number;
+  display: string;
+  title: string;
+  justification: string | null;
+  status: RequestStatus;
+  requestedBy: string;
+  requestedByName: string | null;
+  requestedAt: string;
+  preferredVendorId: string | null;
+  preferredVendorName: string | null;
+  workOrderId: string | null;
+  total: number;
+  requiredLevel: number;
+  submittedAt: string | null;
+  decidedByName: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  orderId: string | null;
+  orderDisplay: string | null;
+  canApprove: boolean;
+  lines: RequestLine[] | null;
+  rowVersion: string;
+}
+
+export interface OrderLine {
+  id: string;
+  position: number;
+  itemId: string | null;
+  itemCode: string | null;
+  storeId: string | null;
+  storeName: string | null;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  receivedQty: number;
+  outstanding: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  number: number;
+  display: string;
+  requestId: string;
+  requestDisplay: string | null;
+  vendorId: string;
+  vendorCode: string;
+  vendorName: string;
+  status: OrderStatus;
+  issuedByName: string | null;
+  issuedAt: string;
+  expectedOn: string | null;
+  currencyCode: string;
+  total: number;
+  notes: string | null;
+  acknowledgedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  erpReference: string | null;
+  lines: OrderLine[] | null;
+  receipts: { id: string; lineId: string; quantity: number; receivedAt: string; receivedByName: string | null; deliveryNote: string | null }[] | null;
+  rowVersion: string;
+}

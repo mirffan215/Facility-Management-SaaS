@@ -1046,6 +1046,69 @@ test('vendors: a vendor and a contract with coverage and service targets, then a
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('purchasing: a technician asks, a different person approves, the order is made and received', async ({ browser }) => {
+  const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
+  try {
+    await tech.getByRole('link', { name: 'Purchasing', exact: true }).click();
+    await tech.getByRole('button', { name: 'New request' }).click();
+    const draft = tech.getByRole('dialog', { name: 'New request' });
+    await draft.getByRole('textbox', { name: 'Title *' }).fill('Crane hire for chiller swap');
+    await draft.getByLabel('A stock item (goes into a store when it arrives)').uncheck();
+    await draft.getByLabel('Description').fill('Mobile crane, per day');
+    await draft.getByLabel('Quantity').fill('2');
+    await draft.getByLabel('Estimated price (per unit)').fill('1500');
+    await expect(draft.getByText('Total: 3,000')).toBeVisible();
+    await draft.getByRole('button', { name: 'Save and submit for approval' }).click();
+    await expect(tech.getByRole('dialog')).toHaveCount(0);
+    await expect(tech.getByRole('row', { name: /Crane hire for chiller swap/ })).toContainText('Waiting for approval');
+    await expect(tech.getByRole('tab', { name: 'Orders' })).toHaveCount(0); // not theirs to see
+  } finally {
+    await tech.context().close();
+  }
+
+  // The administrator is not the requester, and holds the highest level.
+  await page.goto('/purchasing');
+  await page.getByLabel('Waiting for my approval').check();
+  const row = page.getByRole('row', { name: /Crane hire for chiller swap/ });
+  await expect(row).toContainText('3,000');
+  await row.getByRole('button', { name: 'Review' }).click();
+  const review = page.getByRole('dialog', { name: /Crane hire for chiller swap/ });
+  await expect(review.getByText('needs approval at level 1')).toBeVisible();
+  await review.getByRole('button', { name: 'Approve', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Approve' }).getByRole('button', { name: 'Confirm' }).click();
+  await expect(review.locator('.badge', { hasText: 'Approved' })).toBeVisible();
+
+  // Order it from the vendor made earlier.
+  await review.getByRole('button', { name: 'Make an order' }).click();
+  const order = page.getByRole('dialog', { name: 'Make an order' });
+  await order.getByRole('combobox', { name: 'Vendor *' }).selectOption({ index: 1 });
+  await order.getByLabel(/^Mobile crane, per day/).fill('1600');
+  await order.getByRole('button', { name: 'Issue the order' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.getByRole('tab', { name: 'Orders' }).click();
+  const poRow = page.getByRole('row', { name: /PO-\d+/ }).first();
+  await expect(poRow).toContainText('Issued');
+  await poRow.getByRole('button', { name: 'Open' }).click();
+  const po = page.getByRole('dialog', { name: /PO-\d+/ });
+  await po.getByLabel('Quantity received of Mobile crane, per day').fill('2');
+  await po.getByLabel('Delivery note').fill('DN-1');
+  await po.getByRole('button', { name: 'Record receipt' }).click();
+  await expect(po.locator('.badge', { hasText: 'Received' })).toBeVisible();
+  await shot('27-purchase-order');
+  await po.getByRole('button', { name: 'Back' }).click();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['requests', 'orders', 'settings']) {
+      await page.goto(`/purchasing?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`purchasing ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

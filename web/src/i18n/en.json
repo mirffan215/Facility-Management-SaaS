@@ -23,7 +23,8 @@
     "jobs": "My jobs",
     "pm": "Preventive",
     "inventory": "Inventory",
-    "vendors": "Vendors"
+    "vendors": "Vendors",
+    "purchasing": "Purchasing"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -554,6 +555,12 @@
       "contract": {
         "Expiring": "Contract {{number}} ends in {{days}} day(s)",
         "Expired": "Contract {{number}} has ended"
+      },
+      "purchase": {
+        "Submitted": "{{number}} is waiting for your approval",
+        "Approved": "{{number}} was approved",
+        "Rejected": "{{number}} was rejected",
+        "Ordered": "{{number}} has been ordered"
       }
     },
     "unreadSuffix": "unread"
@@ -1026,5 +1033,86 @@
     "Certificate": "Certificate",
     "Insurance": "Insurance",
     "Other": "Other"
+  },
+  "purchasing": {
+    "title": "Purchasing",
+    "intro": "Ask for what you need, get it approved at the right level, order it from a vendor and receive it into stock.",
+    "sections": "Purchasing sections",
+    "tab": {
+      "requests": "Requests",
+      "orders": "Orders",
+      "settings": "Approval limits"
+    },
+    "waitingForMe": "Waiting for my approval",
+    "nothingWaiting": "Nothing is waiting for you.",
+    "newRequest": "New request",
+    "noRequests": "No requests yet.",
+    "number": "Number",
+    "requestTitle": "Title",
+    "total": "Total",
+    "level": "Level",
+    "requestedBy": "Requested by",
+    "review": "Review",
+    "request": "Request",
+    "editRequest": "Edit {{number}}",
+    "justification": "Why it is needed",
+    "lineNumber": "Line {{number}}",
+    "stockItem": "A stock item (goes into a store when it arrives)",
+    "deliverTo": "Deliver to store",
+    "description": "Description",
+    "estimatedPrice": "Estimated price (per unit)",
+    "addLine": "Add a line",
+    "saveDraft": "Save draft",
+    "submit": "Save and submit for approval",
+    "lines": "Lines",
+    "byOn": "{{name}} · {{date}}",
+    "needsLevel": "needs approval at level {{level}}",
+    "decidedBy": "Decided by {{name}} on {{date}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancelRequest": "Cancel request",
+    "makeOrder": "Make an order",
+    "issueOrder": "Issue the order",
+    "expectedOn": "Expected on",
+    "agreedPrices": "Agreed prices",
+    "agreedPricesHint": "Change a price if the vendor quoted differently. The order may exceed the approved total only by the allowed tolerance.",
+    "approvedTotal": "approved {{total}}",
+    "order": "Order",
+    "noOrders": "No orders yet.",
+    "expectedBy": "expected by {{date}}",
+    "ordered": "Ordered",
+    "received": "Received",
+    "unitPrice": "Unit price",
+    "receiveNow": "Receive now",
+    "receiveFor": "Quantity received of {{item}}",
+    "deliveryNote": "Delivery note",
+    "recordReceipt": "Record receipt",
+    "receipts": "Receipts",
+    "acknowledge": "Mark as acknowledged",
+    "cancelOrder": "Cancel order",
+    "limits": "Approval limits",
+    "limitsHint": "A request is approved at the level its total needs. Each approval level includes the ones below it, and nobody approves their own request.",
+    "level1": "First limit",
+    "level1Hint": "Up to this total, a first-level approver is enough.",
+    "level2": "Second limit",
+    "level2Hint": "Up to this total a second-level approver is enough; above it, a third-level one is needed.",
+    "tolerance": "Price tolerance (%)",
+    "toleranceHint": "How far above the approved total an order may go.",
+    "saved": "Saved."
+  },
+  "requestStatus": {
+    "Draft": "Draft",
+    "Submitted": "Waiting for approval",
+    "Approved": "Approved",
+    "Rejected": "Rejected",
+    "Cancelled": "Cancelled",
+    "Ordered": "Ordered"
+  },
+  "orderStatus": {
+    "Issued": "Issued",
+    "Acknowledged": "Acknowledged",
+    "PartiallyReceived": "Partly received",
+    "Received": "Received",
+    "Cancelled": "Cancelled"
   }
 }

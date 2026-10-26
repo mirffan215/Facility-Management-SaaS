@@ -58,6 +58,9 @@ describe('translations', () => {
       coverageKind: ['Site', 'AssetClass', 'Asset'],
       contractDocKind: ['Contract', 'Amendment', 'Certificate', 'Insurance', 'Other'],
       'vendors.tab': ['vendors', 'contracts'],
+      requestStatus: ['Draft', 'Submitted', 'Approved', 'Rejected', 'Cancelled', 'Ordered'],
+      orderStatus: ['Issued', 'Acknowledged', 'PartiallyReceived', 'Received', 'Cancelled'],
+      'purchasing.tab': ['requests', 'orders', 'settings'],
       'pm.tab': ['forecast', 'schedules', 'templates', 'compliance'],
     };
     for (const [group, values] of Object.entries(groups)) for (const v of values) {

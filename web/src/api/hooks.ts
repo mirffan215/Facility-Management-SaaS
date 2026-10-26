@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -271,4 +271,31 @@ export function useContractDocuments(id: string | undefined) {
 export function useVendorAssignment(workOrderId: string | undefined) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['vendors', 'assignment', workOrderId], enabled: !!workOrderId, queryFn: () => api.get<VendorAssignment | undefined>(`/work-orders/${workOrderId}/vendor`) });
+}
+
+// ---------------- purchasing ----------------
+
+export function usePurchasingSettings(enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['purchasing', 'settings'], enabled, queryFn: () => api.get<PurchasingSettings>('/purchasing/settings') });
+}
+
+export function useRequests(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['purchasing', 'requests', params], queryFn: () => api.get<Page<PurchaseRequest>>('/purchasing/requests', params) });
+}
+
+export function useRequest(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['purchasing', 'request', id], enabled: !!id, queryFn: () => api.get<PurchaseRequest>(`/purchasing/requests/${id}`) });
+}
+
+export function useOrders(params: Record<string, string | number | boolean | undefined>, enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['purchasing', 'orders', params], enabled, queryFn: () => api.get<Page<PurchaseOrder>>('/purchasing/orders', params) });
+}
+
+export function useOrder(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['purchasing', 'order', id], enabled: !!id, queryFn: () => api.get<PurchaseOrder>(`/purchasing/orders/${id}`) });
 }
