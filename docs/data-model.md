@@ -52,4 +52,8 @@ Phase 3 adds, in `work`: `PmTemplate`, `PmSchedule` (target asset or class, time
 `PmPlan` (one schedule on one asset: next due, last completed, open work order, meter and baseline) and `PmOccurrence` (one generated visit: due date, trigger Time/Meter,
 outcome Open/Completed/Skipped, on-time flag; the history compliance is computed from). All four are tenant-protected by row-level security. Work orders gain nothing: generated ones are `Type = Planned`.
 
+Phase 4 adds, in `inventory`: `Store`, `Item`, `StockLevel` (per store and item: on hand, reserved, average cost, min/max, low-notified flag; check constraints keep quantities sane),
+append-only `StockMovement` (signed quantity, unit cost, balance after, work order / transfer / stock take, reason), `Reservation` (per work order, store and item), `PmTemplatePart`,
+`StockTake` 1-* `StockTakeLine`. All eight tables are under row-level security; movements are also protected by a database trigger. Work order parts cost is derived from movements, not copied.
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

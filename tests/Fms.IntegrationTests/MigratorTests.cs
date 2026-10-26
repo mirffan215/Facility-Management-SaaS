@@ -51,7 +51,9 @@ public sealed class MigratorTests(SqlServerFixture sql)
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'facilities'),
                    (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'facilities' AND t.name <> N'__EFMigrationsHistory'),
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'work'),
-                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'work' AND t.name <> N'__EFMigrationsHistory')
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'work' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'inventory'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'inventory' AND t.name <> N'__EFMigrationsHistory')
             """, conn);
         await using var reader = await cmd.ExecuteReaderAsync();
         await reader.ReadAsync();
@@ -63,6 +65,8 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(reader.GetInt32(5), reader.GetInt32(4)); // every facilities table is under row-level security
         Assert.Equal(reader.GetInt32(7), reader.GetInt32(6)); // every work table is under row-level security too
         Assert.Equal(22, reader.GetInt32(7)); // work orders, history, comments, categories, settings, SLA (5), checklists (3), time, costs, voids, signatures, attachments
+        Assert.Equal(reader.GetInt32(9), reader.GetInt32(8)); // and every inventory table
+        Assert.Equal(8, reader.GetInt32(9)); // stores, items, levels, movements, reservations, template parts, stock takes, stock take lines
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
     }
 }
