@@ -35,7 +35,7 @@ ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://0.0.0.0:5080 \
 ConnectionStrings__Default="Server=localhost,$SQL_PORT;Database=Fms;User Id=fms_app;Password=$APP_PASSWORD;TrustServerCertificate=True" \
 Deployment__Mode=OnPrem Deployment__SingleTenantId=$TENANT Deployment__LocalStoragePath="$STORAGE" Storage__Provider=Local \
 Authentication__AllowInsecureAuthority=true Authentication__Providers__0__Name=fake Authentication__Providers__0__Authority=http://localhost:9099 \
-Authentication__Providers__0__Audience=api://fms Authentication__Providers__0__ClientId=fms-web \
+Authentication__Providers__0__Audience=api://fms Authentication__Providers__0__ClientId=fms-web Authentication__Providers__0__Scope="openid profile email offline_access" \
 Facilities__PublicBaseUrl=http://localhost:5173 \
   dotnet src/Host/Fms.Api/bin/Debug/net10.0/Fms.Api.dll > "$LOGS/api.log" 2>&1 & PIDS+=($!)
 

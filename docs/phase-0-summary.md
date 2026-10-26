@@ -38,7 +38,8 @@ isolation tests fail, so they do guard those controls. They need Docker.
 - **Worker** has no health endpoint. The parallel-worker test proves exactly-once claiming, not the lock hints' no-blocking benefit.
 - **Bicep/Terraform and Helm** are not written.
 - **Licensing**: the on-prem provider is a placeholder that reports unlicensed and gates nothing; signed licenses are roadmap phase 8.
-- **Docker images and the compose stack were not built here**: this sandbox's proxy certificate is untrusted inside build
-  containers, so NuGet/npm fail there. The migrator and API were run directly against SQL Server instead. CI builds the images.
+- **Docker images**: this sandbox's proxy certificate is untrusted inside build containers, so they cannot be built here; the migrator and API
+  were run directly against SQL Server instead. The CI workflow does build all four images (api, migrator, worker, web) and has passed on GitHub.
+  The `docker-compose.onprem.yml` stack itself has not been brought up end to end.
 - **Localization**: Hijri/Gregorian dates and Arabic documents are not started (the UI shell has Arabic and RTL).
 - Storage keys use the file name as given; file-name length and type limits belong with the first upload endpoint.

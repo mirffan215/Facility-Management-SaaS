@@ -47,10 +47,12 @@ on first load); built files colliding with the `/assets/<id>` page URL; nginx si
 having no page to open; an empty Arabic name pushed to the wrong edge; mixed Arabic/English breadcrumbs scrambling their order.
 
 ## Not done / known gaps
-- **No screens for user and role administration** (the API exists); people get roles through the API for now. A new user with no role sees a
-  clear "no access" message. No screens yet for editing/archiving meters, editing asset classes or custom-field definitions (create and archive only).
-- **Sessions end when the token expires** (no silent renewal yet); the person signs in again. Not yet tried against real Entra or Google, only
-  the fake provider. The nginx configuration is exercised for real by the browser test (the official nginx image with the built files mounted), but the web Docker image build itself was not run here.
+- **User and role administration** has a screen (Users): assign roles, deactivate and reactivate. Administrators cannot change their own roles
+  or deactivate themselves, and only the Administrator role holds `users.manage`, so the last administrator cannot be locked out through the
+  UI; roles themselves are fixed system roles (no custom-role editor). A new user with no role sees a clear "no access" message. No screens yet for editing/archiving meters, editing asset classes or custom-field definitions (create and archive only).
+- **Silent renewal** uses refresh tokens (`offline_access` in the provider's `Scope`), proven against the fake provider. If a provider issues no
+  refresh token, the session ends when the access token expires and the person signs in again. **Not yet tried against real Entra or Google**:
+  see `docs/runbooks/entra-sign-in.md`. The nginx configuration is exercised for real by the browser test (the official nginx image with the built files mounted), but the web Docker image build itself was not run here.
 - **No offline mode** for the technician PWA yet (the API supports idempotent offline sync; the screens do not use it). Dark mode is styled but
   not scanned for contrast. The JavaScript bundle is one file (about 148 KB gzipped); route-level splitting is a later optimisation.
 - **No malware scanning.** `IFileScanner` is a seam; the default accepts everything. Do not accept files from untrusted uploaders until a
@@ -58,11 +60,11 @@ having no page to open; an empty Arabic name pushed to the wrong edge; mixed Ara
   save fails leaves an orphaned (harmless, write-once) object.
 - **Upload size limits** are enforced by counting real bytes in the service (tested) and by Kestrel's body limit (set per request); the
   Kestrel path itself is not exercised by the in-memory test host.
-- **No bulk import/export** (CSV/Excel) for locations and assets, which a real rollout will need on day one.
+- Bulk import/export is CSV only (no Excel files); import is all-or-nothing.
 - **Search is `LIKE`**, with no full-text index; the tree endpoint is capped at 5,000 nodes.
 - **No events yet.** Meter readings and asset changes do not publish outbox messages, because nothing consumes them until Preventive
   Maintenance (Phase 3); an unconsumed message type would only fill the dead-letter list.
 - **Time zones** are stored on sites but nothing uses them yet; dates are ISO, and Hijri display belongs to the UI.
 - **No API rate limiting** anywhere yet.
-- Still open from Phase 0: Bicep/Terraform and Helm, worker health endpoint, tenant onboarding tooling, real identity-provider testing,
-  and CI has not yet run (Docker image builds are unverified in this sandbox).
+- Still open from Phase 0: Bicep/Terraform and Helm, worker health endpoint, tenant onboarding tooling, and real identity-provider testing.
+  CI (backend, web, Docker images, full-stack browser test) runs on GitHub and is green.

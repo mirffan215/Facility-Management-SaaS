@@ -6,8 +6,10 @@ Status: Proposed
   `GET /api/v1/auth/providers` (name, authority, client id, scope). The API stays a pure resource server; it never sees a password or a
   cookie. The access token is kept in `sessionStorage` (gone when the tab closes), never in `localStorage`, and is sent as a bearer
   token. A 401 from the API ends the session and returns to the sign-in page. A returned `returnTo` is accepted only if it is a same-site path.
-- **No refresh or silent renewal yet.** When the token expires the person signs in again (a one-click redirect when the provider has an
-  active session). Silent renewal needs provider-specific settings (refresh tokens in Entra, iframes elsewhere) and deserves its own change.
+- **Silent renewal uses refresh tokens, not a hidden iframe.** The provider's `Scope` includes `offline_access`; `oidc-client-ts` renews shortly
+  before expiry. This needs no extra page and no `frame-src` in the CSP, and works with third-party-cookie blocking. A failed renewal ends the
+  session only once the access token is actually unusable, so a network blip does not sign anyone out. A provider that issues no refresh token
+  degrades to the old behaviour (sign in again when the token expires). Entra issues rotating refresh tokens to single-page apps (limited lifetime).
 - **One origin for the browser.** In production a small nginx serves the built files and proxies `/api` to the API, so there is no CORS
   surface. Security headers (CSP, `nosniff`, no framing, no referrer, locked-down permissions) are set once at server level. nginx drops
   inherited `add_header` lines when a location declares its own, so caching uses `expires` instead. Built files go to `/static/`
@@ -26,7 +28,7 @@ Status: Proposed
   is set **and** the environment is Development; anywhere else that setting stops the app from starting.
 
 ## Consequences
-- Sessions end when the token does (typically an hour). Silent renewal is a known follow-up.
+- Sessions last as long as the provider's refresh token (Entra limits it for single-page apps), then the person signs in again.
 - A deployment must register the web app as a public client at its identity provider and list the provider's origin in `CSP_CONNECT_SRC`
   to get the tight policy (the default allows any https origin for the token call).
 - The full-stack test needs Docker, .NET, Node and Chromium; `scripts/e2e-full.sh` runs it locally and in CI.

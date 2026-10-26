@@ -70,7 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      manager.current = createManager(chosen);
+      const created = createManager(chosen);
+      manager.current = created;
+      created.events.addUserLoaded((renewed) => {
+        if (!cancelled) setUser(renewed);
+      });
+      created.events.addSilentRenewError(() => {
+        // A failed renewal only matters once the token can no longer be used; a brief network blip should not sign anyone out.
+        void created.getUser().then((current) => {
+          if (!cancelled && (!current || current.expired)) endSession('expired');
+        });
+      });
       try {
         if (window.location.pathname === '/auth/callback') {
           const signedIn = await manager.current.signinRedirectCallback();
@@ -101,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [endSession]);
 
   const signIn = useCallback(
     async (providerName: string) => {

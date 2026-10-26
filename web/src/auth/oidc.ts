@@ -15,7 +15,9 @@ export function createManager(provider: ProviderInfo): UserManager {
     response_type: 'code',
     scope: provider.scope ?? 'openid profile email',
     userStore: new WebStorageStateStore({ store: window.sessionStorage }),
-    automaticSilentRenew: false,
+    // Renewal uses a refresh token (the 'offline_access' scope), so no hidden iframe or extra redirect page is needed. Without one the
+    // renewal fails and the session simply ends when the token expires, which is the safe fallback.
+    automaticSilentRenew: true,
     loadUserInfo: false,
   });
 }

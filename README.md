@@ -30,6 +30,7 @@ Authentication__Providers__0__IssuerPrefix=https://login.microsoftonline.com/
 Authentication__Providers__0__ExternalTenantClaim=tid
 Authentication__Providers__0__Audience=api://<api-app-id>
 Authentication__Providers__0__ClientId=<spa-client-id>
+Authentication__Providers__0__Scope="openid profile email offline_access api://<api-app-id>/access_as_user"
 Authentication__TenantMappings__0__Provider=entra
 Authentication__TenantMappings__0__ExternalTenantId=<customer Entra directory id>
 Authentication__TenantMappings__0__TenantId=<FMS tenant id>

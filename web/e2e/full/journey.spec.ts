@@ -367,6 +367,30 @@ test('a person with no role sees a clear message, then only what their role allo
   await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
 });
 
+test('a session outlives its access token by renewing silently with the refresh token', async ({ browser }) => {
+  // Tokens that last 75 s are renewed about a minute before they expire, so within ~15 s the app must have swapped in a new one.
+  await fetch(`${IDP}/__ttl?seconds=75`);
+  const who = await personaPage(browser, `renew-${SUFFIX.toLowerCase()}`, 'Rita Renew');
+  try {
+    await expect(who.getByRole('heading', { name: 'No access' })).toBeVisible();
+    const token = () => who.evaluate(() => {
+      const key = Object.keys(sessionStorage).find((k) => k.startsWith('oidc.user'))!;
+      return (JSON.parse(sessionStorage.getItem(key)!) as { access_token: string }).access_token;
+    });
+    const first = await token();
+    await expect.poll(token, { timeout: 40_000, intervals: [1000] }).not.toBe(first);
+    const stats = (await (await fetch(`${IDP}/__stats`)).json()) as { refreshes: number };
+    expect(stats.refreshes).toBeGreaterThanOrEqual(1);
+    // Still signed in, and the API accepts the renewed token.
+    await who.reload();
+    await expect(who.getByRole('heading', { name: 'No access' })).toBeVisible();
+  } finally {
+    await fetch(`${IDP}/__ttl?seconds=3600`);
+    await who.context().close();
+    await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+  }
+});
+
 test('the strict content-security policy was never violated and the security headers are served', async () => {
   expect(cspViolations).toEqual([]);
   const headers = (await page.request.get('/')).headers();
