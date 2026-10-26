@@ -49,7 +49,9 @@ public sealed record StartStockTakeRequest(Guid? StoreId, string? Note);
 
 public sealed record CountInput(Guid? ItemId, decimal? CountedQty);
 
-public sealed record SaveCountsRequest(IReadOnlyList<CountInput>? Counts, string? RowVersion);
+public sealed record SaveCountsRequest(IReadOnlyList<CountInput>? Counts);
+
+public sealed record ReasonRequest(string? Reason);
 
 public sealed record RowVersionRequest(string? RowVersion);
 

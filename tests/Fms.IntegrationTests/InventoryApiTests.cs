@@ -357,4 +357,88 @@ public sealed class InventoryApiTests(SqlServerFixture sql) : IDisposable
         Assert.Equal(2, await LowNotices());
         Assert.Equal(0, (await ReadAsync<Page<NotificationDto>>(await rig.Viewer.GetAsync("/api/v1/notifications"))).Items.Count(n => n.Type == "inventory.low")); // viewers are not told
     }
+
+    // ---------------- stock takes ----------------
+
+    private static Task<HttpResponseMessage> Counts(HttpClient c, Guid take, params (ItemDto Item, decimal? Counted)[] counts) =>
+        PutAsync(c, $"/api/v1/inventory/stock-takes/{take}/counts", new { counts = counts.Select(x => new { itemId = x.Item.Id, countedQty = x.Counted }).ToArray() });
+
+    [Fact]
+    public async Task A_stock_take_posts_differences_only_when_someone_else_approves_it()
+    {
+        var rig = await NewRigAsync();
+        var checker = await _api.ClientAsync(rig.Tenant, SystemRoles.FacilityManager); // another person with the same role
+        var store = await StoreAsync(rig);
+        var a = await ItemAsync(rig, "Bearing");
+        var b = await ItemAsync(rig, "Seal");
+        var c = await ItemAsync(rig, "Gasket");
+        await ReceiveAsync(rig, store, a, 10, 3);
+        await ReceiveAsync(rig, store, b, 4, 2);
+
+        var take = await ReadAsync<StockTakeDto>(await PostAsync(rig.Manager, "/api/v1/inventory/stock-takes", new { storeId = store.Id, note = "Year end" }));
+        Assert.Equal(StockTakeStatus.Counting, take.Status);
+        Assert.Equal(HttpStatusCode.Conflict, (await PostAsync(rig.Manager, "/api/v1/inventory/stock-takes", new { storeId = store.Id })).StatusCode); // one at a time per store
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Technician, "/api/v1/inventory/stock-takes", new { storeId = store.Id })).StatusCode);
+
+        // The sheet is frozen: stock that arrives during the count is not lost when differences are posted.
+        await ReceiveAsync(rig, store, a, 5, 3);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{take.Id}/submit", new { })).StatusCode); // nothing counted yet
+        Assert.Equal(HttpStatusCode.BadRequest, (await Counts(rig.Manager, take.Id, (a, -1))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Counts(rig.Manager, take.Id, (a, 8), (b, 4), (c, 3))).StatusCode); // c was found but the system had none
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{take.Id}/submit", new { })).StatusCode);
+        var submitted = await ReadAsync<StockTakeDto>(await rig.Manager.GetAsync($"/api/v1/inventory/stock-takes/{take.Id}"));
+        Assert.Equal((3, 3, 2), (submitted.Lines, submitted.Counted, submitted.Differences));
+        Assert.Equal(HttpStatusCode.Conflict, (await Counts(rig.Manager, take.Id, (a, 9))).StatusCode); // locked once submitted
+
+        // Nothing has moved yet, and the submitter cannot approve their own count.
+        Assert.Equal(15m, (await LevelAsync(rig, store, a)).OnHand);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{take.Id}/approve", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Technician, $"/api/v1/inventory/stock-takes/{take.Id}/approve", new { })).StatusCode);
+
+        var approved = await ReadAsync<StockTakeDto>(await PostAsync(checker, $"/api/v1/inventory/stock-takes/{take.Id}/approve", new { }));
+        Assert.Equal(StockTakeStatus.Approved, approved.Status);
+        Assert.Equal(13m, (await LevelAsync(rig, store, a)).OnHand); // 15 now, counted 8 against the 10 frozen: minus 2
+        Assert.Equal(4m, (await LevelAsync(rig, store, b)).OnHand);
+        Assert.Equal(3m, (await LevelAsync(rig, store, c)).OnHand);
+        var adjustments = await ReadAsync<Page<MovementDto>>(await rig.Viewer.GetAsync($"/api/v1/inventory/movements?storeId={store.Id}&type=CountAdjustment"));
+        Assert.Equal(2, adjustments.Total);
+        Assert.Equal(HttpStatusCode.Conflict, (await PostAsync(checker, $"/api/v1/inventory/stock-takes/{take.Id}/approve", new { })).StatusCode); // only once
+
+        // A new count can start now, and can be cancelled with a reason.
+        var again = await ReadAsync<StockTakeDto>(await PostAsync(rig.Manager, "/api/v1/inventory/stock-takes", new { storeId = store.Id }));
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{again.Id}/cancel", new { })).StatusCode);
+        Assert.Equal(StockTakeStatus.Cancelled, (await ReadAsync<StockTakeDto>(await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{again.Id}/cancel", new { reason = "Started by mistake" }))).Status);
+        Assert.Equal(2, (await rig.Viewer.GetFromJsonAsync<StockTakeDto[]>($"/api/v1/inventory/stock-takes?storeId={store.Id}", Json))!.Length);
+    }
+
+    [Fact]
+    public async Task A_count_that_would_cut_into_held_stock_is_refused_and_a_submitted_count_can_be_sent_back()
+    {
+        var rig = await NewRigAsync();
+        var checker = await _api.ClientAsync(rig.Tenant, SystemRoles.FacilityManager);
+        var store = await StoreAsync(rig);
+        var item = await ItemAsync(rig);
+        await ReceiveAsync(rig, store, item, 10, 3);
+        var wo = await WorkOrderAsync(rig);
+        Assert.Equal(HttpStatusCode.OK, (await Parts(rig.Manager, wo.Id, "reserve", store, item, 9)).StatusCode);
+
+        var take = await ReadAsync<StockTakeDto>(await PostAsync(rig.Manager, "/api/v1/inventory/stock-takes", new { storeId = store.Id }));
+        await Counts(rig.Manager, take.Id, (item, 8)); // 2 missing, but 9 are promised to a work order
+        await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{take.Id}/submit", new { });
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(checker, $"/api/v1/inventory/stock-takes/{take.Id}/approve", new { })).StatusCode);
+        Assert.Equal(10m, (await LevelAsync(rig, store, item)).OnHand);
+        Assert.Equal(StockTakeStatus.Submitted, (await ReadAsync<StockTakeDto>(await rig.Manager.GetAsync($"/api/v1/inventory/stock-takes/{take.Id}"))).Status);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(checker, $"/api/v1/inventory/stock-takes/{take.Id}/send-back", new { })).StatusCode); // a reason is needed
+        Assert.Equal(StockTakeStatus.Counting, (await ReadAsync<StockTakeDto>(await PostAsync(checker, $"/api/v1/inventory/stock-takes/{take.Id}/send-back", new { reason = "Recount: reserved stock is on the shelf" }))).Status);
+
+        // Release the hold, count again, and it goes through.
+        Assert.Equal(HttpStatusCode.OK, (await Parts(rig.Manager, wo.Id, "release", store, item, 0)).StatusCode);
+        await Counts(rig.Manager, take.Id, (item, 8));
+        await PostAsync(rig.Manager, $"/api/v1/inventory/stock-takes/{take.Id}/submit", new { });
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(checker, $"/api/v1/inventory/stock-takes/{take.Id}/approve", new { })).StatusCode);
+        Assert.Equal(8m, (await LevelAsync(rig, store, item)).OnHand);
+    }
 }

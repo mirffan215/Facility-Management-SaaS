@@ -33,6 +33,16 @@ public static class InventoryEndpoints
         g.MapPost("/stock/transfer", async (TransferRequest r, StockService s, CancellationToken ct) => (await s.TransferAsync(r, ct)).ToHttp()).RequirePermission(Permissions.InventoryManage);
         g.MapPost("/stock/adjust", async (AdjustRequest r, StockService s, CancellationToken ct) => (await s.AdjustAsync(r, ct)).ToHttp()).RequirePermission(Permissions.InventoryApprove);
 
+        // Stock takes: counting is for stock keepers; approving needs a different person with inventory.approve.
+        g.MapGet("/stock-takes", async (StockTakeService s, Guid? storeId, StockTakeStatus? status, CancellationToken ct) => Results.Ok(await s.ListAsync(storeId, status, ct))).RequirePermission(Permissions.InventoryRead);
+        g.MapGet("/stock-takes/{id:guid}", async (Guid id, StockTakeService s, CancellationToken ct) => (await s.GetAsync(id, ct)).ToHttp()).RequirePermission(Permissions.InventoryRead);
+        g.MapPost("/stock-takes", async (StartStockTakeRequest r, StockTakeService s, CancellationToken ct) => (await s.StartAsync(r, ct)).ToHttp(x => Results.Created($"/api/v1/inventory/stock-takes/{x.Id}", x))).RequirePermission(Permissions.InventoryManage);
+        g.MapPut("/stock-takes/{id:guid}/counts", async (Guid id, SaveCountsRequest r, StockTakeService s, CancellationToken ct) => (await s.SaveCountsAsync(id, r, ct)).ToHttp()).RequirePermission(Permissions.InventoryManage);
+        g.MapPost("/stock-takes/{id:guid}/submit", async (Guid id, StockTakeService s, CancellationToken ct) => (await s.SubmitAsync(id, ct)).ToHttp()).RequirePermission(Permissions.InventoryManage);
+        g.MapPost("/stock-takes/{id:guid}/send-back", async (Guid id, ReasonRequest r, StockTakeService s, CancellationToken ct) => (await s.ReopenAsync(id, r.Reason, ct)).ToHttp()).RequirePermission(Permissions.InventoryApprove);
+        g.MapPost("/stock-takes/{id:guid}/approve", async (Guid id, StockTakeService s, CancellationToken ct) => (await s.ApproveAsync(id, ct)).ToHttp()).RequirePermission(Permissions.InventoryApprove);
+        g.MapPost("/stock-takes/{id:guid}/cancel", async (Guid id, ReasonRequest r, StockTakeService s, CancellationToken ct) => (await s.CancelAsync(id, r.Reason, ct)).ToHttp()).RequirePermission(Permissions.InventoryManage);
+
         // Parts a preventive-maintenance template needs; reserved when its visits are created.
         g.MapGet("/pm-templates/{templateId:guid}/parts", async (Guid templateId, CatalogService s, CancellationToken ct) => Results.Ok(await s.PmPartsAsync(templateId, ct))).RequirePermission(Permissions.InventoryRead);
         g.MapPut("/pm-templates/{templateId:guid}/parts", async (Guid templateId, SavePmPartsRequest r, CatalogService s, CancellationToken ct) => (await s.SavePmPartsAsync(templateId, r, ct)).ToHttp()).RequirePermission(Permissions.InventoryManage);
