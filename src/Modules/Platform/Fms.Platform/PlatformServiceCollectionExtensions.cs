@@ -37,6 +37,7 @@ public static class PlatformServiceCollectionExtensions
         services.AddScoped<Fms.BuildingBlocks.Identity.IUserDirectory, UserDirectory>();
         services.AddFmsPendingWrites();
         services.AddScoped<AccessAdministration>();
+        services.AddScoped<Fms.Platform.Idempotency.IdempotencyService>();
         services.AddScoped<Fms.BuildingBlocks.Notifications.INotificationSink, Fms.Platform.Notifications.NotificationSink>();
         services.AddScoped<Fms.Platform.Notifications.NotificationService>();
         services.AddOutboxHandler<Fms.Platform.Notifications.EmailSendHandler>();

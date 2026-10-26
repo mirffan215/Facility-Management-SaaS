@@ -82,3 +82,26 @@ public sealed class Notification : ITenantOwned
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? ReadAt { get; set; }
 }
+
+/// <summary>
+/// Remembers the outcome of a write that a client may retry (a phone that lost its connection mid-request). The same key from the same person
+/// returns the first answer instead of doing the work twice.
+/// </summary>
+public sealed class IdempotencyKey : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid UserId { get; set; }
+    public string Key { get; set; } = "";
+    public string Method { get; set; } = "";
+    public string Path { get; set; } = "";
+
+    /// <summary>What the request was (method, path, body). A reused key with a different request is refused.</summary>
+    public string RequestHash { get; set; } = "";
+
+    public bool IsComplete { get; set; }
+    public int StatusCode { get; set; }
+    public string? ContentType { get; set; }
+    public byte[]? ResponseBody { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}

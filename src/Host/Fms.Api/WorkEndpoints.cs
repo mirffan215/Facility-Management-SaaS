@@ -10,6 +10,10 @@ public static class WorkEndpoints
 {
     private static readonly string[] Everyone = [Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest];
 
+    /// <summary>When the person says they did it (an app that was offline reports its own clock). The service limits how far this is trusted.</summary>
+    private static DateTimeOffset? PerformedAt(HttpContext http) =>
+        http.Request.Headers.TryGetValue("X-Performed-At", out var v) && DateTimeOffset.TryParse(v.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out var at) ? at : null;
+
     /// <summary>Files are only ever served as downloads, never rendered in the app's origin.</summary>
     private static async Task<IResult> ServeAsync(HttpContext http, Fms.BuildingBlocks.Results.Result<DownloadedFile> result)
     {
@@ -39,6 +43,10 @@ public static class WorkEndpoints
                     openOnly ?? false, overdue ?? false, slaBreached ?? false, q, page, pageSize), ct));
             })
             .RequireAnyPermission(Everyone);
+
+        // A technician's phone downloads this to work without a connection (see ADR-0013).
+        g.MapGet("/offline/jobs", async (OfflineJobsService s, CancellationToken ct) => Results.Ok(await s.JobsAsync(ct)))
+            .RequirePermission(Permissions.WorkOrdersWork);
 
         g.MapGet("/assignees", async (WorkOrderService s, CancellationToken ct) => Results.Ok(await s.AssigneesAsync(ct)))
             .RequireAnyPermission(Permissions.WorkOrdersAssign, Permissions.WorkOrdersManage);
@@ -113,10 +121,10 @@ public static class WorkEndpoints
         g.MapPost("/{id:guid}/approve", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.ApproveAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersApprove);
         g.MapPost("/{id:guid}/reject", async (Guid id, ReasonRequest r, WorkOrderService s, CancellationToken ct) => (await s.RejectAsync(id, r.Reason, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersApprove);
         g.MapPost("/{id:guid}/assign", async (Guid id, AssignRequest r, WorkOrderService s, CancellationToken ct) => (await s.AssignAsync(id, r.AssigneeId, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersAssign);
-        g.MapPost("/{id:guid}/start", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.StartAsync(id, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
-        g.MapPost("/{id:guid}/hold", async (Guid id, ReasonRequest r, WorkOrderService s, CancellationToken ct) => (await s.HoldAsync(id, r.Reason, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
-        g.MapPost("/{id:guid}/resume", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.ResumeAsync(id, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
-        g.MapPost("/{id:guid}/complete", async (Guid id, CompleteRequest r, WorkOrderService s, CancellationToken ct) => (await s.CompleteAsync(id, r, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/start", async (Guid id, HttpContext http, WorkOrderService s, CancellationToken ct) => (await s.StartAsync(id, PerformedAt(http), ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/hold", async (Guid id, ReasonRequest r, HttpContext http, WorkOrderService s, CancellationToken ct) => (await s.HoldAsync(id, r.Reason, PerformedAt(http), ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/resume", async (Guid id, HttpContext http, WorkOrderService s, CancellationToken ct) => (await s.ResumeAsync(id, PerformedAt(http), ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/complete", async (Guid id, CompleteRequest r, HttpContext http, WorkOrderService s, CancellationToken ct) => (await s.CompleteAsync(id, r, PerformedAt(http), ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
         g.MapPost("/{id:guid}/verify", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.VerifyAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersVerify);
         g.MapPost("/{id:guid}/close", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.CloseAsync(id, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersVerify, Permissions.WorkOrdersManage);
         g.MapPost("/{id:guid}/reopen", async (Guid id, ReasonRequest r, WorkOrderService s, CancellationToken ct) => (await s.ReopenAsync(id, r.Reason, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersManage);

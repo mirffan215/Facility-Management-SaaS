@@ -59,7 +59,10 @@ public sealed class OutboxProcessor(
     {
         await using var scope = PlatformScope(out var db);
         var cutoff = clock.GetUtcNow() - options.Value.Retention;
-        return await db.OutboxMessages.Where(m => m.ProcessedAt != null && m.ProcessedAt < cutoff).ExecuteDeleteAsync(ct);
+        var purged = await db.OutboxMessages.Where(m => m.ProcessedAt != null && m.ProcessedAt < cutoff).ExecuteDeleteAsync(ct);
+        // Retried writes are only retried for a short while; older remembered answers are of no use.
+        var keyCutoff = clock.GetUtcNow().AddDays(-7);
+        return purged + await db.IdempotencyKeys.IgnoreQueryFilters().Where(k => k.CreatedAt < keyCutoff).ExecuteDeleteAsync(ct);
     }
 
     private async Task<List<Claimed>> ClaimAsync(CancellationToken ct)

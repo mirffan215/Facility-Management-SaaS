@@ -258,27 +258,27 @@ public sealed class WorkOrderService(
             return null;
         }, subject: assigneeId, ct: ct);
 
-    public Task<Result<WorkOrderDto>> StartAsync(Guid id, CancellationToken ct = default) =>
-        ActAsync(id, WorkOrderAction.Started, null, (wo, now, _) => { wo.Status = WorkOrderStatus.InProgress; wo.StartedAt ??= now; wo.RespondedAt ??= now; wo.StatusReason = null; return null; }, ct: ct);
+    public Task<Result<WorkOrderDto>> StartAsync(Guid id, DateTimeOffset? performedAt = null, CancellationToken ct = default) =>
+        ActAsync(id, WorkOrderAction.Started, null, (wo, now, _) => { wo.Status = WorkOrderStatus.InProgress; wo.StartedAt ??= now; wo.RespondedAt ??= now; wo.StatusReason = null; return null; }, performedAt: performedAt, ct: ct);
 
-    public Task<Result<WorkOrderDto>> HoldAsync(Guid id, string? reason, CancellationToken ct = default) =>
+    public Task<Result<WorkOrderDto>> HoldAsync(Guid id, string? reason, DateTimeOffset? performedAt = null, CancellationToken ct = default) =>
         ActCoreAsync(id, WorkOrderAction.Held, reason, async (wo, now, token) =>
         {
             wo.Status = WorkOrderStatus.OnHold;
             await sla.PauseAsync(wo, now, token); // time on hold does not count against the SLA
             return null;
-        }, ct: ct);
+        }, performedAt: performedAt, ct: ct);
 
-    public Task<Result<WorkOrderDto>> ResumeAsync(Guid id, CancellationToken ct = default) =>
+    public Task<Result<WorkOrderDto>> ResumeAsync(Guid id, DateTimeOffset? performedAt = null, CancellationToken ct = default) =>
         ActCoreAsync(id, WorkOrderAction.Resumed, null, async (wo, now, token) =>
         {
             wo.Status = WorkOrderStatus.InProgress;
             wo.StatusReason = null;
             await sla.ResumeAsync(wo, now, token);
             return null;
-        }, ct: ct);
+        }, performedAt: performedAt, ct: ct);
 
-    public Task<Result<WorkOrderDto>> CompleteAsync(Guid id, CompleteRequest r, CancellationToken ct = default) =>
+    public Task<Result<WorkOrderDto>> CompleteAsync(Guid id, CompleteRequest r, DateTimeOffset? performedAt = null, CancellationToken ct = default) =>
         ActCoreAsync(id, WorkOrderAction.Completed, r.Notes, async (wo, now, token) =>
         {
             if (r.Code is not { } code || !Enum.IsDefined(code)) return ("code", "Say how it ended (closure code).");
@@ -290,7 +290,7 @@ public sealed class WorkOrderService(
             wo.ClosureCode = code;
             wo.ClosureNotes = r.Notes.Trim();
             return null;
-        }, noteIsReason: false, ct: ct);
+        }, noteIsReason: false, performedAt: performedAt, ct: ct);
 
     public Task<Result<WorkOrderDto>> VerifyAsync(Guid id, CancellationToken ct = default) =>
         ActAsync(id, WorkOrderAction.Verified, null, (wo, now, _) => { wo.Status = WorkOrderStatus.Verified; wo.VerifiedAt = now; wo.VerifiedBy = user.UserId; return null; }, ct: ct);
@@ -347,12 +347,12 @@ public sealed class WorkOrderService(
     /// </summary>
     private async Task<Result<WorkOrderDto>> ActAsync(
         Guid id, WorkOrderAction action, string? reason, Func<WorkOrder, DateTimeOffset, CancellationToken, (string Field, string Error)?> apply,
-        Guid? subject = null, bool noteIsReason = true, CancellationToken ct = default) =>
-        await ActCoreAsync(id, action, reason, (wo, now, token) => Task.FromResult(apply(wo, now, token)), subject, noteIsReason, ct);
+        Guid? subject = null, bool noteIsReason = true, DateTimeOffset? performedAt = null, CancellationToken ct = default) =>
+        await ActCoreAsync(id, action, reason, (wo, now, token) => Task.FromResult(apply(wo, now, token)), subject, noteIsReason, performedAt, ct);
 
     private async Task<Result<WorkOrderDto>> ActCoreAsync(
         Guid id, WorkOrderAction action, string? reason, Func<WorkOrder, DateTimeOffset, CancellationToken, Task<(string Field, string Error)?>> apply,
-        Guid? subject = null, bool noteIsReason = true, CancellationToken ct = default)
+        Guid? subject = null, bool noteIsReason = true, DateTimeOffset? performedAt = null, CancellationToken ct = default)
     {
         var wo = await (await VisibleAsync(true, ct)).FirstOrDefaultAsync(w => w.Id == id, ct);
         if (wo is null) return Result<WorkOrderDto>.NotFound();
@@ -367,7 +367,8 @@ public sealed class WorkOrderService(
         if (noteIsReason && WorkOrderRules.RequiresReason(action) && cleaned is null) return Result<WorkOrderDto>.Invalid("reason", "A reason is required.");
 
         var from = wo.Status;
-        var now = clock.GetUtcNow();
+        var synced = clock.GetUtcNow();
+        var now = ClientTime.Resolve(performedAt, wo.UpdatedAt, synced); // an action done offline counts from when it was done, within limits
         if (await apply(wo, now, ct) is { } problem) return Result<WorkOrderDto>.Invalid(problem.Field, problem.Error);
 
         if (noteIsReason && cleaned is not null && action is not WorkOrderAction.Assigned) wo.StatusReason = cleaned;
@@ -375,7 +376,7 @@ public sealed class WorkOrderService(
         db.WorkOrderEvents.Add(Event(wo, action, from, wo.Status, actor.UserId, now, cleaned, subject));
         outbox.Enqueue(WorkMessages.Event, new WorkOrderEventMessage(id, action, actor.UserId, cleaned));
         audit.Record("workorder." + action.ToString().ToLowerInvariant(), nameof(WorkOrder), id.ToString(),
-            JsonSerializer.Serialize(new { from, to = wo.Status, reason = cleaned, subject }));
+            JsonSerializer.Serialize(new { from, to = wo.Status, reason = cleaned, subject, performedAt = now, claimedAt = performedAt, syncedAt = synced }));
         return await SaveAsync(wo, ct);
     }
 

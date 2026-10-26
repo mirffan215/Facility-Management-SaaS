@@ -107,3 +107,13 @@ public sealed class WorkOptions
     public int MaxSignatureBytes { get; set; } = 256 * 1024;
     public int MaxChecklistItems { get; set; } = 100;
 }
+
+// ---------------- offline bundle ----------------
+
+/// <summary>Everything a technician's phone needs to work one job without a connection.</summary>
+public sealed record OfflineJobDto(
+    WorkOrderDto Order, IReadOnlyList<WorkOrderEventDto> Events, IReadOnlyList<WorkOrderCommentDto> Comments, IReadOnlyList<ChecklistItemDto> Checklist,
+    IReadOnlyList<SignatureDto> Signatures, IReadOnlyList<AttachmentDto> Attachments, IReadOnlyList<TimeEntryDto> Time, IReadOnlyList<CostLineDto> Costs, string? CurrencyCode);
+
+/// <summary>The jobs assigned to the signed-in person that are still open, with the server's clock so the phone can correct its own.</summary>
+public sealed record OfflineJobsDto(DateTimeOffset ServerTime, IReadOnlyList<OfflineJobDto> Jobs);

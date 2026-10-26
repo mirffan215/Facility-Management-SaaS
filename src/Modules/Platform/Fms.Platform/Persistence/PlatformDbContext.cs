@@ -19,9 +19,22 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<IdempotencyKey>(e =>
+        {
+            e.ToTable("IdempotencyKeys");
+            e.Property(x => x.Key).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Method).HasMaxLength(10).IsRequired();
+            e.Property(x => x.Path).HasMaxLength(300).IsRequired();
+            e.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.UserId, x.Key }).IsUnique();
+            e.HasIndex(x => x.CreatedAt);
+        });
+
         b.Entity<Notification>(e =>
         {
             e.ToTable("Notifications");

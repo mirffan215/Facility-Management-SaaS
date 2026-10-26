@@ -52,6 +52,7 @@ app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseMiddleware<UserProvisioningMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<IdempotencyMiddleware>();
 
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready").AllowAnonymous();

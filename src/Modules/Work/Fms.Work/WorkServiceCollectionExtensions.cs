@@ -22,6 +22,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<WorkEvidenceService>();
         services.AddScoped<WorkFilesService>();
         services.AddScoped<ChecklistTemplateService>();
+        services.AddScoped<OfflineJobsService>();
         services.AddScoped<SlaClock>();
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, WorkOrderEventHandler>();
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, SlaAlertHandler>();

@@ -212,3 +212,20 @@ public static class WorkOrderRules
 
     public static bool IsOverdue(WorkOrder wo, DateTimeOffset now) => wo.DueAt is { } due && due < now && IsOpen(wo.Status) && wo.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Verified);
 }
+
+/// <summary>
+/// When a field action really happened. A phone that was offline reports the time on its own clock when it syncs; that claim is trusted only
+/// within limits: never in the future, never before the work order's last change, never more than a week ago. Outside them the server's time wins.
+/// </summary>
+public static class ClientTime
+{
+    public static readonly TimeSpan MaxBackdate = TimeSpan.FromDays(7);
+
+    public static DateTimeOffset Resolve(DateTimeOffset? claimed, DateTimeOffset lastChange, DateTimeOffset now)
+    {
+        if (claimed is not { } at) return now;
+        var earliest = lastChange > now - MaxBackdate ? lastChange : now - MaxBackdate;
+        if (earliest > now) return now;
+        return at > now ? now : at < earliest ? earliest : at;
+    }
+}
