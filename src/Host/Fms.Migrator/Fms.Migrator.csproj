@@ -11,5 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\Work\Fms.Work\Fms.Work.csproj" />
+    <ProjectReference Include="..\..\Modules\Inventory\Fms.Inventory\Fms.Inventory.csproj" />
   </ItemGroup>
 </Project>

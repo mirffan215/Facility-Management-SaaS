@@ -11,7 +11,8 @@ namespace Fms.Work.Services;
 
 /// <summary>Checklists, time and costs of a work order. Everything is checked against what this person may see and do on this work order right now.</summary>
 public sealed class WorkEvidenceService(
-    WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IOptions<WorkOptions> options, TimeProvider clock)
+    WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IOptions<WorkOptions> options, TimeProvider clock,
+    IWorkPartsLookup? parts = null)
 {
     private Actor? _actor;
 
@@ -220,6 +221,7 @@ public sealed class WorkEvidenceService(
         var labour = time.Sum(t => t.LabourCost);
         decimal Sum(CostKind k) => costs.Where(c => c.Kind == k).Sum(c => c.Total);
         var (material, contractor, other) = (Sum(CostKind.Material), Sum(CostKind.Contractor), Sum(CostKind.Other));
+        if (parts is not null) material += await parts.MaterialCostAsync(workOrderId, ct); // parts issued from stock are costed by Inventory, not typed in here
         return Result<CostSummaryDto>.Ok(new CostSummaryDto(currency, time.Sum(t => t.Minutes), labour, material, contractor, other, labour + material + contractor + other));
     }
 

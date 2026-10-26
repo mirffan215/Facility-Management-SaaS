@@ -2,6 +2,7 @@ using Fms.BuildingBlocks.Deployment;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities.Persistence;
+using Fms.Inventory.Persistence;
 using Fms.Work.Persistence;
 using Fms.Platform.Domain;
 using Fms.Platform.Persistence;
@@ -36,6 +37,11 @@ await using var workDb = new WorkDbContext(
     new DbContextOptionsBuilder<WorkDbContext>().UseSqlServer(migratorConnection, WorkDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 await workDb.Database.MigrateAsync();
+
+await using var inventoryDb = new InventoryDbContext(
+    new DbContextOptionsBuilder<InventoryDbContext>().UseSqlServer(migratorConnection, InventoryDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+await inventoryDb.Database.MigrateAsync();
 
 var deployment = config.GetSection(DeploymentOptions.SectionName).Get<DeploymentOptions>() ?? new DeploymentOptions();
 if (deployment.Mode == DeploymentMode.OnPrem)

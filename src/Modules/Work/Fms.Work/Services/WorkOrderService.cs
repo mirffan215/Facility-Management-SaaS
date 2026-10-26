@@ -372,6 +372,8 @@ public sealed class WorkOrderService(
         if (action is WorkOrderAction.Completed or WorkOrderAction.Cancelled) await pm.OnFinishedAsync(wo, action == WorkOrderAction.Completed ? PmOutcome.Completed : PmOutcome.Skipped, now, ct);
         db.WorkOrderEvents.Add(Event(wo, action, from, wo.Status, actor.UserId, now, cleaned, subject));
         outbox.Enqueue(WorkMessages.Event, new WorkOrderEventMessage(id, action, actor.UserId, cleaned));
+        // Once verified, closed or cancelled a work order takes no more parts: tell Inventory to let go of what it was holding.
+        if (action is WorkOrderAction.Cancelled or WorkOrderAction.Verified or WorkOrderAction.Closed) outbox.Enqueue(Fms.BuildingBlocks.Identity.WorkOrderEnded.MessageType, new Fms.BuildingBlocks.Identity.WorkOrderEndedMessage(id));
         audit.Record("workorder." + action.ToString().ToLowerInvariant(), nameof(WorkOrder), id.ToString(),
             JsonSerializer.Serialize(new { from, to = wo.Status, reason = cleaned, subject, performedAt = now, claimedAt = performedAt, syncedAt = synced }));
         return await SaveAsync(wo, ct);

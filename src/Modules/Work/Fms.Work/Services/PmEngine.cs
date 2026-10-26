@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Persistence;
@@ -17,7 +18,8 @@ public sealed record PmRunResult(int PlansCreated, int PlansRetired, int WorkOrd
 /// Safe to run often and from several workers at once: a plan carries a version, so only one run can turn a given due date into a work order.
 /// </summary>
 public sealed class PmEngine(
-    WorkDbContext db, IFacilityLookup facilities, IUserDirectory users, IOutbox outbox, IAuditPort audit, ITenantContext tenant, TimeProvider clock)
+    WorkDbContext db, IFacilityLookup facilities, IUserDirectory users, IOutbox outbox, IAuditPort audit, ITenantContext tenant, TimeProvider clock,
+    ILogger<PmEngine>? log = null, IPmPartsReserver? reserver = null)
 {
     private TimeZoneInfo? _zone;
 
@@ -190,10 +192,11 @@ public sealed class PmEngine(
         var now = clock.GetUtcNow();
         var tenantKey = tenant.TenantId?.ToString() ?? "none";
 
+        Guid createdId = Guid.Empty;
         try
         {
             var strategy = db.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
+            var made = await strategy.ExecuteAsync(async () =>
             {
                 db.ChangeTracker.Clear();
                 await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -224,13 +227,30 @@ public sealed class PmEngine(
                     JsonSerializer.Serialize(new { wo.Number, wo.Title, wo.Type, wo.Priority, wo.LocationId, wo.AssetId, status = wo.Status, preventive = true, scheduleId = schedule.Id, trigger, dueOn = due }));
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
+                createdId = wo.Id;
                 return true;
             });
+            if (made) await ReservePartsAsync(createdId, template.Id, ct);
+            return made;
         }
         catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || SqlErrors.IsUniqueViolation(ex))
         {
             db.ChangeTracker.Clear(); // another run generated it first
             return false;
+        }
+    }
+
+    /// <summary>Asks Inventory to hold the parts the template lists. The visit exists either way; a shortage or a failure here must never stop it.</summary>
+    private async Task ReservePartsAsync(Guid workOrderId, Guid templateId, CancellationToken ct)
+    {
+        if (reserver is null) return;
+        try
+        {
+            await reserver.ReserveForTemplateAsync(workOrderId, templateId, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log?.LogWarning(ex, "Could not reserve parts for preventive work order {WorkOrderId}.", workOrderId);
         }
     }
 

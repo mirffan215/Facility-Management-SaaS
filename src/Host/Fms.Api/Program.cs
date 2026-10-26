@@ -3,6 +3,7 @@ using Fms.Api.Authentication;
 using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Security;
 using Fms.Facilities;
+using Fms.Inventory;
 using Fms.Work;
 using Fms.Platform;
 using Fms.Platform.Services;
@@ -28,6 +29,7 @@ if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } conn
     builder.Services.AddFmsPlatform(connectionString);
     builder.Services.AddFmsFacilities(connectionString);
     builder.Services.AddFmsWork(connectionString);
+    builder.Services.AddFmsInventory(connectionString);
 }
 
 // Enums travel as readable strings ("Site", not 1), so the contract does not depend on enum numbering.
@@ -82,6 +84,7 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapFacilities();
     v1.MapWork();
     v1.MapPm();
+    v1.MapInventory();
     v1.MapNotifications();
 
     v1.MapGet("/roles", async (AccessAdministration access, CancellationToken ct) => Results.Ok(await access.ListRolesAsync(ct)))

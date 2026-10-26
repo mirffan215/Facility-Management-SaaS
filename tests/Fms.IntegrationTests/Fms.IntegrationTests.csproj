@@ -22,5 +22,6 @@
     <ProjectReference Include="..\..\src\Host\Fms.Api\Fms.Api.csproj" />
     <ProjectReference Include="..\..\src\Host\Fms.Migrator\Fms.Migrator.csproj" />
     <ProjectReference Include="..\..\src\Modules\Work\Fms.Work\Fms.Work.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Inventory\Fms.Inventory\Fms.Inventory.csproj" />
   </ItemGroup>
 </Project>

@@ -35,6 +35,18 @@ public static class Permissions
     public const string PmRead = "pm.read";
     public const string PmManage = "pm.manage";
 
+    /// <summary>See items, stores, stock and the parts on work orders.</summary>
+    public const string InventoryRead = "inventory.read";
+
+    /// <summary>Maintain items and stores, receive and transfer stock, reserve parts, set reorder levels, start and submit stock takes.</summary>
+    public const string InventoryManage = "inventory.manage";
+
+    /// <summary>Issue parts to work orders and return unused ones.</summary>
+    public const string InventoryIssue = "inventory.issue";
+
+    /// <summary>Approve stock takes and make direct stock adjustments. A stock take cannot be approved by the person who submitted it.</summary>
+    public const string InventoryApprove = "inventory.approve";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
@@ -42,6 +54,7 @@ public static class Permissions
         DocumentsRead, DocumentsManage, CustomFieldsManage,
         WorkOrdersRead, WorkOrdersRequest, WorkOrdersApprove, WorkOrdersAssign, WorkOrdersWork, WorkOrdersVerify, WorkOrdersManage,
         PmRead, PmManage,
+        InventoryRead, InventoryManage, InventoryIssue, InventoryApprove,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;

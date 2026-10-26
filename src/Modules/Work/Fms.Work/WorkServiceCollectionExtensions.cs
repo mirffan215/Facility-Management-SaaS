@@ -23,6 +23,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<WorkFilesService>();
         services.AddScoped<ChecklistTemplateService>();
         services.AddScoped<OfflineJobsService>();
+        services.AddScoped<Fms.BuildingBlocks.Identity.IWorkOrderLookup, WorkOrderLookup>();
         services.AddScoped<PmEngine>();
         services.AddScoped<PmService>();
         services.AddSingleton<PmGenerator>();
