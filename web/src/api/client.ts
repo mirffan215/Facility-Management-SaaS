@@ -93,7 +93,8 @@ export function createApi(options: ApiOptions) {
       return (response.status === 204 ? undefined : await response.json()) as T;
     },
     async put<T>(path: string, body: unknown): Promise<T> {
-      return (await json('PUT', path, body)).json() as Promise<T>;
+      const response = await json('PUT', path, body);
+      return (response.status === 204 ? undefined : await response.json()) as T;
     },
     async upload<T>(path: string, form: FormData, params?: Query): Promise<T> {
       return (await request(path + toQuery(params), { method: 'POST', body: form })).json() as Promise<T>;

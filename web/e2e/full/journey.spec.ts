@@ -319,12 +319,17 @@ test('a person with no role sees a clear message, then only what their role allo
   const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
   await expect(tech.getByRole('heading', { name: 'No access' })).toBeVisible();
 
-  // The administrator gives them the Technician role (through the API; there is no user-admin screen yet).
-  const users = (await (await api('/users')).json()) as { id: string; email: string }[];
-  const techUser = users.find((u) => u.email === `tech-${SUFFIX.toLowerCase()}@example.test`)!;
-  const roles = (await (await api('/roles')).json()) as { id: string; name: string }[];
-  const response = await api(`/users/${techUser.id}/roles`, { method: 'PUT', body: JSON.stringify({ roleIds: [roles.find((r) => r.name === 'Technician')!.id] }) });
-  expect(response.status).toBe(204);
+  // The administrator gives them the Technician role on the Users screen.
+  const email = `tech-${SUFFIX.toLowerCase()}@example.test`;
+  await page.goto('/users');
+  const row = page.getByRole('row').filter({ hasText: email });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Edit roles' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit roles' });
+  await dialog.getByLabel(/^Technician/).check();
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(row).toContainText('Technician');
 
   await tech.reload();
   await expect(tech.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();
@@ -343,6 +348,20 @@ test('a person with no role sees a clear message, then only what their role allo
   // Typing the address of a page they cannot use gives them the empty state, not data.
   await tech.goto('/import');
   await expect(tech.getByRole('heading', { name: 'Import' })).toHaveCount(0);
+
+  // Deactivating them locks them out at once; reactivating restores what their role allows.
+  const toggle = async (button: string) => {
+    await row.getByRole('button', { name: button }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  };
+  await toggle('Deactivate');
+  await expect(row).toContainText('Deactivated');
+  await tech.goto('/assets');
+  await expect(tech.getByRole('heading', { name: 'Your account has been deactivated' })).toBeVisible();
+  await toggle('Reactivate');
+  await tech.goto('/assets');
+  await expect(tech.getByRole('link', { name: 'Assets', exact: true }).first()).toBeVisible();
 
   await tech.context().close();
   await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });

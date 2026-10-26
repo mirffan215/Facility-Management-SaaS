@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
-import { useMe, usePermissions } from './api/hooks';
+import { usePermissions } from './api/hooks';
 import { SignIn } from './pages/SignIn';
 import { LocationsPage } from './pages/Locations';
 import { AssetsPage } from './pages/Assets';
@@ -13,23 +13,10 @@ import { AssetCreatePage } from './pages/AssetCreate';
 import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
 import { UsersPage } from './pages/Users';
-import { ApiError } from './api/client';
 import { ScanRedirectPage } from './pages/ScanRedirect';
-
-function Deactivated() {
-  const { t } = useTranslation();
-  return (
-    <section>
-      <h1>{t('users.deactivatedAccount')}</h1>
-      <p>{t('users.deactivatedHelp')}</p>
-    </section>
-  );
-}
 
 function Home() {
   const { can, loaded } = usePermissions();
-  const me = useMe();
-  if (me.error instanceof ApiError && me.error.isForbidden) return <Deactivated />;
   if (!loaded) return <Loading />;
   if (can('assets.read')) return <Navigate to="/assets" replace />;
   if (can('locations.read')) return <Navigate to="/locations" replace />;

@@ -34,6 +34,11 @@ describe('createApi', () => {
     expect(new Headers((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].headers).has('Authorization')).toBe(false);
   });
 
+  it('puts JSON bodies and handles 204 without a body', async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+    await expect(api(fetchImpl as unknown as typeof fetch).client.put('/x', { a: 1 })).resolves.toBeUndefined();
+  });
+
   it('posts JSON bodies and handles 204 without a body', async () => {
     const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
     const result = await api(fetchImpl as unknown as typeof fetch).client.post('/x', { a: 1 });

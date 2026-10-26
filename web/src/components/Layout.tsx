@@ -1,7 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
-import { usePermissions } from '../api/hooks';
+import { ApiError } from '../api/client';
+import { useMe, usePermissions } from '../api/hooks';
 import { languages } from '../i18n';
 import { usePrefs } from '../lib/prefs';
 
@@ -10,6 +11,7 @@ export function Layout() {
   const { displayName, signOut } = useAuth();
   const { calendar, setCalendar } = usePrefs();
   const { can } = usePermissions();
+  const me = useMe();
 
   return (
     <>
@@ -50,7 +52,14 @@ export function Layout() {
         </div>
       </header>
       <main id="main" tabIndex={-1}>
-        <Outlet />
+        {me.error instanceof ApiError && me.error.isForbidden ? (
+          <section>
+            <h1>{t('users.deactivatedAccount')}</h1>
+            <p>{t('users.deactivatedHelp')}</p>
+          </section>
+        ) : (
+          <Outlet />
+        )}
       </main>
     </>
   );
