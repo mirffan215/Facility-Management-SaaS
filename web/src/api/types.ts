@@ -518,3 +518,134 @@ export interface Compliance {
   otherWorkOrders: number;
   plannedShare: number | null;
 }
+
+// ---------------- inventory ----------------
+
+export type MovementType = 'Receipt' | 'Issue' | 'Return' | 'TransferOut' | 'TransferIn' | 'Adjustment' | 'CountAdjustment';
+export type StockTakeStatus = 'Counting' | 'Submitted' | 'Approved' | 'Cancelled';
+
+export interface Store {
+  id: string;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  siteId: string | null;
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export interface Item {
+  id: string;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  description: string | null;
+  unit: string;
+  barcode: string | null;
+  isArchived: boolean;
+  onHand: number;
+  available: number;
+  rowVersion: string;
+}
+
+export interface StockLevel {
+  storeId: string;
+  storeCode: string;
+  storeName: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  onHand: number;
+  reserved: number;
+  available: number;
+  averageCost: number;
+  value: number;
+  minQty: number | null;
+  maxQty: number | null;
+  isLow: boolean;
+  suggestedOrder: number;
+  rowVersion: string;
+}
+
+export interface Movement {
+  id: string;
+  storeId: string;
+  storeName: string | null;
+  itemId: string;
+  itemCode: string | null;
+  itemName: string | null;
+  type: MovementType;
+  quantity: number;
+  unitCost: number;
+  balanceAfter: number;
+  at: string;
+  by: string | null;
+  byName: string | null;
+  workOrderId: string | null;
+  reference: string | null;
+  reason: string | null;
+}
+
+export interface WorkPart {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  storeId: string;
+  storeName: string;
+  reserved: number;
+  issued: number;
+  unitCost: number;
+  cost: number;
+  storeAvailable: number;
+}
+
+export interface WorkParts {
+  workOrderId: string;
+  acceptsParts: boolean;
+  lines: WorkPart[];
+  totalCost: number;
+}
+
+export interface PmTemplatePart {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  quantity: number;
+  storeId: string | null;
+  storeName: string | null;
+}
+
+export interface StockTakeLine {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  systemQty: number;
+  countedQty: number | null;
+  variance: number | null;
+  unitCost: number;
+  varianceValue: number | null;
+}
+
+export interface StockTake {
+  id: string;
+  storeId: string;
+  storeName: string;
+  status: StockTakeStatus;
+  note: string | null;
+  startedAt: string;
+  startedByName: string | null;
+  submittedAt: string | null;
+  submittedByName: string | null;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  lines: number;
+  counted: number;
+  differences: number;
+  netVarianceValue: number;
+  detail: StockTakeLine[] | null;
+  rowVersion: string;
+}

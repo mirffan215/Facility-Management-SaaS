@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, Forecast, PmSchedule, PmTemplate,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, Forecast, Item, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -197,4 +197,46 @@ export function usePmForecast(params: Record<string, string | undefined>) {
 export function usePmCompliance(params: Record<string, string | undefined>) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['pm', 'compliance', params], queryFn: () => api.get<Compliance>('/pm/compliance', params) });
+}
+
+// ---------------- inventory ----------------
+
+export function useStores(includeArchived = false, enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'stores', includeArchived], enabled, queryFn: () => api.get<Store[]>('/inventory/stores', { includeArchived }) });
+}
+
+export function useItems(params: Record<string, string | number | boolean | undefined>, enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'items', params], enabled, queryFn: () => api.get<Page<Item>>('/inventory/items', params) });
+}
+
+export function useStock(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'stock', params], queryFn: () => api.get<Page<StockLevel>>('/inventory/stock', params) });
+}
+
+export function useMovements(params: Record<string, string | number | boolean | undefined>, enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'movements', params], enabled, queryFn: () => api.get<Page<Movement>>('/inventory/movements', params) });
+}
+
+export function useStockTakes() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'takes'], queryFn: () => api.get<StockTake[]>('/inventory/stock-takes') });
+}
+
+export function useStockTake(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'take', id], enabled: !!id, queryFn: () => api.get<StockTake>(`/inventory/stock-takes/${id}`) });
+}
+
+export function useWorkParts(workOrderId: string | undefined, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'work-parts', workOrderId], enabled: enabled && !!workOrderId, queryFn: () => api.get<WorkParts>(`/work-orders/${workOrderId}/parts`) });
+}
+
+export function usePmTemplateParts(templateId: string | undefined, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['inventory', 'pm-parts', templateId], enabled: enabled && !!templateId, queryFn: () => api.get<PmTemplatePart[]>(`/inventory/pm-templates/${templateId}/parts`) });
 }

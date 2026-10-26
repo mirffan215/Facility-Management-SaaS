@@ -29,6 +29,7 @@ export function Layout() {
           {can('locations.read') ? <NavLink to="/locations">{t('nav.locations')}</NavLink> : null}
           {can('assets.read') ? <NavLink to="/assets">{t('nav.assets')}</NavLink> : null}
           {can('workorders.read') || can('workorders.request') ? <NavLink to="/work-orders">{t('nav.workOrders')}</NavLink> : null}
+          {can('inventory.read') ? <NavLink to="/inventory">{t('nav.inventory')}</NavLink> : null}
           {can('pm.read') ? <NavLink to="/pm">{t('nav.pm')}</NavLink> : null}
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
           {can('assets.manage') || can('customfields.manage') || can('workorders.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}

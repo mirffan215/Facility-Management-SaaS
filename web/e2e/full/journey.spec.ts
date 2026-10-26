@@ -863,6 +863,112 @@ test('preventive maintenance: a template and a schedule create a work order ahea
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('inventory: a store, an item, stock received, parts reserved and used on a work order, and a stock take that needs a second person', async () => {
+  const STORE = `MAIN-${SUFFIX}`;
+  const ITEM = `FLT-${SUFFIX}`;
+  await page.goto('/inventory?tab=stores');
+  await page.getByRole('button', { name: 'New store' }).click();
+  const store = page.getByRole('dialog', { name: 'New store' });
+  await store.getByLabel('Code').fill(STORE);
+  await store.getByRole('textbox', { name: 'Name *' }).fill('Main storeroom');
+  await store.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Main storeroom')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Items' }).click();
+  await page.getByRole('button', { name: 'New item' }).click();
+  const item = page.getByRole('dialog', { name: 'New item' });
+  await item.getByRole('textbox', { name: 'Code *' }).fill(ITEM);
+  await item.getByRole('textbox', { name: 'Name *' }).fill('Air filter G4');
+  await item.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('cell', { name: ITEM })).toBeVisible();
+
+  // Receive stock: the item is found by typing, the cost sets the store's average.
+  await page.getByRole('tab', { name: 'Stock', exact: true }).click();
+  await page.getByRole('button', { name: 'Receive stock' }).click();
+  const receive = page.getByRole('dialog', { name: 'Receive stock' });
+  await receive.getByRole('combobox', { name: 'Store' }).selectOption({ index: 1 });
+  await receive.getByLabel('Find an item').fill(ITEM);
+  await receive.getByRole('combobox', { name: 'Matching items' }).selectOption({ index: 1 });
+  await receive.getByLabel('Quantity').fill('10');
+  await receive.getByLabel('Unit cost').fill('5');
+  await receive.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const row = page.getByRole('row', { name: new RegExp(ITEM) });
+  await expect(row).toContainText('10 pcs');
+
+  // A reorder level of 4: the row shows it and is not low yet.
+  await row.getByRole('button', { name: 'Reorder level' }).click();
+  const reorder = page.getByRole('dialog', { name: /Reorder level/ });
+  await reorder.getByLabel('Minimum').fill('4');
+  await reorder.getByLabel('Maximum').fill('20');
+  await reorder.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(row).toContainText('4 – 20');
+  await shot('23-inventory-stock');
+
+  // Parts on a work order: held, then used.
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const wo = (await (await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Replace AHU filter', type: 'Emergency', locationId: site.id }) })).json()) as { id: string };
+  await page.goto(`/work-orders/${wo.id}?tab=parts`);
+  const add = page.getByRole('group', { name: 'Add a part' });
+  await add.getByLabel('Find an item').fill(ITEM);
+  await add.getByRole('combobox', { name: 'Matching items' }).selectOption({ index: 1 });
+  await add.getByLabel('Quantity').fill('3');
+  await add.getByRole('button', { name: 'Reserve' }).click();
+  const line = page.getByRole('row', { name: new RegExp(ITEM) });
+  await expect(line).toContainText('3 pcs');
+  await line.getByRole('button', { name: 'Issue', exact: true }).click();
+  const issue = page.getByRole('dialog', { name: /Issue/ });
+  await expect(issue.getByLabel('Quantity')).toHaveValue('3');
+  await issue.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('row', { name: /Parts cost/ })).toContainText('15');
+  await shot('24-work-order-parts');
+
+  // Using more than there is, is refused in words.
+  await add.getByLabel('Find an item').fill(ITEM);
+  await add.getByRole('combobox', { name: 'Matching items' }).selectOption({ index: 1 });
+  await add.getByLabel('Quantity').fill('50');
+  await add.getByRole('button', { name: 'Issue now' }).click();
+  await expect(add.getByText(/No store has that much available/)).toBeVisible();
+
+  // A stock take: the same person cannot count, submit and approve their own work.
+  await page.goto('/inventory?tab=takes');
+  await page.getByRole('button', { name: 'Start a stock take' }).click();
+  const start = page.getByRole('dialog', { name: 'Start a stock take' });
+  await start.getByRole('combobox', { name: 'Store' }).selectOption({ index: 1 });
+  await start.getByRole('button', { name: 'Save' }).click();
+  const take = page.getByRole('dialog', { name: /Stock take:/ });
+  await take.getByLabel(new RegExp(`Count of ${ITEM}`)).fill('6');
+  await take.getByRole('button', { name: 'Save counts' }).click();
+  await expect(take.getByLabel(new RegExp(`Count of ${ITEM}`))).toHaveValue('6');
+  await take.getByRole('button', { name: 'Submit for approval' }).click();
+  await expect(take.getByText('Waiting for approval').first()).toBeVisible();
+  await take.getByRole('button', { name: 'Approve and post differences' }).click();
+  await expect(take.getByRole('alert').first()).toBeVisible(); // refused: someone else must approve
+  await expect(take.getByText('Waiting for approval').first()).toBeVisible();
+  await take.getByRole('button', { name: 'Cancel stock take' }).click();
+  await page.getByRole('dialog', { name: 'Cancel stock take' }).getByRole('textbox').fill('Practice run');
+  await page.getByRole('dialog', { name: 'Cancel stock take' }).getByRole('button', { name: 'Confirm' }).click();
+  await expect(take.getByText('Cancelled').first()).toBeVisible();
+  await take.getByRole('button', { name: 'Back' }).click();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['stock', 'items', 'stores', 'takes']) {
+      await page.goto(`/inventory?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`inventory ${tab} ${lang}`);
+    }
+    await page.goto(`/work-orders/${wo.id}?tab=parts`);
+    await expect(page.getByRole('tabpanel')).toBeVisible();
+    await expectNoSeriousA11yIssues(`work order parts ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

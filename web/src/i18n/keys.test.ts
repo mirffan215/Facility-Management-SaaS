@@ -48,6 +48,10 @@ describe('translations', () => {
       pmUnit: ['Day', 'Week', 'Month', 'Year'],
       pmTarget: ['Asset', 'AssetClass'],
       'pm.basisHint': ['Fixed', 'Floating', 'None'],
+      movementType: ['Receipt', 'Issue', 'Return', 'TransferOut', 'TransferIn', 'Adjustment', 'CountAdjustment'],
+      takeStatus: ['Counting', 'Submitted', 'Approved', 'Cancelled'],
+      'inventory.tab': ['stock', 'items', 'stores', 'takes'],
+      'parts': ['reserve', 'issue', 'return', 'release'],
       'pm.tab': ['forecast', 'schedules', 'templates', 'compliance'],
     };
     for (const [group, values] of Object.entries(groups)) for (const v of values) {

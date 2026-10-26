@@ -3,10 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useAssetChoices, useAssetClasses, useAssignees, useChecklistTemplates, usePermissions, usePmCompliance, usePmForecast, usePmSchedules, usePmTemplates } from '../api/hooks';
+import { useAssetChoices, useAssetClasses, useAssignees, useChecklistTemplates, usePermissions, usePmTemplateParts, usePmCompliance, usePmForecast, usePmSchedules, usePmTemplates } from '../api/hooks';
 import type { ComplianceCounts, ForecastItem, PmIntervalUnit, PmSchedule, PmTargetKind, PmTemplate, PmTimeBasis, WorkPriority } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
+import { ItemPicker } from '../components/InventoryBits';
 import { usePrefs } from '../lib/prefs';
 
 const TABS = ['forecast', 'schedules', 'templates', 'compliance'] as const;
@@ -280,17 +281,27 @@ function TemplateDialog({ template, onClose }: { template: PmTemplate | null; on
   const [priority, setPriority] = useState<WorkPriority>(template?.priority ?? 'Medium');
   const [minutes, setMinutes] = useState(template?.estimatedMinutes?.toString() ?? '');
   const [checklistId, setChecklistId] = useState(template?.checklistTemplateId ?? '');
+  const { can } = usePermissions();
+  const editParts = can('inventory.manage');
+  const existingParts = usePmTemplateParts(template?.id, can('inventory.read'));
+  const [parts, setParts] = useState<{ itemId: string; label: string; quantity: string }[] | null>(null);
+  const [pick, setPick] = useState<{ id: string; label: string } | null>(null);
+  const shown = parts ?? existingParts.data?.map((p) => ({ itemId: p.itemId, label: `${p.itemCode} ${p.itemName}`, quantity: String(p.quantity) })) ?? [];
 
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const body = {
         name: nameEn.trim(), nameAr: nameAr.trim() || null, instructions: instructions.trim() || null, priority,
         estimatedMinutes: minutes ? Number(minutes) : null, checklistTemplateId: checklistId || null, rowVersion: template?.rowVersion,
       };
-      return template ? api.put(`/pm/templates/${template.id}`, body) : api.post('/pm/templates', body);
+      const saved = template ? await api.put<PmTemplate>(`/pm/templates/${template.id}`, body) : await api.post<PmTemplate>('/pm/templates', body);
+      // The parts list belongs to Inventory: saved after the template (which a new one needs first), and only when it was touched.
+      if (editParts && parts !== null) await api.put(`/inventory/pm-templates/${saved.id}/parts`, { parts: parts.map((p) => ({ itemId: p.itemId, quantity: Number(p.quantity) || null })) });
+      return saved;
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['pm'] });
+      await client.invalidateQueries({ queryKey: ['inventory', 'pm-parts'] });
       onClose();
     },
   });
@@ -318,6 +329,34 @@ function TemplateDialog({ template, onClose }: { template: PmTemplate | null; on
               </select>
             </Field>
           </div>
+          {can('inventory.read') ? (
+            <fieldset>
+              <legend>{t('pm.parts')}</legend>
+              <p className="muted">{t('pm.partsHint')}</p>
+              <ul className="plain">
+                {shown.map((p, n) => (
+                  <li key={p.itemId}>
+                    <bdi>{p.label}</bdi>{' '}
+                    {editParts ? (
+                      <>
+                        <input
+                          type="number" step="any" min="0" aria-label={t('pm.partQuantity', { item: p.label })} value={p.quantity}
+                          onChange={(e) => setParts(shown.map((x, i) => (i === n ? { ...x, quantity: e.target.value } : x)))}
+                        />{' '}
+                        <button type="button" onClick={() => setParts(shown.filter((_, i) => i !== n))}>{t('common.delete')}</button>
+                      </>
+                    ) : <span className="muted">× {p.quantity}</span>}
+                  </li>
+                ))}
+              </ul>
+              {editParts ? (
+                <>
+                  <ItemPicker value={pick} onChange={(i) => setPick(i ? { id: i.id, label: `${i.code} ${i.name}` } : null)} />
+                  <button type="button" disabled={!pick || shown.some((x) => x.itemId === pick.id)} onClick={() => { setParts([...shown, { itemId: pick!.id, label: pick!.label, quantity: '1' }]); setPick(null); }}>{t('pm.addPart')}</button>
+                </>
+              ) : null}
+            </fieldset>
+          ) : null}
           <ErrorBanner error={error?.status === 400 ? null : save.error} />
           <div className="actions">
             <button type="button" onClick={onClose}>{t('common.cancel')}</button>

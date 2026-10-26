@@ -21,7 +21,8 @@
     "users": "Users",
     "workOrders": "Work orders",
     "jobs": "My jobs",
-    "pm": "Preventive"
+    "pm": "Preventive",
+    "inventory": "Inventory"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -545,6 +546,9 @@
           "ResolutionAtRisk": "{{number}} is close to missing its resolution time",
           "ResolutionBreached": "{{number}} missed its resolution time"
         }
+      },
+      "inventory": {
+        "low": "Low stock: {{number}} {{title}}"
       }
     },
     "unreadSuffix": "unread"
@@ -576,7 +580,8 @@
       "checklist": "Checklist",
       "costs": "Time and costs",
       "files": "Photos and files",
-      "signatures": "Signatures"
+      "signatures": "Signatures",
+      "parts": "Parts"
     },
     "checklist": "Checklist",
     "noChecklist": "No checklist on this work order.",
@@ -759,7 +764,11 @@
       "month": "Month",
       "byTemplate": "By template",
       "byClass": "By asset class"
-    }
+    },
+    "parts": "Parts needed",
+    "partsHint": "Reserved from stock when each visit's work order is created. If a part is short, the visit is still created and the shortage is recorded.",
+    "partQuantity": "Quantity of {{item}}",
+    "addPart": "Add part"
   },
   "pmKind": {
     "Open": "Created",
@@ -780,5 +789,130 @@
   "pmTarget": {
     "Asset": "One asset",
     "AssetClass": "All assets of a class"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "intro": "Spare parts and consumables: what is in each store, what is held for work orders, and what is running low.",
+    "sections": "Inventory sections",
+    "tab": {
+      "stock": "Stock",
+      "items": "Items",
+      "stores": "Stores",
+      "takes": "Stock takes"
+    },
+    "item": "Item",
+    "store": "Store",
+    "onHand": "On hand",
+    "reserved": "Reserved",
+    "available": "Available",
+    "avgCost": "Average cost",
+    "value": "Value",
+    "reorder": "Reorder level",
+    "low": "low",
+    "suggested": "Order about {{quantity}}",
+    "history": "History",
+    "setReorder": "Reorder level",
+    "search": "Search",
+    "lowOnly": "Low stock only",
+    "noLow": "Nothing is low on stock.",
+    "noStock": "No stock yet. Receive some to get started.",
+    "receive": "Receive stock",
+    "transfer": "Transfer",
+    "adjust": "Adjust stock",
+    "quantity": "Quantity",
+    "unitCost": "Unit cost",
+    "unitCostHint": "What one unit cost; the store's average cost follows.",
+    "reference": "Reference",
+    "referenceHint": "A delivery note or invoice number.",
+    "note": "Note",
+    "fromStore": "From store",
+    "toStore": "To store",
+    "adjustHint": "Direct corrections need a reason and are recorded for audit. For a full recount use a stock take.",
+    "delta": "Change",
+    "deltaHint": "Positive adds, negative removes.",
+    "setReorderFor": "Reorder level: {{item}}",
+    "reorderHint": "When the available quantity falls to the minimum, the people who look after stock are told once.",
+    "minQty": "Minimum",
+    "maxQty": "Maximum",
+    "historyFor": "History: {{item}}",
+    "movements": "Stock movements",
+    "when": "When",
+    "movement": "Movement",
+    "balance": "Balance",
+    "by": "By",
+    "why": "Reason",
+    "code": "Code",
+    "codeHint": "1–50 letters, digits, dot, dash or slash.",
+    "unit": "Unit",
+    "unitHint": "How it is counted: pcs, litre, m…",
+    "description": "Description",
+    "barcode": "Barcode",
+    "newItem": "New item",
+    "editItem": "Edit item",
+    "noItems": "No items yet.",
+    "newStore": "New store",
+    "editStore": "Edit store",
+    "noStores": "No stores yet.",
+    "startTake": "Start a stock take",
+    "takesHint": "Count a store. A different person approves the count before any stock changes.",
+    "noTakes": "No stock takes yet.",
+    "started": "Started",
+    "counted": "Counted",
+    "differences": "Differences",
+    "openTake": "Open",
+    "startTakeHint": "The system quantities are frozen when you start. Enter what you find.",
+    "takeOf": "Stock take: {{store}}",
+    "takeSummary": "{{counted}} of {{lines}} counted · {{differences}} differences · net value {{value}}",
+    "startedBy": "Started by {{name}} on {{when}}",
+    "submittedBy": "submitted by {{name}} on {{when}}",
+    "decidedBy": "decided by {{name}} on {{when}}",
+    "countSheet": "Count sheet",
+    "systemQty": "System",
+    "countedQty": "Counted",
+    "variance": "Difference",
+    "countFor": "Count of {{item}}",
+    "addFound": "Found something not on the sheet",
+    "saveCounts": "Save counts",
+    "submitCount": "Submit for approval",
+    "cancelTake": "Cancel stock take",
+    "approveTake": "Approve and post differences",
+    "sendBack": "Send back for recount",
+    "findItem": "Find an item",
+    "findItemHint": "Type at least 2 letters of its code, name or barcode.",
+    "selected": "Selected: {{name}}",
+    "matchingItems": "Matching items"
+  },
+  "parts": {
+    "intro": "Parts are held for the job by a planner, then taken from stock by the technician. Unused parts can be returned.",
+    "closed": "This work order no longer takes parts.",
+    "none": "No parts reserved or used yet.",
+    "reserved": "Held",
+    "issued": "Used",
+    "cost": "Cost",
+    "issue": "Issue",
+    "return": "Return",
+    "release": "Release",
+    "total": "Parts cost",
+    "add": "Add a part",
+    "storeOptional": "Store",
+    "reserve": "Reserve",
+    "issueNow": "Issue now",
+    "upTo": "Up to",
+    "releaseWarning": "Let go of the {{quantity}} {{unit}} held for this work order?"
+  },
+  "takeStatus": {
+    "Counting": "Counting",
+    "Submitted": "Waiting for approval",
+    "Approved": "Approved",
+    "Cancelled": "Cancelled"
+  },
+  "movementType": {
+    "Receipt": "Received",
+    "Issue": "Issued to work order",
+    "Return": "Returned from work order",
+    "TransferOut": "Transferred out",
+    "TransferIn": "Transferred in",
+    "Adjustment": "Adjustment",
+    "CountAdjustment": "Stock take"
   }
 }

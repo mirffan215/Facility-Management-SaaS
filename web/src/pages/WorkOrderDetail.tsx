@@ -10,6 +10,7 @@ import { Badge, ErrorBanner, Field, QueryState, ReasonDialog, useEnumLabel } fro
 import { usePrefs } from '../lib/prefs';
 import { PRIORITIES, priorityTone, slaTone, workStatusTone } from './WorkOrders';
 import { ChecklistTab, CostsTab, FilesTab, SignaturesTab } from './WorkOrderEvidence';
+import { PartsTab } from './WorkParts';
 
 const CLOSURE_CODES: ClosureCode[] = ['Fixed', 'NoFaultFound', 'TemporaryFix', 'PartsRequired', 'Duplicate', 'NotRequired'];
 
@@ -34,7 +35,7 @@ export function WorkOrderDetailPage() {
   const [dialog, setDialog] = useState<WorkOrderAction | null>(null);
   const [params, setParams] = useSearchParams();
   const { can } = usePermissions();
-  const tabs = ['overview', 'checklist', ...(can('workorders.read') ? ['costs'] : []), 'files', 'signatures'];
+  const tabs = ['overview', 'checklist', ...(can('workorders.read') ? ['costs'] : []), ...(can('inventory.read') ? ['parts'] : []), 'files', 'signatures'];
   const tab = tabs.find((x) => x === params.get('tab')) ?? 'overview';
 
   const detail = query.data;
@@ -146,6 +147,7 @@ export function WorkOrderDetailPage() {
               ) : null}
               {tab === 'checklist' ? <ChecklistTab order={o} /> : null}
               {tab === 'costs' ? <CostsTab order={o} /> : null}
+              {tab === 'parts' ? <PartsTab order={o} /> : null}
               {tab === 'files' ? <FilesTab order={o} /> : null}
               {tab === 'signatures' ? <SignaturesTab order={o} /> : null}
             </div>
