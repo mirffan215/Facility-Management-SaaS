@@ -12,6 +12,7 @@ Status: design phase. See [docs/](docs/).
 - [Phase 0 summary](docs/phase-0-summary.md)
 - [Phase 1 summary](docs/phase-1-summary.md) (locations, assets, meters, documents, API list)
 - [Phase 2a summary](docs/phase-2a-summary.md) (requests and work orders: lifecycle, controls, API, gaps)
+- [Phase 2b summary](docs/phase-2b-summary.md) (service levels, working calendars, notifications and email)
 - [ADRs](docs/adr/)
 
 ## Quick start
@@ -36,6 +37,19 @@ Authentication__TenantMappings__0__Provider=entra
 Authentication__TenantMappings__0__ExternalTenantId=<customer Entra directory id>
 Authentication__TenantMappings__0__TenantId=<FMS tenant id>
 ```
+
+## Email notifications (optional, worker)
+In-app notifications always work. Email is off (`Email__Provider=None`) until configured on the **worker**:
+```
+Email__Provider=Smtp
+Email__Host=smtp.example.com
+Email__Port=587
+Email__UseSsl=true
+Email__User=<account>
+Email__Password=<from your secret store>
+Email__From=fms@example.com
+```
+Messages are bilingual (English and Arabic). The worker also watches SLA clocks once a minute and raises the alerts.
 
 ## Storage configuration (examples)
 ```

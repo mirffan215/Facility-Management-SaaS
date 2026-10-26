@@ -220,6 +220,7 @@ export interface WorkOrder {
   /** What this person may do right now; the server decides. */
   allowed: WorkOrderAction[];
   rowVersion: string;
+  sla: Sla;
 }
 
 export interface WorkOrderEvent {
@@ -277,4 +278,63 @@ export interface AssetChoice {
   code: string;
   name: string;
   locationId: string | null;
+}
+
+export type SlaState = 'None' | 'OnTrack' | 'AtRisk' | 'Paused' | 'Met' | 'Breached';
+
+export interface Sla {
+  state: SlaState;
+  responseDueAt: string | null;
+  resolutionDueAt: string | null;
+  respondedAt: string | null;
+  responseBreached: boolean;
+  paused: boolean;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  data: { workOrderId?: string; number?: string; title?: string; reason?: string | null };
+  linkPath: string | null;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export interface DayHours {
+  start: string | null;
+  end: string | null;
+}
+
+export interface Holiday {
+  date: string;
+  name: string;
+}
+
+export interface WorkCalendar {
+  id: string;
+  name: string;
+  timeZoneId: string;
+  hours: Record<string, DayHours | null>;
+  isDefault: boolean;
+  isArchived: boolean;
+  holidays: Holiday[];
+  siteIds: string[];
+  rowVersion: string;
+}
+
+export interface SlaTarget {
+  priority: WorkPriority;
+  responseMinutes: number;
+  resolutionMinutes: number;
+}
+
+export interface SlaPolicy {
+  id: string;
+  name: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  isDefault: boolean;
+  isArchived: boolean;
+  targets: SlaTarget[];
+  rowVersion: string;
 }

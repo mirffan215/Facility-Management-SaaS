@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, Page, RoleSummary, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings,
+  Asset, AssetChoice, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -108,4 +108,33 @@ export function useAssetChoices(search: string, tag: string) {
     queryFn: () => api.get<AssetChoice[]>('/work-orders/assets', { q: search || undefined, tag: tag || undefined }),
     enabled: search.trim().length >= 2 || tag.length > 0,
   });
+}
+
+/** How many unread notices the signed-in person has; refreshed every half minute while the app is open. */
+export function useUnreadCount() {
+  const { api, status } = useAuth();
+  return useQuery({
+    queryKey: ['notifications', 'unread'],
+    queryFn: () => api.get<{ count: number }>('/notifications/unread-count'),
+    enabled: status === 'signedIn',
+    refetchInterval: 30_000,
+  });
+}
+
+export function useNotifications(unreadOnly: boolean, page: number) {
+  const { api } = useAuth();
+  return useQuery({
+    queryKey: ['notifications', 'list', unreadOnly, page],
+    queryFn: () => api.get<Page<NotificationItem>>('/notifications', { unreadOnly: unreadOnly || undefined, page, pageSize: 25 }),
+  });
+}
+
+export function useCalendars(includeArchived = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['sla-calendars', includeArchived], queryFn: () => api.get<WorkCalendar[]>('/work-orders/sla/calendars', { includeArchived }) });
+}
+
+export function useSlaPolicies(includeArchived = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['sla-policies', includeArchived], queryFn: () => api.get<SlaPolicy[]>('/work-orders/sla/policies', { includeArchived }) });
 }

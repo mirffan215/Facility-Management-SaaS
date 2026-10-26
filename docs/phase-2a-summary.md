@@ -26,8 +26,8 @@ Design record: [ADR-0010](adr/0010-work-orders-and-requests.md).
   closed by someone else, requester sees the outcome but not the internal note; accessibility scan of the new screens in English and Arabic.
 
 ## Not done / known gaps (Phase 2 continues)
-- **SLA engine, calendars, escalations** (2b). Due dates are entered by hand and only drive the "overdue" flag.
-- **Notifications**: nothing is emailed or pushed yet; people must open the app. No outbox events are published.
+- **SLA engine, calendars, escalation alerts and notifications: done in 2b** (see [phase-2b-summary](phase-2b-summary.md)). The manual due date still only drives the "overdue" flag.
+- Notifications: added in 2b.
 - **Checklists, labour/material/contractor cost, time tracking, signatures, photos** (2c). Attachments on work orders are not built.
 - **Technician PWA with offline sync** (2d): the web app is responsive but works online only.
 - **Teams/crews/skills, recurring requests, email/phone intake, satisfaction survey**: not started.

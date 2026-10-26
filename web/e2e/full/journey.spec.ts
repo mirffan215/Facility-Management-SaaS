@@ -375,6 +375,42 @@ async function giveRole(sub: string, roleName: string) {
   expect(response.status).toBe(204);
 }
 
+test('service levels: an administrator sets a working calendar and a policy', async () => {
+  await page.goto('/setup?section=sla');
+  await expect(page.getByRole('heading', { name: 'Working calendars' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'New calendar' }).click();
+  const calendar = page.getByRole('dialog', { name: 'New calendar' });
+  await calendar.getByRole('textbox', { name: 'Name *' }).fill('Saudi week');
+  await calendar.getByRole('button', { name: /Sunday to Thursday/ }).click();
+  await calendar.getByLabel('Date').fill('2026-09-23');
+  await calendar.getByRole('textbox', { name: 'Name', exact: true }).fill('National Day');
+  await calendar.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(calendar.getByText('National Day')).toBeVisible();
+  await calendar.getByLabel(/Use for sites that have no calendar/).check();
+  await calendar.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Saudi week')).toBeVisible();
+
+  await page.getByRole('button', { name: 'New policy' }).click();
+  const policy = page.getByRole('dialog', { name: 'New policy' });
+  await policy.getByRole('textbox', { name: 'Name *' }).fill('Standard');
+  await policy.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('table', { name: 'Standard' })).toBeVisible();
+  await shot('19-service-levels');
+
+  // A bad policy is explained, not silently accepted.
+  await page.getByRole('button', { name: 'New policy' }).click();
+  const bad = page.getByRole('dialog', { name: 'New policy' });
+  await bad.getByRole('textbox', { name: 'Name *' }).fill('Backwards');
+  await bad.getByLabel('Resolve (minutes)').first().fill('1');
+  await bad.getByLabel('Respond (minutes)').first().fill('500');
+  await bad.getByRole('button', { name: 'Save' }).click();
+  await expect(bad.getByText(/resolution cannot be sooner than response/)).toBeVisible();
+  await bad.getByRole('button', { name: 'Cancel' }).click();
+});
+
 test('helpdesk: a requester scans a label, the request is approved, assigned, done, verified and closed by different people', async ({ browser }) => {
   const asset = ((await (await api(`/assets?q=${ASSET}`)).json()) as { items: { tagCode: string }[] }).items[0];
 
@@ -394,6 +430,14 @@ test('helpdesk: a requester scans a label, the request is approved, assigned, do
   await expect(requester.getByRole('button', { name: 'Cancel request' })).toBeVisible();
   const url = requester.url();
 
+  // The administrator (an approver) is told, in the app, by the worker.
+  await expect(async () => {
+    await page.goto('/notifications');
+    await expect(page.getByRole('list', { name: 'Notifications' }).getByText(/WO-\d+ was requested/)).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 20_000 });
+  await expect(page.getByRole('link', { name: /Notifications\s*\d+ unread/ })).toBeVisible();
+  await shot('22-notifications');
+
   // 2. The administrator approves it and assigns the technician.
   await page.goto('/work-orders?view=all');
   await page.getByRole('link', { name: /WO-\d+/ }).first().click();
@@ -401,6 +445,7 @@ test('helpdesk: a requester scans a label, the request is approved, assigned, do
   await page.getByRole('button', { name: 'Approve', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('Approved', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Service level' })).toContainText('On track'); // approval started the clocks
   await page.getByRole('button', { name: 'Assign', exact: true }).click();
   await page.getByRole('dialog').getByLabel('Assigned to').selectOption({ label: 'Tina Technician' });
   await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
@@ -444,6 +489,14 @@ test('helpdesk: a requester scans a label, the request is approved, assigned, do
   await expect(page.getByText('All fixed, thank you for reporting.')).toBeVisible();
   await shot('21-work-order-closed');
 
+  // The requester was told as it progressed, and opening a notice goes to the request.
+  await expect(async () => {
+    await requester.goto('/notifications');
+    await expect(requester.getByRole('list', { name: 'Notifications' }).getByText(/was approved/)).toBeVisible({ timeout: 1500 });
+    await expect(requester.getByRole('list', { name: 'Notifications' }).getByText(/was closed/)).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 20_000 });
+  await requester.getByRole('list', { name: 'Notifications' }).getByRole('button', { name: /was closed/ }).click();
+  await expect(requester.getByRole('heading', { name: /Compressor makes a grinding noise/ })).toBeVisible();
   await requester.goto(url);
   await expect(requester.getByText('Closed', { exact: true }).first()).toBeVisible();
   await expect(requester.locator('dl').getByText('Replaced the bearing.')).toBeVisible();
@@ -469,6 +522,12 @@ test('work order screens have no serious accessibility problems in English or Ar
     await page.goto('/setup?section=work');
     await expect(page.getByRole('tabpanel')).toBeVisible();
     await expectNoSeriousA11yIssues(`work setup ${lang}`);
+    await page.goto('/setup?section=sla');
+    await expect(page.getByRole('table').first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`service levels ${lang}`);
+    await page.goto('/notifications');
+    await expect(page.getByRole('list').first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`notifications ${lang}`);
   }
 
   await page.locator('.prefs select').first().selectOption('en');

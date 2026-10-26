@@ -7,6 +7,7 @@ using Fms.Facilities;
 using Fms.Work;
 using Fms.Work.Services;
 using Fms.BuildingBlocks.Notifications;
+using Fms.BuildingBlocks.Identity;
 using Fms.Platform;
 using Fms.Platform.Outbox;
 
@@ -19,6 +20,8 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+// Background jobs act for no one: services that ask who is signed in see nobody (and so cannot be misused as someone).
+builder.Services.AddSingleton<ICurrentUser, BackgroundUser>();
 builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o));
 builder.Services.AddFmsStorage(builder.Configuration);
 builder.Services.AddFmsPlatform(connectionString);
@@ -93,4 +96,13 @@ internal sealed class SlaMonitorWorker(SlaMonitor monitor, ILogger<SlaMonitorWor
             }
         }
     }
+}
+
+internal sealed class BackgroundUser : ICurrentUser
+{
+    public bool IsAuthenticated => false;
+    public string? Subject => null;
+    public string? Provider => null;
+    public Guid? TenantId => null;
+    public Guid? UserId => null;
 }

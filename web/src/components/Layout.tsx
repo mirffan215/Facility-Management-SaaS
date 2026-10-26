@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
-import { useMe, usePermissions } from '../api/hooks';
+import { useMe, usePermissions, useUnreadCount } from '../api/hooks';
 import { languages } from '../i18n';
 import { usePrefs } from '../lib/prefs';
 
@@ -12,6 +12,7 @@ export function Layout() {
   const { calendar, setCalendar } = usePrefs();
   const { can } = usePermissions();
   const me = useMe();
+  const unread = useUnreadCount().data?.count ?? 0;
 
   return (
     <>
@@ -27,6 +28,16 @@ export function Layout() {
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
           {can('assets.manage') || can('customfields.manage') || can('workorders.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
           {can('users.read') ? <NavLink to="/users">{t('nav.users')}</NavLink> : null}
+          <NavLink to="/notifications">
+            {t('notify.title')}
+            {unread > 0 ? (
+              <>
+                {' '}
+                <span className="count">{unread > 99 ? '99+' : unread}</span>
+                <span className="visually-hidden"> {t('notify.unreadSuffix')}</span>
+              </>
+            ) : null}
+          </NavLink>
         </nav>
         <div className="prefs">
           <label>

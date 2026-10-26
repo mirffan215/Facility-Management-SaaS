@@ -31,6 +31,6 @@ Status: Proposed
 ## Consequences
 - Changing the lifecycle shape (new states or per-tenant steps) is a code change and a migration of existing rows' meaning; revisit with
   the workflow engine in the Reporting & Admin phase if tenants need it.
-- No outbox messages are published yet: nothing consumes them until notifications and SLAs (Phase 2b), and an unconsumed message type would
+- (Phase 2b now publishes `workorder.event` messages; see ADR-0011.) Earlier text: no outbox messages were published, and an unconsumed message type would
   only fill the dead-letter list.
 - Assignment is to one person. Teams, crews, skills and shifts are not modelled yet.

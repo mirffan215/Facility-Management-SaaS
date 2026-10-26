@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWorkOrders } from '../api/hooks';
-import type { WorkOrderStatus, WorkPriority } from '../api/types';
+import type { SlaState, WorkOrderStatus, WorkPriority } from '../api/types';
 import { Badge, Can, Field, Pager, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 
@@ -24,6 +24,10 @@ export function workStatusTone(status: WorkOrderStatus): 'ok' | 'warn' | 'bad' |
   }
 }
 
+export function slaTone(state: SlaState): 'ok' | 'warn' | 'bad' | 'neutral' {
+  return state === 'Breached' ? 'bad' : state === 'AtRisk' ? 'warn' : state === 'Met' || state === 'OnTrack' ? 'ok' : 'neutral';
+}
+
 export function priorityTone(priority: WorkPriority): 'ok' | 'warn' | 'bad' | 'neutral' {
   return priority === 'Urgent' ? 'bad' : priority === 'High' ? 'warn' : 'neutral';
 }
@@ -33,6 +37,7 @@ export function WorkOrdersPage() {
   const { date } = usePrefs();
   const statusLabel = useEnumLabel('workStatus');
   const priorityLabel = useEnumLabel('workPriority');
+  const slaLabel = useEnumLabel('slaState');
   const [params, setParams] = useSearchParams();
 
   const filters = {
@@ -59,6 +64,7 @@ export function WorkOrdersPage() {
     mine: filters.view === 'mine' ? true : undefined,
     assignedToMe: filters.view === 'assigned' ? true : undefined,
     overdue: filters.view === 'overdue' ? true : undefined,
+    slaBreached: filters.view === 'sla' ? true : undefined,
     priority: filters.priority || undefined,
     status: filters.status || undefined,
     page: filters.page,
@@ -77,7 +83,7 @@ export function WorkOrdersPage() {
       </div>
 
       <div className="tabs" role="tablist" aria-label={t('work.views')}>
-        {['open', 'mine', 'assigned', 'overdue', 'all'].map((v) => (
+        {['open', 'mine', 'assigned', 'overdue', 'sla', 'all'].map((v) => (
           <button key={v} role="tab" type="button" aria-selected={filters.view === v} className={filters.view === v ? 'active' : ''} onClick={() => set({ view: v })}>
             {t(`work.view.${v}`)}
           </button>
@@ -126,6 +132,7 @@ export function WorkOrdersPage() {
                   <th scope="col">{t('work.where')}</th>
                   <th scope="col">{t('work.assignedTo')}</th>
                   <th scope="col">{t('work.due')}</th>
+                  <th scope="col">{t('work.sla')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -154,6 +161,7 @@ export function WorkOrdersPage() {
                     <td>
                       {w.dueAt ? date(w.dueAt, true) : '—'} {w.isOverdue ? <Badge tone="bad">{t('work.overdue')}</Badge> : null}
                     </td>
+                    <td>{w.sla.state === 'None' ? '—' : <Badge tone={slaTone(w.sla.state)}>{slaLabel(w.sla.state)}</Badge>}</td>
                   </tr>
                 ))}
               </tbody>

@@ -38,4 +38,8 @@ WorkOrder (Number, Title, Type, Priority, Status, LocationId, AssetId?, Category
 WorkOrder 1-* WorkOrderEvent (append-only history)   WorkOrder 1-* WorkOrderComment (append-only, IsInternal)
 WorkCategory (Code, Name, NameAr, DefaultPriority)   WorkSettings (RequireApproval, RequireVerification; one row per tenant)
 ```
+
+Phase 2b adds, in `work`: `WorkCalendar` (+ `WorkCalendarHoliday`, `WorkCalendarSite`), `SlaPolicy` 1-* `SlaTarget`, and SLA columns on `WorkOrder`
+(policy, calendar, start, response/resolution due, responded, pause, alert flags). In `dbo`: `Notification` (per person; unique per event and person).
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

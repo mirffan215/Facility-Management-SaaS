@@ -8,7 +8,7 @@ import type { ClosureCode, WorkOrder, WorkOrderAction, WorkPriority } from '../a
 import { useAuth } from '../auth/AuthContext';
 import { Badge, ErrorBanner, Field, QueryState, ReasonDialog, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
-import { PRIORITIES, priorityTone, workStatusTone } from './WorkOrders';
+import { PRIORITIES, priorityTone, slaTone, workStatusTone } from './WorkOrders';
 
 const CLOSURE_CODES: ClosureCode[] = ['Fixed', 'NoFaultFound', 'TemporaryFix', 'PartsRequired', 'Duplicate', 'NotRequired'];
 
@@ -29,6 +29,7 @@ export function WorkOrderDetailPage() {
   const priorityLabel = useEnumLabel('workPriority');
   const typeLabel = useEnumLabel('workType');
   const closureLabel = useEnumLabel('closureCode');
+  const slaLabel = useEnumLabel('slaState');
   const [dialog, setDialog] = useState<WorkOrderAction | null>(null);
 
   const detail = query.data;
@@ -61,6 +62,17 @@ export function WorkOrderDetailPage() {
               </div>
             </header>
 
+            {o.sla.state !== 'None' ? (
+              <div className="banner" role="group" aria-label={t('work.sla')}>
+                <strong>{t('work.sla')}:</strong> <Badge tone={slaTone(o.sla.state)}>{slaLabel(o.sla.state)}</Badge>{' '}
+                <span>
+                  {t('work.respondBy')}: {o.sla.respondedAt ? `${date(o.sla.respondedAt, true)} (${o.sla.responseBreached ? t('work.late') : t('work.onTime')})` : o.sla.responseDueAt ? date(o.sla.responseDueAt, true) : '—'}
+                </span>{' · '}
+                <span>
+                  {t('work.resolveBy')}: {o.sla.paused ? t('work.clockPaused') : o.sla.resolutionDueAt ? date(o.sla.resolutionDueAt, true) : '—'}
+                </span>
+              </div>
+            ) : null}
             {o.statusReason && (o.status === 'OnHold' || o.status === 'Cancelled') ? <p className="banner">{t('work.reason', { reason: o.statusReason })}</p> : null}
 
             <dl className="details">

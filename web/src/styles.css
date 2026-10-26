@@ -114,3 +114,9 @@ tr.voided td { color: var(--muted); text-decoration: line-through; }
 .details { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
 .details dt { font-weight: 600; }
 .details dd { margin: 0; }
+.count { display: inline-block; margin-inline-start: 0.35rem; min-width: 1.25rem; padding: 0 0.35rem; border-radius: 999px; background: var(--bad); color: var(--bad-bg); font-size: 0.8rem; text-align: center; }
+.notices { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+.notices button { width: 100%; display: grid; gap: 0.15rem; text-align: start; }
+.notices li.unread button { border-inline-start: 4px solid var(--warn); }
+.sla-row { display: grid; grid-template-columns: 8rem 1fr 1fr; gap: 0.5rem; align-items: end; }
+.hours-row { display: grid; grid-template-columns: 8rem auto 1fr 1fr; gap: 0.5rem; align-items: center; }

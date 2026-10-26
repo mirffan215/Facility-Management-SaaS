@@ -49,6 +49,13 @@ services:
       Deployment__Mode: OnPrem
       Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
       Deployment__LocalStoragePath: /data/files
+      # Email notifications are off until a provider is set (in-app notices always work):
+      Email__Provider: ${FMS_EMAIL_PROVIDER:-None}
+      Email__Host: ${FMS_EMAIL_HOST:-}
+      Email__Port: ${FMS_EMAIL_PORT:-587}
+      Email__User: ${FMS_EMAIL_USER:-}
+      Email__Password: ${FMS_EMAIL_PASSWORD:-}
+      Email__From: ${FMS_EMAIL_FROM:-}
     volumes: ["files:/data/files"]
   web:
     # One origin for the browser: static files plus /api proxied to the API. Set CSP_CONNECT_SRC to your identity provider's origin

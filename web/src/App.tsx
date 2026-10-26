@@ -12,6 +12,7 @@ import { AssetDetailPage } from './pages/AssetDetail';
 import { AssetCreatePage } from './pages/AssetCreate';
 import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
+import { NotificationsPage } from './pages/Notifications';
 import { WorkOrdersPage } from './pages/WorkOrders';
 import { WorkOrderCreatePage } from './pages/WorkOrderCreate';
 import { WorkOrderDetailPage } from './pages/WorkOrderDetail';
@@ -72,6 +73,7 @@ export function App() {
         <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="work-orders/new" element={<WorkOrderCreatePage />} />
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />
         <Route path="*" element={<NotFound />} />

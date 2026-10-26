@@ -8,8 +8,9 @@ import type { AssetClass, CustomFieldDefinition, CustomFieldTarget, CustomFieldT
 import { useAuth } from '../auth/AuthContext';
 import { Badge, Can, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
+import { SlaSection } from './SlaSetup';
 
-const SECTIONS = ['classes', 'fields', 'work'] as const;
+const SECTIONS = ['classes', 'fields', 'work', 'sla'] as const;
 
 export function SetupPage() {
   const { t } = useTranslation();
@@ -25,7 +26,7 @@ export function SetupPage() {
           </button>
         ))}
       </div>
-      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : <WorkSection />}</div>
+      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : section === 'work' ? <WorkSection /> : <SlaSection />}</div>
     </section>
   );
 }

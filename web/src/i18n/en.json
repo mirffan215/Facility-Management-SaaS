@@ -306,7 +306,8 @@
     "required": "Required",
     "requiredBadge": "Required",
     "noFields": "No custom fields yet.",
-    "work": "Work orders"
+    "work": "Work orders",
+    "sla": "Service levels"
   },
   "scan": {
     "title": "Scan asset label",
@@ -408,7 +409,8 @@
       "mine": "My requests",
       "assigned": "Assigned to me",
       "overdue": "Overdue",
-      "all": "All"
+      "all": "All",
+      "sla": "SLA breached"
     },
     "searchHint": "Title or number",
     "status": "Status",
@@ -454,6 +456,88 @@
     "requireVerificationHint": "Turn off only if you accept that people sign off their own work.",
     "categories": "Request categories",
     "defaultPriority": "Default priority",
-    "add": "Add"
+    "add": "Add",
+    "sla": "Service level",
+    "respondBy": "Respond by",
+    "resolveBy": "Resolve by",
+    "late": "late",
+    "onTime": "on time",
+    "clockPaused": "paused while on hold"
+  },
+  "slaState": {
+    "None": "No SLA",
+    "OnTrack": "On track",
+    "AtRisk": "At risk",
+    "Paused": "Paused",
+    "Met": "Met",
+    "Breached": "Breached"
+  },
+  "sla": {
+    "intro": "Service levels set how quickly requests must be answered and finished. Time counts only during working hours, and stops while work is on hold.",
+    "calendars": "Working calendars",
+    "newCalendar": "New calendar",
+    "editCalendar": "Edit calendar",
+    "noCalendars": "No calendars. Without one, every hour of every day counts.",
+    "default": "Default",
+    "timeZone": "Time zone",
+    "timeZoneHint": "For example Asia/Riyadh",
+    "hours": "Working hours",
+    "presetSaudi": "Sunday to Thursday, 08:00–17:00",
+    "presetAlways": "Around the clock",
+    "open": "Open",
+    "closed": "Closed",
+    "from": "from",
+    "to": "to",
+    "holidays": "Holidays",
+    "holidayDate": "Date",
+    "holidayName": "Name",
+    "sites": "Sites that follow this calendar",
+    "sitesHint": "A site follows one calendar. Sites with none follow the default.",
+    "makeDefault": "Use for sites that have no calendar of their own",
+    "policies": "Service level policies",
+    "newPolicy": "New policy",
+    "editPolicy": "Edit policy",
+    "noPolicies": "No policies yet, so no clocks run.",
+    "policiesHint": "The default policy covers everything; a category policy replaces it for that category.",
+    "response": "Respond within",
+    "resolution": "Resolve within",
+    "appliesToAll": "Applies to all requests (the default)",
+    "targets": "Targets by priority",
+    "targetsHint": "In working minutes, counted from approval.",
+    "responseMinutes": "Respond (minutes)",
+    "resolutionMinutes": "Resolve (minutes)",
+    "appliesLater": "Changes apply to requests approved from now on. Clocks that are already running keep their deadlines.",
+    "days": "{{count}} working day(s)",
+    "hoursShort": "{{count}} h",
+    "minutesShort": "{{count}} min"
+  },
+  "notify": {
+    "title": "Notifications",
+    "unreadOnly": "Unread only",
+    "markAll": "Mark all as read",
+    "empty": "Nothing to show.",
+    "new": "New",
+    "generic": "{{number}} was updated",
+    "type": {
+      "workorder": {
+        "Created": "{{number}} was requested",
+        "Approved": "{{number}} was approved",
+        "Rejected": "{{number}} was rejected",
+        "Assigned": "{{number}} was assigned",
+        "Started": "Work started on {{number}}",
+        "Held": "{{number}} was put on hold",
+        "Resumed": "Work resumed on {{number}}",
+        "Completed": "{{number}} was completed",
+        "Closed": "{{number}} was closed",
+        "Reopened": "{{number}} was reopened",
+        "Cancelled": "{{number}} was cancelled",
+        "sla": {
+          "ResponseBreached": "{{number}} missed its response time",
+          "ResolutionAtRisk": "{{number}} is close to missing its resolution time",
+          "ResolutionBreached": "{{number}} missed its resolution time"
+        }
+      }
+    },
+    "unreadSuffix": "unread"
   }
 }
