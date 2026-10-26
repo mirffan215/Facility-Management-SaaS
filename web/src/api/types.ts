@@ -265,6 +265,9 @@ export interface WorkSettings {
   requireApproval: boolean;
   requireVerification: boolean;
   rowVersion: string | null;
+  currencyCode: string;
+  labourRatePerHour: number;
+  requireCompletionSignature: boolean;
 }
 
 export interface Assignee {
@@ -337,4 +340,87 @@ export interface SlaPolicy {
   isArchived: boolean;
   targets: SlaTarget[];
   rowVersion: string;
+}
+
+export type ChecklistResult = 'Pending' | 'Done' | 'Failed' | 'NotApplicable';
+export type CostKind = 'Material' | 'Contractor' | 'Other';
+export type AttachmentKind = 'Before' | 'After' | 'Other';
+export type SignatureRole = 'Technician' | 'Customer';
+
+export interface ChecklistItem {
+  id: string;
+  position: number;
+  text: string;
+  required: boolean;
+  result: ChecklistResult;
+  note: string | null;
+  resultByName: string | null;
+  resultAt: string | null;
+}
+
+export interface ChecklistTemplate {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  isArchived: boolean;
+  items: { text: string; required: boolean }[];
+  rowVersion: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  workerId: string;
+  workerName: string | null;
+  workedOn: string;
+  minutes: number;
+  hourlyRate: number;
+  labourCost: number;
+  note: string | null;
+  recordedAt: string;
+  isVoided: boolean;
+  voidReason: string | null;
+}
+
+export interface CostLine {
+  id: string;
+  kind: CostKind;
+  description: string;
+  reference: string | null;
+  quantity: number;
+  unitCost: number;
+  total: number;
+  recordedByName: string | null;
+  recordedAt: string;
+  isVoided: boolean;
+  voidReason: string | null;
+}
+
+export interface CostSummary {
+  currencyCode: string;
+  minutes: number;
+  labourCost: number;
+  material: number;
+  contractor: number;
+  other: number;
+  total: number;
+}
+
+export interface WorkSignature {
+  id: string;
+  role: SignatureRole;
+  signerName: string;
+  signedAt: string;
+  recordedByName: string | null;
+}
+
+export interface WorkAttachment {
+  id: string;
+  kind: AttachmentKind;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  description: string | null;
+  uploadedAt: string;
+  uploadedByName: string | null;
+  uploadedBy: string;
 }

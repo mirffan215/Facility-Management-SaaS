@@ -507,6 +507,116 @@ test('helpdesk: a requester scans a label, the request is approved, assigned, do
   await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
 });
 
+test('field work: checklist, time, costs, photo and signature, with completion blocked until the checklist is answered', async ({ browser }) => {
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+
+  // A dispatcher prepares: a checklist template, an hourly rate, and an emergency job assigned to the technician.
+  await page.goto('/setup?section=checklists');
+  await page.getByRole('button', { name: 'New checklist' }).click();
+  const template = page.getByRole('dialog', { name: 'New checklist' });
+  await template.getByRole('textbox', { name: 'Name *' }).fill('Pump inspection');
+  await template.getByRole('textbox', { name: 'Line 1' }).fill('Isolate power');
+  await template.getByRole('button', { name: 'Add a line' }).click();
+  await template.getByRole('textbox', { name: 'Line 2' }).fill('Check seals');
+  await template.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Pump inspection')).toBeVisible();
+
+  const settings = (await (await api('/work-orders/settings')).json()) as { rowVersion: string | null };
+  expect((await api('/work-orders/settings', { method: 'PUT', body: JSON.stringify({ requireApproval: true, requireVerification: true, labourRatePerHour: 80, rowVersion: settings.rowVersion }) })).status).toBe(200);
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const users = (await (await api('/users')).json()) as { id: string; email: string }[];
+  const techId = users.find((u) => u.email === `tech-${SUFFIX.toLowerCase()}@example.test`)!.id;
+  const made = await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Pump seized', type: 'Emergency', priority: 'Urgent', locationId: site.id }) });
+  expect(made.status).toBe(201);
+  const wo = (await made.json()) as { id: string };
+  expect((await api(`/work-orders/${wo.id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeId: techId }) })).status).toBe(200);
+
+  await page.goto(`/work-orders/${wo.id}?tab=checklist`);
+  await page.getByLabel('Add a checklist').selectOption({ label: 'Pump inspection' });
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Checklist' }).getByRole('listitem')).toHaveCount(2);
+
+  // The technician starts; completing is refused until the required lines are answered.
+  const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
+  await expect(tech.getByRole('link', { name: 'Work orders', exact: true })).toBeVisible();
+  await tech.goto(`/work-orders/${wo.id}`);
+  await tech.getByRole('button', { name: 'Start work' }).click();
+  await tech.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(tech.getByText('In progress', { exact: true }).first()).toBeVisible();
+
+  await tech.getByRole('button', { name: 'Complete', exact: true }).click();
+  await tech.getByRole('dialog').getByLabel('What was done').fill('Replaced the seal');
+  await tech.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(tech.getByRole('dialog').getByText(/1 required checklist item/)).toBeVisible();
+  await tech.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+
+  await tech.getByRole('tab', { name: 'Checklist' }).click();
+  await tech.getByLabel('Result: Isolate power').selectOption('Done');
+  await expect(tech.getByRole('listitem').filter({ hasText: 'Isolate power' }).getByText('Done', { exact: true }).first()).toBeVisible();
+  await tech.getByLabel('Result: Check seals').selectOption('Done');
+  await expect(tech.getByRole('listitem').filter({ hasText: 'Check seals' }).getByText('Done', { exact: true }).first()).toBeVisible();
+
+  // Time and costs.
+  await tech.getByRole('tab', { name: 'Time and costs' }).click();
+  await tech.getByLabel('Minutes').fill('45');
+  await tech.getByRole('button', { name: 'Record time' }).click();
+  await expect(tech.getByRole('cell', { name: '45', exact: true })).toBeVisible();
+  await tech.getByLabel('Description').fill('Mechanical seal');
+  await tech.getByLabel('Reference').fill('PO-77');
+  await tech.getByLabel('Quantity').fill('2');
+  await tech.getByLabel('Unit cost').fill('25.5');
+  await tech.getByRole('button', { name: 'Add cost' }).click();
+  await expect(tech.getByRole('cell', { name: 'Mechanical seal' })).toBeVisible();
+  await expect(tech.getByRole('definition').filter({ hasText: /111/ }).first()).toBeVisible(); // 45 min at 80 = 60, plus 2 x 25.5 = 51
+
+  // A photo.
+  await tech.getByRole('tab', { name: 'Photos and files' }).click();
+  await tech.locator('input[type=file]').setInputFiles({ name: 'seal.png', mimeType: 'image/png', buffer: PNG });
+  await tech.getByRole('button', { name: 'Add a photo or file' }).click();
+  await expect(tech.getByRole('list', { name: 'Photos and files' }).getByText('seal.png')).toBeVisible();
+  await expect(tech.getByRole('img', { name: 'seal.png' })).toBeVisible();
+
+  // A signature drawn on the pad.
+  await tech.getByRole('tab', { name: 'Signatures' }).click();
+  await tech.getByLabel('Printed name').fill('Tina Technician');
+  const pad = tech.getByRole('img', { name: /Signature area/ });
+  const box = (await pad.boundingBox())!;
+  await tech.mouse.move(box.x + 20, box.y + 20);
+  await tech.mouse.down();
+  await tech.mouse.move(box.x + 120, box.y + 60, { steps: 6 });
+  await tech.mouse.move(box.x + 200, box.y + 30, { steps: 6 });
+  await tech.mouse.up();
+  await tech.getByRole('button', { name: 'Save signature' }).click();
+  await expect(tech.getByRole('list', { name: 'Signatures' }).getByRole('listitem')).toHaveCount(1);
+
+  // Now it completes.
+  await tech.getByRole('tab', { name: 'Overview' }).click();
+  await tech.getByRole('button', { name: 'Complete', exact: true }).click();
+  await tech.getByRole('dialog').getByLabel('What was done').fill('Replaced the seal');
+  await tech.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(tech.getByText('Completed', { exact: true }).first()).toBeVisible();
+  await tech.context().close();
+
+  // The administrator sees it all, and the screens are accessible in both languages.
+  for (const lang of ['en', 'ar']) {
+    await page.goto(`/work-orders/${wo.id}`);
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['checklist', 'costs', 'files', 'signatures']) {
+      await page.goto(`/work-orders/${wo.id}?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      await expectNoSeriousA11yIssues(`work order ${tab} ${lang}`);
+    }
+    await page.goto('/setup?section=checklists');
+    await expect(page.getByRole('tabpanel')).toBeVisible();
+    await expectNoSeriousA11yIssues(`checklist setup ${lang}`);
+  }
+
+  await page.locator('.prefs select').first().selectOption('en');
+  await shot('23-field-work');
+  await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

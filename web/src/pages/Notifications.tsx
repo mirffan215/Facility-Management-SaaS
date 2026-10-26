@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,11 @@ export function NotificationsPage() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
   const query = useNotifications(unreadOnly, page);
+
+  // The bell and this list should never disagree: whenever the list is refreshed, refresh the count too.
+  useEffect(() => {
+    if (query.dataUpdatedAt) void client.invalidateQueries({ queryKey: ['notifications', 'unread'] });
+  }, [query.dataUpdatedAt, client]);
 
   const refresh = () => client.invalidateQueries({ queryKey: ['notifications'] });
   const markRead = useMutation({ mutationFn: (id: string) => api.post(`/notifications/${id}/read`), onSuccess: refresh });

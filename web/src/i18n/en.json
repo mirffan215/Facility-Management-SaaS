@@ -307,7 +307,8 @@
     "requiredBadge": "Required",
     "noFields": "No custom fields yet.",
     "work": "Work orders",
-    "sla": "Service levels"
+    "sla": "Service levels",
+    "checklists": "Checklists"
   },
   "scan": {
     "title": "Scan asset label",
@@ -462,7 +463,13 @@
     "resolveBy": "Resolve by",
     "late": "late",
     "onTime": "on time",
-    "clockPaused": "paused while on hold"
+    "clockPaused": "paused while on hold",
+    "requireSignature": "Work cannot be completed without the technician’s signature.",
+    "requireSignatureHint": "Signing needs a pen, finger or mouse.",
+    "currency": "Currency",
+    "currencyHint": "Three-letter code, for example SAR",
+    "labourRate": "Labour rate per hour",
+    "labourRateHint": "Applied to time as it is recorded; earlier entries keep the rate they had. Zero means labour is not costed."
   },
   "slaState": {
     "None": "No SLA",
@@ -539,5 +546,91 @@
       }
     },
     "unreadSuffix": "unread"
+  },
+  "checklistResult": {
+    "Pending": "Not answered",
+    "Done": "Done",
+    "Failed": "Failed",
+    "NotApplicable": "Not applicable"
+  },
+  "costKind": {
+    "Material": "Materials",
+    "Contractor": "Contractor",
+    "Other": "Other"
+  },
+  "attachmentKind": {
+    "Before": "Before",
+    "After": "After",
+    "Other": "Other"
+  },
+  "signatureRole": {
+    "Technician": "Technician",
+    "Customer": "Customer"
+  },
+  "evidence": {
+    "sections": "Work order sections",
+    "tabs": {
+      "overview": "Overview",
+      "checklist": "Checklist",
+      "costs": "Time and costs",
+      "files": "Photos and files",
+      "signatures": "Signatures"
+    },
+    "checklist": "Checklist",
+    "noChecklist": "No checklist on this work order.",
+    "addChecklist": "Add a checklist",
+    "attach": "Add",
+    "required": "Required",
+    "result": "Result",
+    "note": "Note",
+    "summary": "Cost summary",
+    "labour": "Labour",
+    "hoursUnit": "h",
+    "total": "Total",
+    "time": "Time worked",
+    "addTime": "Record time",
+    "workedOn": "Day",
+    "minutes": "Minutes",
+    "worker": "Worker",
+    "cost": "Cost",
+    "noTime": "No time recorded.",
+    "voided": "Voided",
+    "void": "Void",
+    "costs": "Other costs",
+    "addCost": "Add cost",
+    "kind": "Kind",
+    "description": "Description",
+    "reference": "Reference",
+    "referenceHint": "Supplier, invoice or purchase order",
+    "quantity": "Quantity",
+    "unitCost": "Unit cost",
+    "noCosts": "No costs recorded.",
+    "files": "Photos and files",
+    "addFile": "Add a photo or file",
+    "file": "Photo or file",
+    "fileHint": "A photo from the camera, or a PDF, Word, Excel or text file. Up to 15 MB.",
+    "download": "Download",
+    "remove": "Remove",
+    "noFiles": "Nothing attached.",
+    "signatures": "Signatures",
+    "noSignatures": "Not signed yet.",
+    "addSignature": "Take a signature",
+    "signingAs": "Signing as",
+    "printedName": "Printed name",
+    "padLabel": "Signature area: draw with a finger, pen or mouse",
+    "clearPad": "Clear",
+    "sign": "Save signature",
+    "signatureOf": "Signature of {{name}}",
+    "templates": "Checklist templates",
+    "templatesHint": "Reusable lists to add to a work order. A work order keeps its own copy, so later edits do not change work already planned.",
+    "newTemplate": "New checklist",
+    "editTemplate": "Edit checklist",
+    "noTemplates": "No checklists yet.",
+    "lines": "{{count}} line(s)",
+    "templateLines": "Lines",
+    "lineText": "Line {{number}}",
+    "addLine": "Add a line",
+    "moveUp": "Move line {{number}} up",
+    "moveDown": "Move line {{number}} down"
   }
 }

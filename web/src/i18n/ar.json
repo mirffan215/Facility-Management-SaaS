@@ -307,7 +307,8 @@
     "requiredBadge": "إلزامي",
     "noFields": "لا توجد حقول مخصصة بعد.",
     "work": "أوامر العمل",
-    "sla": "مستويات الخدمة"
+    "sla": "مستويات الخدمة",
+    "checklists": "قوائم الفحص"
   },
   "scan": {
     "title": "مسح ملصق الأصل",
@@ -462,7 +463,13 @@
     "resolveBy": "الحل قبل",
     "late": "متأخرة",
     "onTime": "في الوقت",
-    "clockPaused": "متوقف أثناء التعليق"
+    "clockPaused": "متوقف أثناء التعليق",
+    "requireSignature": "لا يمكن إكمال العمل بدون توقيع الفني.",
+    "requireSignatureHint": "يتطلب التوقيع قلماً أو إصبعاً أو فأرة.",
+    "currency": "العملة",
+    "currencyHint": "رمز من ثلاثة أحرف، مثل SAR",
+    "labourRate": "أجر العمالة في الساعة",
+    "labourRateHint": "يُطبَّق على الوقت عند تسجيله؛ وتحتفظ الإدخالات السابقة بسعرها. الصفر يعني عدم احتساب العمالة."
   },
   "slaState": {
     "None": "بدون اتفاقية",
@@ -539,5 +546,91 @@
       }
     },
     "unreadSuffix": "غير مقروء"
+  },
+  "checklistResult": {
+    "Pending": "بلا إجابة",
+    "Done": "تم",
+    "Failed": "فشل",
+    "NotApplicable": "لا ينطبق"
+  },
+  "costKind": {
+    "Material": "مواد",
+    "Contractor": "مقاول",
+    "Other": "أخرى"
+  },
+  "attachmentKind": {
+    "Before": "قبل",
+    "After": "بعد",
+    "Other": "أخرى"
+  },
+  "signatureRole": {
+    "Technician": "الفني",
+    "Customer": "العميل"
+  },
+  "evidence": {
+    "sections": "أقسام أمر العمل",
+    "tabs": {
+      "overview": "نظرة عامة",
+      "checklist": "قائمة الفحص",
+      "costs": "الوقت والتكاليف",
+      "files": "الصور والملفات",
+      "signatures": "التواقيع"
+    },
+    "checklist": "قائمة الفحص",
+    "noChecklist": "لا توجد قائمة فحص على أمر العمل هذا.",
+    "addChecklist": "إضافة قائمة فحص",
+    "attach": "إضافة",
+    "required": "إلزامي",
+    "result": "النتيجة",
+    "note": "ملاحظة",
+    "summary": "ملخص التكاليف",
+    "labour": "العمالة",
+    "hoursUnit": "س",
+    "total": "الإجمالي",
+    "time": "الوقت المنفَّذ",
+    "addTime": "تسجيل وقت",
+    "workedOn": "اليوم",
+    "minutes": "الدقائق",
+    "worker": "المنفّذ",
+    "cost": "التكلفة",
+    "noTime": "لم يُسجَّل أي وقت.",
+    "voided": "ملغى",
+    "void": "إلغاء الإدخال",
+    "costs": "تكاليف أخرى",
+    "addCost": "إضافة تكلفة",
+    "kind": "النوع",
+    "description": "الوصف",
+    "reference": "المرجع",
+    "referenceHint": "المورد أو الفاتورة أو أمر الشراء",
+    "quantity": "الكمية",
+    "unitCost": "تكلفة الوحدة",
+    "noCosts": "لم تُسجَّل أي تكاليف.",
+    "files": "الصور والملفات",
+    "addFile": "إضافة صورة أو ملف",
+    "file": "صورة أو ملف",
+    "fileHint": "صورة من الكاميرا، أو ملف PDF أو Word أو Excel أو نص. حتى 15 ميغابايت.",
+    "download": "تنزيل",
+    "remove": "إزالة",
+    "noFiles": "لا يوجد مرفقات.",
+    "signatures": "التواقيع",
+    "noSignatures": "لم يتم التوقيع بعد.",
+    "addSignature": "أخذ توقيع",
+    "signingAs": "التوقيع بصفة",
+    "printedName": "الاسم المطبوع",
+    "padLabel": "منطقة التوقيع: ارسم بإصبعك أو بقلم أو بالفأرة",
+    "clearPad": "مسح",
+    "sign": "حفظ التوقيع",
+    "signatureOf": "توقيع {{name}}",
+    "templates": "قوالب قوائم الفحص",
+    "templatesHint": "قوائم قابلة لإعادة الاستخدام تُضاف إلى أمر العمل. يحتفظ أمر العمل بنسخته الخاصة، فلا تؤثر التعديلات اللاحقة على العمل المخطط.",
+    "newTemplate": "قائمة فحص جديدة",
+    "editTemplate": "تعديل قائمة الفحص",
+    "noTemplates": "لا توجد قوائم فحص بعد.",
+    "lines": "{{count}} بند",
+    "templateLines": "البنود",
+    "lineText": "البند {{number}}",
+    "addLine": "إضافة بند",
+    "moveUp": "نقل البند {{number}} للأعلى",
+    "moveDown": "نقل البند {{number}} للأسفل"
   }
 }

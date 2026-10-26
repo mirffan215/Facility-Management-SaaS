@@ -4,13 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import { useAssetClasses, useWorkCategories, useWorkSettings } from '../api/hooks';
-import type { AssetClass, CustomFieldDefinition, CustomFieldTarget, CustomFieldType, WorkCategory, WorkPriority } from '../api/types';
+import type { AssetClass, CustomFieldDefinition, CustomFieldTarget, CustomFieldType, WorkCategory, WorkPriority, WorkSettings } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, Can, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { SlaSection } from './SlaSetup';
+import { ChecklistsSection } from './ChecklistSetup';
 
-const SECTIONS = ['classes', 'fields', 'work', 'sla'] as const;
+const SECTIONS = ['classes', 'fields', 'work', 'sla', 'checklists'] as const;
 
 export function SetupPage() {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export function SetupPage() {
           </button>
         ))}
       </div>
-      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : section === 'work' ? <WorkSection /> : <SlaSection />}</div>
+      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : section === 'work' ? <WorkSection /> : section === 'sla' ? <SlaSection /> : <ChecklistsSection />}</div>
     </section>
   );
 }
@@ -227,7 +228,7 @@ function WorkSection() {
     onSuccess: () => client.invalidateQueries({ queryKey: ['work-categories'] }),
   });
   const saveSettings = useMutation({
-    mutationFn: (next: { requireApproval: boolean; requireVerification: boolean }) => api.put('/work-orders/settings', { ...next, rowVersion: settings.data?.rowVersion ?? null }),
+    mutationFn: (next: Partial<WorkSettings>) => api.put('/work-orders/settings', { ...settings.data, ...next, rowVersion: settings.data?.rowVersion ?? null }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['work-settings'] }),
   });
   const error = create.error instanceof ApiError ? create.error : null;
@@ -241,14 +242,27 @@ function WorkSection() {
             <legend>{t('work.settingsLegend')}</legend>
             <label className="check">
               <input type="checkbox" checked={settings.data.requireApproval} disabled={saveSettings.isPending}
-                onChange={(e) => saveSettings.mutate({ requireApproval: e.target.checked, requireVerification: settings.data!.requireVerification })} />
+                onChange={(e) => saveSettings.mutate({ requireApproval: e.target.checked })} />
               <span>{t('work.requireApproval')} <small className="muted">{t('work.requireApprovalHint')}</small></span>
             </label>
             <label className="check">
               <input type="checkbox" checked={settings.data.requireVerification} disabled={saveSettings.isPending}
-                onChange={(e) => saveSettings.mutate({ requireApproval: settings.data!.requireApproval, requireVerification: e.target.checked })} />
+                onChange={(e) => saveSettings.mutate({ requireVerification: e.target.checked })} />
               <span>{t('work.requireVerification')} <small className="muted">{t('work.requireVerificationHint')}</small></span>
             </label>
+            <label className="check">
+              <input type="checkbox" checked={settings.data.requireCompletionSignature} disabled={saveSettings.isPending}
+                onChange={(e) => saveSettings.mutate({ requireCompletionSignature: e.target.checked })} />
+              <span>{t('work.requireSignature')} <small className="muted">{t('work.requireSignatureHint')}</small></span>
+            </label>
+            <div className="row">
+              <Field label={t('work.currency')} hint={t('work.currencyHint')}>
+                <input defaultValue={settings.data.currencyCode} maxLength={3} onBlur={(e) => e.target.value.trim().toUpperCase() !== settings.data!.currencyCode && saveSettings.mutate({ currencyCode: e.target.value.trim() })} />
+              </Field>
+              <Field label={t('work.labourRate')} hint={t('work.labourRateHint')}>
+                <input type="number" min={0} step="any" defaultValue={settings.data.labourRatePerHour} onBlur={(e) => Number(e.target.value) !== settings.data!.labourRatePerHour && saveSettings.mutate({ labourRatePerHour: Number(e.target.value) })} />
+              </Field>
+            </div>
             <ErrorBanner error={saveSettings.error} />
           </fieldset>
         ) : null}

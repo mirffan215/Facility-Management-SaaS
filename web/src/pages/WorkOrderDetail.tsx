@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
@@ -9,6 +9,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Badge, ErrorBanner, Field, QueryState, ReasonDialog, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { PRIORITIES, priorityTone, slaTone, workStatusTone } from './WorkOrders';
+import { ChecklistTab, CostsTab, FilesTab, SignaturesTab } from './WorkOrderEvidence';
 
 const CLOSURE_CODES: ClosureCode[] = ['Fixed', 'NoFaultFound', 'TemporaryFix', 'PartsRequired', 'Duplicate', 'NotRequired'];
 
@@ -31,6 +32,10 @@ export function WorkOrderDetailPage() {
   const closureLabel = useEnumLabel('closureCode');
   const slaLabel = useEnumLabel('slaState');
   const [dialog, setDialog] = useState<WorkOrderAction | null>(null);
+  const [params, setParams] = useSearchParams();
+  const { can } = usePermissions();
+  const tabs = ['overview', 'checklist', ...(can('workorders.read') ? ['costs'] : []), 'files', 'signatures'];
+  const tab = tabs.find((x) => x === params.get('tab')) ?? 'overview';
 
   const detail = query.data;
   const o = detail?.order;
@@ -75,6 +80,16 @@ export function WorkOrderDetailPage() {
             ) : null}
             {o.statusReason && (o.status === 'OnHold' || o.status === 'Cancelled') ? <p className="banner">{t('work.reason', { reason: o.statusReason })}</p> : null}
 
+            <div className="tabs" role="tablist" aria-label={t('evidence.sections')}>
+              {tabs.map((x) => (
+                <button key={x} role="tab" type="button" aria-selected={tab === x} className={tab === x ? 'active' : ''} onClick={() => setParams({ tab: x }, { replace: true })}>
+                  {t(`evidence.tabs.${x}`)}
+                </button>
+              ))}
+            </div>
+            <div role="tabpanel">
+              {tab === 'overview' ? (
+                <>
             <dl className="details">
               <dt>{t('work.asset')}</dt>
               <dd>
@@ -126,6 +141,14 @@ export function WorkOrderDetailPage() {
 
             <h2>{t('work.comments')}</h2>
             <Comments order={o} comments={detail.comments} />
+
+                </>
+              ) : null}
+              {tab === 'checklist' ? <ChecklistTab order={o} /> : null}
+              {tab === 'costs' ? <CostsTab order={o} /> : null}
+              {tab === 'files' ? <FilesTab order={o} /> : null}
+              {tab === 'signatures' ? <SignaturesTab order={o} /> : null}
+            </div>
 
             {dialog ? <ActionDialog action={dialog} order={o} onClose={() => setDialog(null)} /> : null}
           </>
@@ -283,6 +306,7 @@ function CompleteDialog({ busy, error, onConfirm, onClose }: { busy: boolean; er
   const label = useEnumLabel('closureCode');
   const [code, setCode] = useState<ClosureCode>('Fixed');
   const [notes, setNotes] = useState('');
+  const problem = error instanceof ApiError ? error : null;
   return (
     <div className="overlay" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
       <div className="dialog" role="dialog" aria-modal="true" aria-label={t('workAction.Completed')}>
@@ -305,7 +329,8 @@ function CompleteDialog({ busy, error, onConfirm, onClose }: { busy: boolean; er
           <Field label={t('work.whatWasDone')} required>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} maxLength={2000} />
           </Field>
-          <ErrorBanner error={error} />
+          {problem?.field('checklist') ? <p className="banner error" role="alert">{problem.field('checklist')}</p> : null}
+          <ErrorBanner error={problem?.status === 400 ? null : error} />
           <div className="actions">
             <button type="button" onClick={onClose}>
               {t('common.cancel')}

@@ -120,3 +120,14 @@ tr.voided td { color: var(--muted); text-decoration: line-through; }
 .notices li.unread button { border-inline-start: 4px solid var(--warn); }
 .sla-row { display: grid; grid-template-columns: 8rem 1fr 1fr; gap: 0.5rem; align-items: end; }
 .hours-row { display: grid; grid-template-columns: 8rem auto 1fr 1fr; gap: 0.5rem; align-items: center; }
+.checklist { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
+.checklist li { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.75rem; }
+.files { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
+.files li { display: flex; gap: 0.75rem; align-items: flex-start; }
+.thumb { width: 6rem; height: 6rem; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; }
+.thumb.placeholder { display: inline-block; background: var(--border); }
+.pad { display: grid; gap: 0.5rem; margin-block: 0.5rem; max-width: 40rem; }
+.pad canvas { width: 100%; height: auto; aspect-ratio: 3 / 1; background: #fff; border: 2px dashed var(--border); border-radius: var(--radius); touch-action: none; }
+tr.voided td { text-decoration: line-through; opacity: 0.7; }
+tr.voided td:last-child, tr.voided td .badge { text-decoration: none; }
+.plain { list-style: none; padding: 0; display: grid; gap: 0.5rem; }

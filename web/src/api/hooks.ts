@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -137,4 +137,44 @@ export function useCalendars(includeArchived = true) {
 export function useSlaPolicies(includeArchived = true) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['sla-policies', includeArchived], queryFn: () => api.get<SlaPolicy[]>('/work-orders/sla/policies', { includeArchived }) });
+}
+
+const evidence = (id: string | undefined, part: string, enabled = true) => ({
+  queryKey: ['work-evidence', id, part],
+  enabled: !!id && enabled,
+});
+
+export function useChecklist(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ ...evidence(id, 'checklist'), queryFn: () => api.get<ChecklistItem[]>(`/work-orders/${id}/checklist`) });
+}
+
+export function useChecklistTemplates(enabled = true, includeArchived = false) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['checklist-templates', includeArchived], enabled, queryFn: () => api.get<ChecklistTemplate[]>('/work-orders/checklists', { includeArchived }) });
+}
+
+export function useTimeEntries(id: string | undefined, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ ...evidence(id, 'time', enabled), queryFn: () => api.get<TimeEntry[]>(`/work-orders/${id}/time`) });
+}
+
+export function useCostLines(id: string | undefined, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ ...evidence(id, 'costs', enabled), queryFn: () => api.get<CostLine[]>(`/work-orders/${id}/costs`) });
+}
+
+export function useCostSummary(id: string | undefined, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ ...evidence(id, 'summary', enabled), queryFn: () => api.get<CostSummary>(`/work-orders/${id}/cost-summary`) });
+}
+
+export function useSignatures(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ ...evidence(id, 'signatures'), queryFn: () => api.get<WorkSignature[]>(`/work-orders/${id}/signatures`) });
+}
+
+export function useAttachments(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ ...evidence(id, 'attachments'), queryFn: () => api.get<WorkAttachment[]>(`/work-orders/${id}/attachments`) });
 }

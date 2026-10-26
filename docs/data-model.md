@@ -42,4 +42,8 @@ WorkCategory (Code, Name, NameAr, DefaultPriority)   WorkSettings (RequireApprov
 Phase 2b adds, in `work`: `WorkCalendar` (+ `WorkCalendarHoliday`, `WorkCalendarSite`), `SlaPolicy` 1-* `SlaTarget`, and SLA columns on `WorkOrder`
 (policy, calendar, start, response/resolution due, responded, pause, alert flags). In `dbo`: `Notification` (per person; unique per event and person).
 
+Phase 2c adds, in `work`: `ChecklistTemplate` 1-* `ChecklistTemplateItem`; `WorkOrderChecklistItem` (a copy, with result); append-only `WorkOrderTimeEntry`,
+`WorkOrderCostLine`, `WorkOrderVoid` (one per cancelled entry) and `WorkOrderSignature`; `WorkOrderAttachment` (soft delete). Settings gain currency, labour rate
+and "require completion signature".
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).
