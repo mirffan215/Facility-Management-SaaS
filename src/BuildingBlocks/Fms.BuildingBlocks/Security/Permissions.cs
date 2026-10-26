@@ -47,6 +47,12 @@ public static class Permissions
     /// <summary>Approve stock takes and make direct stock adjustments. A stock take cannot be approved by the person who submitted it.</summary>
     public const string InventoryApprove = "inventory.approve";
 
+    /// <summary>See vendors, their contacts, contracts and contract files.</summary>
+    public const string VendorsRead = "vendors.read";
+
+    /// <summary>Maintain vendors and contracts, assign work orders to vendors, and invite vendor users.</summary>
+    public const string VendorsManage = "vendors.manage";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
@@ -55,6 +61,7 @@ public static class Permissions
         WorkOrdersRead, WorkOrdersRequest, WorkOrdersApprove, WorkOrdersAssign, WorkOrdersWork, WorkOrdersVerify, WorkOrdersManage,
         PmRead, PmManage,
         InventoryRead, InventoryManage, InventoryIssue, InventoryApprove,
+        VendorsRead, VendorsManage,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;

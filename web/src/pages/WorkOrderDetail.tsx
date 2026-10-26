@@ -11,6 +11,7 @@ import { usePrefs } from '../lib/prefs';
 import { PRIORITIES, priorityTone, slaTone, workStatusTone } from './WorkOrders';
 import { ChecklistTab, CostsTab, FilesTab, SignaturesTab } from './WorkOrderEvidence';
 import { PartsTab } from './WorkParts';
+import { VendorRows } from './WorkVendor';
 
 const CLOSURE_CODES: ClosureCode[] = ['Fixed', 'NoFaultFound', 'TemporaryFix', 'PartsRequired', 'Duplicate', 'NotRequired'];
 
@@ -112,6 +113,7 @@ export function WorkOrderDetailPage() {
               <dd>
                 <bdi>{o.assignedToName ?? '—'}</bdi>
               </dd>
+              <VendorRows order={o} />
               <dt>{t('work.due')}</dt>
               <dd>{o.dueAt ? date(o.dueAt, true) : '—'}</dd>
               {o.completedAt ? (

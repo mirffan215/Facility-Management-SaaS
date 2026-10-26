@@ -649,3 +649,94 @@ export interface StockTake {
   detail: StockTakeLine[] | null;
   rowVersion: string;
 }
+
+// ---------------- vendors and contracts ----------------
+
+export type VendorStatus = 'Active' | 'OnHold' | 'Blocked';
+export type ContractType = 'Amc' | 'Sla' | 'Service' | 'Supply' | 'Other';
+export type ContractStatus = 'Upcoming' | 'Active' | 'Expiring' | 'Expired' | 'Terminated';
+export type CoverageKind = 'Site' | 'AssetClass' | 'Asset';
+export type ContractDocumentKind = 'Contract' | 'Amendment' | 'Certificate' | 'Insurance' | 'Other';
+
+export interface Vendor {
+  id: string;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  status: VendorStatus;
+  statusReason: string | null;
+  taxNumber: string | null;
+  registrationNumber: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  country: string | null;
+  paymentTerms: string | null;
+  notes: string | null;
+  erpAccount: string | null;
+  isArchived: boolean;
+  activeContracts: number;
+  rowVersion: string;
+}
+
+export interface VendorContact {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  isPrimary: boolean;
+}
+
+export interface ContractSla {
+  priority: number;
+  responseMinutes: number;
+  resolutionMinutes: number;
+}
+
+export interface Contract {
+  id: string;
+  vendorId: string;
+  vendorName: string | null;
+  number: string;
+  title: string;
+  type: ContractType;
+  startOn: string;
+  endOn: string;
+  value: number | null;
+  currencyCode: string;
+  renewalNoticeDays: number;
+  notes: string | null;
+  status: ContractStatus;
+  daysLeft: number;
+  terminatedAt: string | null;
+  terminationReason: string | null;
+  coverage: { kind: CoverageKind; targetId: string; name: string | null }[];
+  sla: ContractSla[];
+  documents: number;
+  rowVersion: string;
+}
+
+export interface ContractDocument {
+  id: string;
+  contractId: string;
+  kind: ContractDocumentKind;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  description: string | null;
+  uploadedAt: string;
+}
+
+export interface VendorAssignment {
+  vendorId: string;
+  vendorName: string;
+  vendorNameAr: string | null;
+  contractId: string | null;
+  contractNumber: string | null;
+  contractTitle: string | null;
+  contractInForce: boolean;
+  covered: boolean | null;
+  responseMinutes: number | null;
+  resolutionMinutes: number | null;
+}

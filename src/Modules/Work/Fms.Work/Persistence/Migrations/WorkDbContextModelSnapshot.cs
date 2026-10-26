@@ -692,6 +692,9 @@ namespace Fms.Work.Persistence.Migrations
                     b.Property<Guid?>("AssignedTo")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AssignedVendorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uniqueidentifier");
 
@@ -798,6 +801,9 @@ namespace Fms.Work.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("VendorContractId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset?>("VerifiedAt")
                         .HasColumnType("datetimeoffset");

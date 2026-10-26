@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\src\Host\Fms.Api\Fms.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Work\Fms.Work\Fms.Work.csproj" />
     <ProjectReference Include="..\..\src\Modules\Inventory\Fms.Inventory\Fms.Inventory.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Vendors\Fms.Vendors\Fms.Vendors.csproj" />
   </ItemGroup>
 </Project>

@@ -22,7 +22,8 @@
     "workOrders": "Work orders",
     "jobs": "My jobs",
     "pm": "Preventive",
-    "inventory": "Inventory"
+    "inventory": "Inventory",
+    "vendors": "Vendors"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -549,6 +550,10 @@
       },
       "inventory": {
         "low": "Low stock: {{number}} {{title}}"
+      },
+      "contract": {
+        "Expiring": "Contract {{number}} ends in {{days}} day(s)",
+        "Expired": "Contract {{number}} has ended"
       }
     },
     "unreadSuffix": "unread"
@@ -914,5 +919,112 @@
     "TransferIn": "Transferred in",
     "Adjustment": "Adjustment",
     "CountAdjustment": "Stock take"
+  },
+  "vendors": {
+    "title": "Vendors and contracts",
+    "intro": "The companies that do work for you, and the contracts that say what they must do and when.",
+    "sections": "Vendor sections",
+    "tab": {
+      "vendors": "Vendors",
+      "contracts": "Contracts"
+    },
+    "search": "Search",
+    "newVendor": "New vendor",
+    "editVendor": "Edit vendor",
+    "noVendors": "No vendors yet.",
+    "activeContracts": "Contracts in force",
+    "contact": "Contact",
+    "vat": "VAT",
+    "contacts": "Contacts",
+    "changeStatus": "Hold or block",
+    "changeStatusOf": "Status of {{name}}",
+    "statusHint": "A vendor on hold or blocked cannot be given new work or orders. Existing work carries on.",
+    "country": "Country",
+    "countryHint": "Two letters, such as SA.",
+    "taxNumber": "VAT number",
+    "registrationNumber": "Commercial registration",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "paymentTerms": "Payment terms",
+    "notes": "Notes",
+    "contactsOf": "Contacts of {{name}}",
+    "noContacts": "No contacts yet.",
+    "contactNumber": "Contact {{number}}",
+    "role": "Role",
+    "mainContact": "Main contact",
+    "addContact": "Add contact",
+    "vendor": "Vendor",
+    "newContract": "New contract",
+    "noContracts": "No contracts yet.",
+    "number": "Number",
+    "contractTitle": "Title",
+    "period": "Period",
+    "value": "Value",
+    "daysLeft": "{{count}} day(s) left",
+    "contract": "Contract",
+    "contractNumber": "Contract {{number}}",
+    "type": "Type",
+    "startOn": "Starts",
+    "endOn": "Ends",
+    "renewalNotice": "Remind before end (days)",
+    "renewalNoticeHint": "The people who manage vendors are told once.",
+    "currency": "Currency",
+    "terminate": "Terminate contract",
+    "saveFirst": "Save the contract first, then add what it covers, its service targets and its files.",
+    "coverage": "What it covers",
+    "coverageAll": "No coverage listed: the contract is treated as covering everything.",
+    "coverageHint": "A work order is covered when its asset, the asset's class, or its site is listed.",
+    "coverageKind": "Kind",
+    "coverageTarget": "Which",
+    "addCoverage": "Add",
+    "sla": "Service targets",
+    "slaHint": "What the vendor promises for each priority, in minutes. Shown on work orders given to the vendor under this contract; they are not enforced as clocks.",
+    "saveSla": "Save targets",
+    "documents": "Files",
+    "noDocuments": "No files yet.",
+    "doneBy": "Done by",
+    "underContract": "under contract {{number}}",
+    "inForce": "in force",
+    "notInForce": "not in force",
+    "noContract": "No contract",
+    "notCovered": "This contract does not list this site, asset or class",
+    "contractTargets": "Contract targets: respond within {{response}} min, resolve within {{resolution}} min",
+    "changeVendor": "Change vendor",
+    "giveToVendor": "Give to a vendor",
+    "takeBack": "Take back",
+    "contractOptional": "Optional. Only contracts in force are listed.",
+    "until": "until {{date}}"
+  },
+  "vendorStatus": {
+    "Active": "Active",
+    "OnHold": "On hold",
+    "Blocked": "Blocked"
+  },
+  "contractStatus": {
+    "Upcoming": "Not started",
+    "Active": "Active",
+    "Expiring": "Ending soon",
+    "Expired": "Ended",
+    "Terminated": "Terminated"
+  },
+  "contractType": {
+    "Amc": "Annual maintenance (AMC)",
+    "Sla": "Service levels (SLA)",
+    "Service": "Service",
+    "Supply": "Supply",
+    "Other": "Other"
+  },
+  "coverageKind": {
+    "Site": "Site",
+    "AssetClass": "Asset class",
+    "Asset": "Asset"
+  },
+  "contractDocKind": {
+    "Contract": "Contract",
+    "Amendment": "Amendment",
+    "Certificate": "Certificate",
+    "Insurance": "Insurance",
+    "Other": "Other"
   }
 }

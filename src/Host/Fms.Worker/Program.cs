@@ -5,6 +5,8 @@ using Fms.BuildingBlocks.Observability;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities;
 using Fms.Inventory;
+using Fms.Vendors;
+using Fms.Vendors.Services;
 using Fms.Work;
 using Fms.Work.Services;
 using Fms.BuildingBlocks.Notifications;
@@ -29,11 +31,13 @@ builder.Services.AddFmsPlatform(connectionString);
 builder.Services.AddFmsFacilities(connectionString);
 builder.Services.AddFmsWork(connectionString);
 builder.Services.AddFmsInventory(connectionString);
+builder.Services.AddFmsVendors(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddFmsEmail(builder.Configuration);
 builder.Services.AddHostedService<OutboxWorker>();
 builder.Services.AddHostedService<SlaMonitorWorker>();
 builder.Services.AddHostedService<PmWorker>();
+builder.Services.AddHostedService<ContractWorker>();
 
 // Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
 
@@ -131,6 +135,32 @@ internal sealed class PmWorker(PmGenerator generator, ILogger<PmWorker> log) : B
             {
                 log.LogError(ex, "Preventive maintenance run failed");
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Queues contract reminders (ending soon, ended). Contracts are dated in days, so a few times a day is plenty.</summary>
+internal sealed class ContractWorker(ContractMonitor monitor, ILogger<ContractWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var queued = await monitor.RunOnceAsync(stoppingToken);
+                if (queued > 0) log.LogInformation("Queued {Count} contract reminders", queued);
+                await Task.Delay(TimeSpan.FromHours(4), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Contract reminder run failed");
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
     }

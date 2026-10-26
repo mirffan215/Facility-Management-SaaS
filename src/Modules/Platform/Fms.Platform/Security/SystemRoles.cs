@@ -24,6 +24,7 @@ public static class SystemRoles
             Permissions.WorkOrdersWork, Permissions.WorkOrdersVerify, Permissions.WorkOrdersManage,
             Permissions.PmRead, Permissions.PmManage,
             Permissions.InventoryRead, Permissions.InventoryManage, Permissions.InventoryIssue, Permissions.InventoryApprove,
+            Permissions.VendorsRead, Permissions.VendorsManage,
         ],
         [Technician] =
         [
@@ -32,6 +33,6 @@ public static class SystemRoles
             Permissions.InventoryRead, Permissions.InventoryIssue,
         ],
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest],
-        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead],
     };
 }

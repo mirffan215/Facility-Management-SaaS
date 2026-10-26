@@ -969,6 +969,83 @@ test('inventory: a store, an item, stock received, parts reserved and used on a 
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('vendors: a vendor and a contract with coverage and service targets, then a work order given to the vendor under it', async () => {
+  const VENDOR = `VEN-${SUFFIX}`;
+  const CONTRACT = `CT-${SUFFIX}`;
+  const nextYear = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+  await page.goto('/vendors');
+  await page.getByRole('button', { name: 'New vendor' }).click();
+  const vendor = page.getByRole('dialog', { name: 'New vendor' });
+  await vendor.getByRole('textbox', { name: 'Code *' }).fill(VENDOR);
+  await vendor.getByRole('textbox', { name: 'Name *' }).fill('CoolAir Services');
+  await vendor.getByLabel('Email').fill('ops@coolair.test');
+  await vendor.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('row', { name: new RegExp(VENDOR) })).toContainText('Active');
+
+  // A bad email is explained next to the field.
+  await page.getByRole('button', { name: 'New vendor' }).click();
+  const bad = page.getByRole('dialog', { name: 'New vendor' });
+  await bad.getByRole('textbox', { name: 'Code *' }).fill(`${VENDOR}-X`);
+  await bad.getByRole('textbox', { name: 'Name *' }).fill('X');
+  await bad.getByLabel('Email').fill('nope');
+  await bad.getByRole('button', { name: 'Save' }).click();
+  await expect(bad.getByText(/valid email/)).toBeVisible();
+  await bad.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.getByRole('tab', { name: 'Contracts' }).click();
+  await page.getByRole('button', { name: 'New contract' }).click();
+  const contract = page.getByRole('dialog', { name: 'New contract' });
+  await contract.getByRole('combobox', { name: 'Vendor *' }).selectOption({ index: 1 });
+  await contract.getByRole('textbox', { name: 'Number *' }).fill(CONTRACT);
+  await contract.getByRole('textbox', { name: 'Title *' }).fill('Chiller AMC');
+  await contract.getByLabel('Ends').fill(nextYear);
+  await contract.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const row = page.getByRole('row', { name: new RegExp(CONTRACT) });
+  await expect(row).toContainText('Active');
+  await row.getByRole('button', { name: 'Open' }).click();
+
+  const open = page.getByRole('dialog', { name: new RegExp(`Contract ${CONTRACT}`) });
+  await open.getByRole('combobox', { name: 'Which' }).selectOption({ index: 1 }); // a site
+  await open.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(open.getByRole('listitem').filter({ hasText: 'Riyadh HQ' })).toBeVisible();
+  await open.getByLabel('Respond within (High)').fill('60');
+  await open.getByLabel('Resolve within (High)').fill('240');
+  await open.getByRole('button', { name: 'Save targets' }).click();
+  await expect(open.getByLabel('Resolve within (High)')).toHaveValue('240');
+  await shot('25-contract');
+  await open.getByRole('button', { name: 'Back' }).click();
+
+  // Give a work order to the vendor under the contract; its terms show on the work order.
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const wo = (await (await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Chiller not cooling', type: 'Emergency', priority: 'High', locationId: site.id }) })).json()) as { id: string };
+  await page.goto(`/work-orders/${wo.id}`);
+  await page.getByRole('button', { name: 'Give to a vendor' }).click();
+  const give = page.getByRole('dialog', { name: 'Give to a vendor' });
+  await give.getByRole('combobox', { name: 'Vendor *' }).selectOption({ index: 1 });
+  await give.getByRole('combobox', { name: 'Contract' }).selectOption({ index: 1 });
+  await give.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('CoolAir Services', { exact: true })).toBeVisible();
+  await expect(page.getByText(`under contract ${CONTRACT}`)).toBeVisible();
+  await expect(page.getByText(/respond within 60 min, resolve within 240 min/)).toBeVisible();
+  await shot('26-work-order-vendor');
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['vendors', 'contracts']) {
+      await page.goto(`/vendors?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`vendors ${tab} ${lang}`);
+    }
+    await page.goto(`/work-orders/${wo.id}`);
+    await expect(page.getByRole('tabpanel')).toBeVisible();
+    await expectNoSeriousA11yIssues(`work order with vendor ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

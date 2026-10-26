@@ -162,3 +162,9 @@ public sealed record ComplianceGroupDto(Guid? Id, string Name, ComplianceCounts 
 public sealed record ComplianceDto(
     DateOnly From, DateOnly To, DateOnly Today, ComplianceCounts Total, IReadOnlyList<ComplianceMonthDto> Months, IReadOnlyList<ComplianceGroupDto> ByTemplate,
     IReadOnlyList<ComplianceGroupDto> ByAssetClass, int PlannedWorkOrders, int OtherWorkOrders, decimal? PlannedShare);
+
+public sealed record AssignVendorRequest(Guid? VendorId, Guid? ContractId);
+
+/// <summary>Who outside is doing a work order and under what terms. The contract's targets are shown for the work order's priority; they are not enforced as SLA clocks.</summary>
+public sealed record VendorAssignmentDto(
+    Guid VendorId, string VendorName, string? VendorNameAr, Guid? ContractId, string? ContractNumber, string? ContractTitle, bool ContractInForce, bool? Covered, int? ResponseMinutes, int? ResolutionMinutes);

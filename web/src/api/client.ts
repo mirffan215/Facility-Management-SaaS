@@ -99,7 +99,8 @@ export function createApi(options: ApiOptions) {
   return {
     raw,
     async get<T>(path: string, params?: Query): Promise<T> {
-      return (await request(path + toQuery(params))).json() as Promise<T>;
+      const response = await request(path + toQuery(params));
+      return (response.status === 204 ? undefined : await response.json()) as T;
     },
     async post<T>(path: string, body?: unknown, params?: Query): Promise<T> {
       const response = await json('POST', path + toQuery(params), body ?? {});

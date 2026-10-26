@@ -52,6 +52,12 @@ describe('translations', () => {
       takeStatus: ['Counting', 'Submitted', 'Approved', 'Cancelled'],
       'inventory.tab': ['stock', 'items', 'stores', 'takes'],
       'parts': ['reserve', 'issue', 'return', 'release'],
+      vendorStatus: ['Active', 'OnHold', 'Blocked'],
+      contractStatus: ['Upcoming', 'Active', 'Expiring', 'Expired', 'Terminated'],
+      contractType: ['Amc', 'Sla', 'Service', 'Supply', 'Other'],
+      coverageKind: ['Site', 'AssetClass', 'Asset'],
+      contractDocKind: ['Contract', 'Amendment', 'Certificate', 'Insurance', 'Other'],
+      'vendors.tab': ['vendors', 'contracts'],
       'pm.tab': ['forecast', 'schedules', 'templates', 'compliance'],
     };
     for (const [group, values] of Object.entries(groups)) for (const v of values) {

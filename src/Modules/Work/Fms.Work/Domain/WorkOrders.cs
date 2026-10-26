@@ -39,6 +39,11 @@ public sealed class WorkOrder : ITenantOwned
     public Guid RequestedBy { get; set; }
     public DateTimeOffset RequestedAt { get; set; }
     public Guid? AssignedTo { get; set; }
+
+    /// <summary>The vendor doing the work instead of a person, and the contract it is done under. A work order has a person or a vendor, not both.</summary>
+    public Guid? AssignedVendorId { get; set; }
+
+    public Guid? VendorContractId { get; set; }
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? StartedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }

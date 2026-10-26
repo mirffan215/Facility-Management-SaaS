@@ -48,6 +48,9 @@ public static class WorkEndpoints
         g.MapGet("/offline/jobs", async (OfflineJobsService s, CancellationToken ct) => Results.Ok(await s.JobsAsync(ct)))
             .RequirePermission(Permissions.WorkOrdersWork);
 
+        g.MapGet("/{id:guid}/vendor", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.VendorAssignmentAsync(id, ct)).ToHttp(x => x is null ? Results.NoContent() : Results.Ok(x))).RequirePermission(Permissions.WorkOrdersRead);
+        g.MapPost("/{id:guid}/vendor", async (Guid id, AssignVendorRequest r, WorkOrderService s, CancellationToken ct) => (await s.AssignVendorAsync(id, r, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersAssign);
+        g.MapPost("/{id:guid}/vendor/clear", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.ClearVendorAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersAssign);
         g.MapGet("/assignees", async (WorkOrderService s, CancellationToken ct) => Results.Ok(await s.AssigneesAsync(ct)))
             .RequireAnyPermission(Permissions.WorkOrdersAssign, Permissions.WorkOrdersManage);
 

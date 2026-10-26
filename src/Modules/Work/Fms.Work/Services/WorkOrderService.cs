@@ -13,7 +13,7 @@ namespace Fms.Work.Services;
 
 public sealed class WorkOrderService(
     WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IFacilityLookup facilities,
-    SlaClock sla, IOutbox outbox, WorkEvidenceService evidence, PmEngine pm, TimeProvider clock)
+    SlaClock sla, IOutbox outbox, WorkEvidenceService evidence, PmEngine pm, TimeProvider clock, IVendorLookup? vendors = null)
 {
     private Actor? _actor;
     private WorkflowSettings? _settings;
@@ -249,9 +249,61 @@ public sealed class WorkOrderService(
             var found = (await users.WithPermissionAsync(Permissions.WorkOrdersWork, token)).FirstOrDefault(u => u.Id == who);
             if (found is null) return ("assigneeId", "That person is not active or cannot do work orders.");
             wo.AssignedTo = who;
+            wo.AssignedVendorId = null;
+            wo.VendorContractId = null;
             if (wo.Status == WorkOrderStatus.Approved) wo.Status = WorkOrderStatus.Assigned;
             return null;
         }, subject: assigneeId, ct: ct);
+
+    /// <summary>Gives the work to a vendor, optionally under one of its contracts in force. The person assigned, if any, is replaced.</summary>
+    public async Task<Result<WorkOrderDto>> AssignVendorAsync(Guid id, AssignVendorRequest r, CancellationToken ct = default)
+    {
+        if (vendors is null) return Result<WorkOrderDto>.Conflict("Vendors are not available.");
+        if (r.VendorId is not { } vendorId) return Result<WorkOrderDto>.Invalid("vendorId", "Choose a vendor.");
+        var vendor = await vendors.GetVendorAsync(vendorId, ct);
+        if (vendor is null) return Result<WorkOrderDto>.Invalid("vendorId", "Vendor not found.");
+        if (!vendor.CanReceiveWork) return Result<WorkOrderDto>.Invalid("vendorId", "This vendor is on hold, blocked or archived and cannot be given work.");
+        if (r.ContractId is { } contractId)
+        {
+            var contract = await vendors.GetContractAsync(contractId, ct);
+            if (contract is null || contract.VendorId != vendorId) return Result<WorkOrderDto>.Invalid("contractId", "That contract is not this vendor's.");
+            if (!contract.InForce) return Result<WorkOrderDto>.Invalid("contractId", "That contract is not in force today.");
+        }
+
+        return await ActCoreAsync(id, WorkOrderAction.Assigned, $"Vendor: {vendor.Name}", (wo, _, _) =>
+        {
+            wo.AssignedVendorId = vendorId;
+            wo.VendorContractId = r.ContractId;
+            wo.AssignedTo = null;
+            if (wo.Status == WorkOrderStatus.Approved) wo.Status = WorkOrderStatus.Assigned;
+            return Task.FromResult<(string Field, string Error)?>(null);
+        }, noteIsReason: false, ct: ct);
+    }
+
+    /// <summary>Takes the work back from the vendor. A work order nobody else holds returns to the approved queue.</summary>
+    public Task<Result<WorkOrderDto>> ClearVendorAsync(Guid id, CancellationToken ct = default) =>
+        ActCoreAsync(id, WorkOrderAction.Assigned, "Vendor removed", (wo, _, _) =>
+        {
+            if (wo.AssignedVendorId is null) return Task.FromResult<(string Field, string Error)?>(("vendorId", "No vendor is assigned."));
+            wo.AssignedVendorId = null;
+            wo.VendorContractId = null;
+            if (wo.Status == WorkOrderStatus.Assigned && wo.AssignedTo is null) wo.Status = WorkOrderStatus.Approved;
+            return Task.FromResult<(string Field, string Error)?>(null);
+        }, noteIsReason: false, ct: ct);
+
+    public async Task<Result<VendorAssignmentDto?>> VendorAssignmentAsync(Guid id, CancellationToken ct = default)
+    {
+        var wo = await (await VisibleAsync(false, ct)).FirstOrDefaultAsync(w => w.Id == id, ct);
+        if (wo is null) return Result<VendorAssignmentDto?>.NotFound();
+        if (wo.AssignedVendorId is not { } vendorId || vendors is null) return Result<VendorAssignmentDto?>.Ok(null);
+        var vendor = await vendors.GetVendorAsync(vendorId, ct);
+        if (vendor is null) return Result<VendorAssignmentDto?>.Ok(null);
+
+        ContractRef? contract = wo.VendorContractId is { } cid ? await vendors.GetContractAsync(cid, ct) : null;
+        bool? covered = contract is null ? null : await vendors.CoversAsync(contract.Id, wo.AssetId, wo.LocationId, ct);
+        var sla = contract is null ? null : await vendors.SlaAsync(contract.Id, (int)wo.Priority, ct);
+        return Result<VendorAssignmentDto?>.Ok(new VendorAssignmentDto(vendor.Id, vendor.Name, vendor.NameAr, contract?.Id, contract?.Number, contract?.Title, contract?.InForce ?? false, covered, sla?.ResponseMinutes, sla?.ResolutionMinutes));
+    }
 
     public Task<Result<WorkOrderDto>> StartAsync(Guid id, DateTimeOffset? performedAt = null, CancellationToken ct = default) =>
         ActAsync(id, WorkOrderAction.Started, null, (wo, now, _) => { wo.Status = WorkOrderStatus.InProgress; wo.StartedAt ??= now; wo.RespondedAt ??= now; wo.StatusReason = null; return null; }, performedAt: performedAt, ct: ct);

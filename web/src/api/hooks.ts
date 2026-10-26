@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, Forecast, Item, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -239,4 +239,36 @@ export function useWorkParts(workOrderId: string | undefined, enabled: boolean) 
 export function usePmTemplateParts(templateId: string | undefined, enabled: boolean) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['inventory', 'pm-parts', templateId], enabled: enabled && !!templateId, queryFn: () => api.get<PmTemplatePart[]>(`/inventory/pm-templates/${templateId}/parts`) });
+}
+
+// ---------------- vendors and contracts ----------------
+
+export function useVendors(params: Record<string, string | number | boolean | undefined>, enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['vendors', 'list', params], enabled, queryFn: () => api.get<Page<Vendor>>('/vendors', params) });
+}
+
+export function useVendorContacts(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['vendors', 'contacts', id], enabled: !!id, queryFn: () => api.get<VendorContact[]>(`/vendors/${id}/contacts`) });
+}
+
+export function useContracts(params: Record<string, string | number | boolean | undefined>, enabled = true) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['vendors', 'contracts', params], enabled, queryFn: () => api.get<Page<Contract>>('/contracts', params) });
+}
+
+export function useContract(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['vendors', 'contract', id], enabled: !!id, queryFn: () => api.get<Contract>(`/contracts/${id}`) });
+}
+
+export function useContractDocuments(id: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['vendors', 'contract-documents', id], enabled: !!id, queryFn: () => api.get<ContractDocument[]>(`/contracts/${id}/documents`) });
+}
+
+export function useVendorAssignment(workOrderId: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['vendors', 'assignment', workOrderId], enabled: !!workOrderId, queryFn: () => api.get<VendorAssignment | undefined>(`/work-orders/${workOrderId}/vendor`) });
 }

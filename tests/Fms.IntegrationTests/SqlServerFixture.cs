@@ -3,6 +3,7 @@ using Fms.BuildingBlocks.Storage;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities.Persistence;
 using Fms.Inventory.Persistence;
+using Fms.Vendors.Persistence;
 using Fms.Work.Persistence;
 using Fms.Platform.Domain;
 using Fms.Platform.Persistence;
@@ -51,6 +52,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var facilitiesOwner = FacilitiesContext(OwnerConnectionString, null, platform: true)) await facilitiesOwner.Database.MigrateAsync();
             await using (var workOwner = WorkContext(OwnerConnectionString, null, platform: true)) await workOwner.Database.MigrateAsync();
             await using (var inventoryOwner = InventoryContext(OwnerConnectionString, null, platform: true)) await inventoryOwner.Database.MigrateAsync();
+            await using (var vendorsOwner = VendorsContext(OwnerConnectionString, null, platform: true)) await vendorsOwner.Database.MigrateAsync();
             owner.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owner.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owner.SaveChangesAsync();
@@ -113,6 +115,25 @@ public sealed class SqlServerFixture : IAsyncLifetime
         return db;
     }
 
+    /// <summary>A Vendors context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public VendorsDbContext Vendors(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = VendorsContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
+    private static VendorsDbContext VendorsContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new VendorsDbContext(
+            new DbContextOptionsBuilder<VendorsDbContext>().UseSqlServer(connectionString, VendorsDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
+    }
+
     private static InventoryDbContext InventoryContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
     {
         var tenant = new TenantContext();
@@ -171,6 +192,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var facilitiesOwned = FacilitiesContext(owner, null, platform: true)) await facilitiesOwned.Database.MigrateAsync();
             await using (var workOwned = WorkContext(owner, null, platform: true)) await workOwned.Database.MigrateAsync();
             await using (var inventoryOwned = InventoryContext(owner, null, platform: true)) await inventoryOwned.Database.MigrateAsync();
+            await using (var vendorsOwned = VendorsContext(owner, null, platform: true)) await vendorsOwned.Database.MigrateAsync();
             owned.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owned.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owned.SaveChangesAsync();

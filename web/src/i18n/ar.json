@@ -22,7 +22,8 @@
     "workOrders": "أوامر العمل",
     "jobs": "مهامي",
     "pm": "الوقائية",
-    "inventory": "المخزون"
+    "inventory": "المخزون",
+    "vendors": "الموردون"
   },
   "auth": {
     "prompt": "سجّل الدخول للمتابعة.",
@@ -549,6 +550,10 @@
       },
       "inventory": {
         "low": "مخزون منخفض: {{number}} {{title}}"
+      },
+      "contract": {
+        "Expiring": "ينتهي العقد {{number}} خلال {{days}} يوم",
+        "Expired": "انتهى العقد {{number}}"
       }
     },
     "unreadSuffix": "غير مقروء"
@@ -914,5 +919,112 @@
     "TransferIn": "تحويل وارد",
     "Adjustment": "تسوية",
     "CountAdjustment": "جرد"
+  },
+  "vendors": {
+    "title": "الموردون والعقود",
+    "intro": "الشركات التي تنفذ أعمالًا لصالحك، والعقود التي تحدد ما عليها وفي أي موعد.",
+    "sections": "أقسام الموردين",
+    "tab": {
+      "vendors": "الموردون",
+      "contracts": "العقود"
+    },
+    "search": "بحث",
+    "newVendor": "مورد جديد",
+    "editVendor": "تعديل المورد",
+    "noVendors": "لا يوجد موردون بعد.",
+    "activeContracts": "العقود السارية",
+    "contact": "التواصل",
+    "vat": "ضريبة القيمة المضافة",
+    "contacts": "جهات الاتصال",
+    "changeStatus": "إيقاف أو حظر",
+    "changeStatusOf": "حالة {{name}}",
+    "statusHint": "لا يمكن إسناد أعمال أو أوامر جديدة لمورد موقوف أو محظور. تستمر الأعمال القائمة.",
+    "country": "الدولة",
+    "countryHint": "حرفان، مثل SA.",
+    "taxNumber": "الرقم الضريبي",
+    "registrationNumber": "السجل التجاري",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "address": "العنوان",
+    "paymentTerms": "شروط الدفع",
+    "notes": "ملاحظات",
+    "contactsOf": "جهات اتصال {{name}}",
+    "noContacts": "لا توجد جهات اتصال بعد.",
+    "contactNumber": "جهة الاتصال {{number}}",
+    "role": "المسمى",
+    "mainContact": "جهة الاتصال الرئيسية",
+    "addContact": "إضافة جهة اتصال",
+    "vendor": "المورد",
+    "newContract": "عقد جديد",
+    "noContracts": "لا توجد عقود بعد.",
+    "number": "الرقم",
+    "contractTitle": "العنوان",
+    "period": "المدة",
+    "value": "القيمة",
+    "daysLeft": "متبقي {{count}} يوم",
+    "contract": "العقد",
+    "contractNumber": "العقد {{number}}",
+    "type": "النوع",
+    "startOn": "يبدأ",
+    "endOn": "ينتهي",
+    "renewalNotice": "التذكير قبل الانتهاء (أيام)",
+    "renewalNoticeHint": "يُبلَّغ المسؤولون عن الموردين مرة واحدة.",
+    "currency": "العملة",
+    "terminate": "إنهاء العقد",
+    "saveFirst": "احفظ العقد أولًا، ثم أضف ما يغطيه وأهداف الخدمة والملفات.",
+    "coverage": "ما يغطيه",
+    "coverageAll": "لم تُحدَّد تغطية: يُعامل العقد على أنه يغطي كل شيء.",
+    "coverageHint": "يكون أمر العمل مشمولًا إذا كان أصله أو فئة أصله أو موقعه مدرجًا.",
+    "coverageKind": "النوع",
+    "coverageTarget": "أي منها",
+    "addCoverage": "إضافة",
+    "sla": "أهداف الخدمة",
+    "slaHint": "ما يتعهد به المورد لكل أولوية، بالدقائق. تظهر على أوامر العمل المسندة للمورد بموجب هذا العقد، ولا تُطبَّق كمؤقّتات.",
+    "saveSla": "حفظ الأهداف",
+    "documents": "الملفات",
+    "noDocuments": "لا توجد ملفات بعد.",
+    "doneBy": "ينفذه",
+    "underContract": "بموجب العقد {{number}}",
+    "inForce": "ساري",
+    "notInForce": "غير ساري",
+    "noContract": "بلا عقد",
+    "notCovered": "هذا العقد لا يشمل هذا الموقع أو الأصل أو الفئة",
+    "contractTargets": "أهداف العقد: الاستجابة خلال {{response}} دقيقة، والحل خلال {{resolution}} دقيقة",
+    "changeVendor": "تغيير المورد",
+    "giveToVendor": "إسناد إلى مورد",
+    "takeBack": "استرجاع",
+    "contractOptional": "اختياري. تُعرض العقود السارية فقط.",
+    "until": "حتى {{date}}"
+  },
+  "vendorStatus": {
+    "Active": "نشط",
+    "OnHold": "موقوف",
+    "Blocked": "محظور"
+  },
+  "contractStatus": {
+    "Upcoming": "لم يبدأ",
+    "Active": "ساري",
+    "Expiring": "ينتهي قريبًا",
+    "Expired": "منتهٍ",
+    "Terminated": "مُنهى"
+  },
+  "contractType": {
+    "Amc": "صيانة سنوية (AMC)",
+    "Sla": "مستوى الخدمة (SLA)",
+    "Service": "خدمة",
+    "Supply": "توريد",
+    "Other": "أخرى"
+  },
+  "coverageKind": {
+    "Site": "موقع",
+    "AssetClass": "فئة أصول",
+    "Asset": "أصل"
+  },
+  "contractDocKind": {
+    "Contract": "العقد",
+    "Amendment": "ملحق",
+    "Certificate": "شهادة",
+    "Insurance": "تأمين",
+    "Other": "أخرى"
   }
 }
