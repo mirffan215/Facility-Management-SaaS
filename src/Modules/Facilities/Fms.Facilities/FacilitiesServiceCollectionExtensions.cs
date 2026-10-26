@@ -1,9 +1,11 @@
 using Fms.BuildingBlocks.Persistence;
+using Fms.BuildingBlocks.Storage;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities.Persistence;
 using Fms.Facilities.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Fms.Facilities;
 
@@ -24,7 +26,7 @@ public static class FacilitiesServiceCollectionExtensions
         services.AddScoped<Fms.BuildingBlocks.Identity.IFacilityLookup, FacilityLookup>();
         services.AddScoped<DocumentService>();
         services.AddScoped<ImportExportService>();
-        services.AddSingleton<IFileScanner, NoOpFileScanner>();
+        services.TryAddSingleton<IFileScanner, NoOpFileScanner>();
         services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<FacilitiesOptions>, FacilitiesOptionsValidator>();
         services.AddOptions<FacilitiesOptions>().BindConfiguration(FacilitiesOptions.SectionName).ValidateOnStart();
         services.AddSingleton<AssetLabelService>();

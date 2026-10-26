@@ -59,7 +59,7 @@ public sealed class WorkSetupService(WorkDbContext db, IAuditPort audit)
     public async Task<WorkSettingsDto> GetSettingsAsync(CancellationToken ct = default)
     {
         var s = await db.Settings.AsNoTracking().FirstOrDefaultAsync(ct);
-        return s is null ? new WorkSettingsDto(true, true, null) : new WorkSettingsDto(s.RequireApproval, s.RequireVerification, Convert.ToBase64String(s.RowVersion));
+        return s is null ? new WorkSettingsDto(true, true, null) : ToDto(s);
     }
 
     public async Task<Result<WorkSettingsDto>> SaveSettingsAsync(SaveWorkSettingsRequest r, CancellationToken ct = default)
@@ -76,15 +76,24 @@ public sealed class WorkSetupService(WorkDbContext db, IAuditPort audit)
             db.Entry(s).Property(x => x.RowVersion).OriginalValue = version;
         }
 
-        var before = new { s.RequireApproval, s.RequireVerification };
+        var errors = new ValidationErrors();
+        var currency = r.CurrencyCode?.Trim().ToUpperInvariant();
+        if (currency is not null && (currency.Length != 3 || !currency.All(char.IsAsciiLetterUpper))) errors.Add("currencyCode", "Use a three-letter currency code, for example SAR.");
+        if (r.LabourRatePerHour is { } rate && (rate < 0 || rate > 100_000)) errors.Add("labourRatePerHour", "The hourly rate must be between 0 and 100,000.");
+        if (errors.Any) { db.ChangeTracker.Clear(); return errors.ToResult<WorkSettingsDto>(); }
+
+        var before = new { s.RequireApproval, s.RequireVerification, s.RequireCompletionSignature, s.CurrencyCode, s.LabourRatePerHour };
         s.RequireApproval = r.RequireApproval;
         s.RequireVerification = r.RequireVerification;
+        if (r.RequireCompletionSignature is { } sig) s.RequireCompletionSignature = sig;
+        if (currency is not null) s.CurrencyCode = currency;
+        if (r.LabourRatePerHour is { } newRate) s.LabourRatePerHour = Math.Round(newRate, 2);
         audit.Record("worksettings.changed", nameof(WorkSettings), s.Id.ToString(),
-            JsonSerializer.Serialize(new { from = before, to = new { s.RequireApproval, s.RequireVerification } }));
+            JsonSerializer.Serialize(new { from = before, to = new { s.RequireApproval, s.RequireVerification, s.RequireCompletionSignature, s.CurrencyCode, s.LabourRatePerHour } }));
         try
         {
             await db.SaveChangesAsync(ct);
-            return Result<WorkSettingsDto>.Ok(new WorkSettingsDto(s.RequireApproval, s.RequireVerification, Convert.ToBase64String(s.RowVersion)));
+            return Result<WorkSettingsDto>.Ok(ToDto(s));
         }
         catch (Exception ex) when (ex is DbUpdateConcurrencyException || (ex is DbUpdateException u && SqlErrors.IsUniqueViolation(u)))
         {
@@ -92,6 +101,9 @@ public sealed class WorkSetupService(WorkDbContext db, IAuditPort audit)
             return Result<WorkSettingsDto>.Conflict("The settings were changed by someone else. Reload and try again.");
         }
     }
+
+    private static WorkSettingsDto ToDto(WorkSettings s) =>
+        new(s.RequireApproval, s.RequireVerification, Convert.ToBase64String(s.RowVersion), s.CurrencyCode, s.LabourRatePerHour, s.RequireCompletionSignature);
 
     private static ValidationErrors Validate(SaveCategoryRequest r)
     {

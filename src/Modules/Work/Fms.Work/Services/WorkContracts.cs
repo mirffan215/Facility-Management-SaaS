@@ -40,9 +40,9 @@ public sealed record CategoryDto(Guid Id, string Code, string Name, string? Name
 
 public sealed record SaveCategoryRequest(string? Code, string? Name, string? NameAr, WorkPriority? DefaultPriority, string? RowVersion);
 
-public sealed record WorkSettingsDto(bool RequireApproval, bool RequireVerification, string? RowVersion);
+public sealed record WorkSettingsDto(bool RequireApproval, bool RequireVerification, string? RowVersion, string CurrencyCode = "SAR", decimal LabourRatePerHour = 0, bool RequireCompletionSignature = false);
 
-public sealed record SaveWorkSettingsRequest(bool RequireApproval, bool RequireVerification, string? RowVersion);
+public sealed record SaveWorkSettingsRequest(bool RequireApproval, bool RequireVerification, string? RowVersion, string? CurrencyCode = null, decimal? LabourRatePerHour = null, bool? RequireCompletionSignature = null);
 
 public sealed record AssigneeDto(Guid Id, string? DisplayName, string? Email);
 
@@ -64,3 +64,46 @@ public sealed record SlaTargetDto(WorkPriority Priority, int ResponseMinutes, in
 public sealed record SlaPolicyDto(Guid Id, string Name, Guid? CategoryId, string? CategoryName, bool IsDefault, bool IsArchived, IReadOnlyList<SlaTargetDto> Targets, string RowVersion);
 
 public sealed record SaveSlaPolicyRequest(string? Name, Guid? CategoryId, bool IsDefault, IReadOnlyList<SlaTargetDto>? Targets, string? RowVersion);
+
+
+// ---------------- checklists, time, costs, signatures, files ----------------
+
+public sealed record TemplateItemDto(string Text, bool Required);
+
+public sealed record ChecklistTemplateDto(Guid Id, string Name, string? NameAr, bool IsArchived, IReadOnlyList<TemplateItemDto> Items, string RowVersion);
+
+public sealed record SaveChecklistTemplateRequest(string? Name, string? NameAr, IReadOnlyList<TemplateItemDto>? Items, string? RowVersion);
+
+public sealed record ChecklistItemDto(Guid Id, int Position, string Text, bool Required, ChecklistResult Result, string? Note, string? ResultByName, DateTimeOffset? ResultAt);
+
+public sealed record AttachChecklistRequest(Guid? TemplateId);
+
+public sealed record SetChecklistResultRequest(ChecklistResult? Result, string? Note);
+
+public sealed record TimeEntryDto(Guid Id, Guid WorkerId, string? WorkerName, DateOnly WorkedOn, int Minutes, decimal HourlyRate, decimal LabourCost, string? Note, DateTimeOffset RecordedAt, bool IsVoided, string? VoidReason);
+
+public sealed record AddTimeRequest(DateOnly? WorkedOn, int? Minutes, string? Note);
+
+public sealed record CostLineDto(Guid Id, CostKind Kind, string Description, string? Reference, decimal Quantity, decimal UnitCost, decimal Total, string? RecordedByName, DateTimeOffset RecordedAt, bool IsVoided, string? VoidReason);
+
+public sealed record AddCostRequest(CostKind? Kind, string? Description, string? Reference, decimal? Quantity, decimal? UnitCost);
+
+public sealed record CostSummaryDto(string CurrencyCode, int Minutes, decimal LabourCost, decimal Material, decimal Contractor, decimal Other, decimal Total);
+
+public sealed record SignatureDto(Guid Id, SignatureRole Role, string SignerName, DateTimeOffset SignedAt, string? RecordedByName);
+
+public sealed record AddSignatureRequest(SignatureRole? Role, string? SignerName, string? ImageBase64);
+
+public sealed record AttachmentDto(Guid Id, AttachmentKind Kind, string FileName, string ContentType, long SizeBytes, string? Description, DateTimeOffset UploadedAt, string? UploadedByName, Guid UploadedBy);
+
+public sealed record DownloadedFile(string FileName, string ContentType, Stream Content);
+
+public sealed class WorkOptions
+{
+    public const string SectionName = "Work";
+
+    public long MaxAttachmentBytes { get; set; } = 15L * 1024 * 1024;
+    public int MaxAttachmentsPerOrder { get; set; } = 40;
+    public int MaxSignatureBytes { get; set; } = 256 * 1024;
+    public int MaxChecklistItems { get; set; } = 100;
+}

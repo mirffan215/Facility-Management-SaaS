@@ -133,6 +133,15 @@ public sealed class WorkSettings : ITenantOwned
     /// <summary>When on, finished work is checked by someone other than the person who did it before it can be closed.</summary>
     public bool RequireVerification { get; set; } = true;
 
+    /// <summary>When on, work cannot be completed until the technician has signed.</summary>
+    public bool RequireCompletionSignature { get; set; }
+
+    /// <summary>ISO 4217 code that costs are shown in. A tenant works in one currency here.</summary>
+    public string CurrencyCode { get; set; } = "SAR";
+
+    /// <summary>Own labour rate per hour, frozen onto each time entry when it is recorded. Zero means labour is not costed.</summary>
+    public decimal LabourRatePerHour { get; set; }
+
     [Timestamp]
     public byte[] RowVersion { get; set; } = [];
 }

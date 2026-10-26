@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Fms.BuildingBlocks.Storage;
 using System.Text;
 using Fms.Facilities.Domain;
 

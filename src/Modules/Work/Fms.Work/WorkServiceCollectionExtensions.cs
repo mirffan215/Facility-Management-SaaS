@@ -4,6 +4,7 @@ using Fms.Work.Persistence;
 using Fms.Work.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Fms.Work;
 
@@ -16,6 +17,11 @@ public static class WorkServiceCollectionExtensions
             .UseSqlServer(connectionString, WorkDbContextOptions.Sql)
             .AddInterceptors(new TenantSessionContextInterceptor(sp.GetRequiredService<ITenantContext>())));
 
+        services.TryAddSingleton<Fms.BuildingBlocks.Storage.IFileScanner, Fms.BuildingBlocks.Storage.NoOpFileScanner>();
+        services.AddOptions<WorkOptions>().BindConfiguration(WorkOptions.SectionName);
+        services.AddScoped<WorkEvidenceService>();
+        services.AddScoped<WorkFilesService>();
+        services.AddScoped<ChecklistTemplateService>();
         services.AddScoped<SlaClock>();
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, WorkOrderEventHandler>();
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, SlaAlertHandler>();

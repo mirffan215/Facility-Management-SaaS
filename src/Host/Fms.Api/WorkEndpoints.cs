@@ -1,12 +1,24 @@
 using Fms.BuildingBlocks.Security;
 using Fms.Work.Domain;
 using Fms.Work.Services;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Options;
 
 namespace Fms.Api;
 
 public static class WorkEndpoints
 {
     private static readonly string[] Everyone = [Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest];
+
+    /// <summary>Files are only ever served as downloads, never rendered in the app's origin.</summary>
+    private static async Task<IResult> ServeAsync(HttpContext http, Fms.BuildingBlocks.Results.Result<DownloadedFile> result)
+    {
+        if (!result.IsOk) return result.ToHttp();
+        http.Response.Headers.CacheControl = "private, no-store";
+        http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+        await Task.CompletedTask;
+        return Results.File(result.Value!.Content, result.Value.ContentType, result.Value.FileName);
+    }
 
     public static void MapWork(this RouteGroupBuilder v1)
     {
@@ -64,6 +76,19 @@ public static class WorkEndpoints
         sla.MapPost("/policies/{id:guid}/restore", async (Guid id, RowVersionRequest r, SlaSetupService s, CancellationToken ct) => (await s.SetPolicyArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
             .RequirePermission(Permissions.WorkOrdersManage);
 
+        var templates = g.MapGroup("/checklists");
+        templates.MapGet("", async (ChecklistTemplateService s, bool? includeArchived, CancellationToken ct) => Results.Ok(await s.ListAsync(includeArchived ?? false, ct)))
+            .RequireAnyPermission(Permissions.WorkOrdersRead, Permissions.WorkOrdersManage);
+        templates.MapPost("", async (SaveChecklistTemplateRequest r, ChecklistTemplateService s, CancellationToken ct) =>
+                (await s.CreateAsync(r, ct)).ToHttp(t => Results.Created($"/api/v1/work-orders/checklists/{t.Id}", t)))
+            .RequirePermission(Permissions.WorkOrdersManage);
+        templates.MapPut("/{id:guid}", async (Guid id, SaveChecklistTemplateRequest r, ChecklistTemplateService s, CancellationToken ct) => (await s.UpdateAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        templates.MapPost("/{id:guid}/archive", async (Guid id, RowVersionRequest r, ChecklistTemplateService s, CancellationToken ct) => (await s.SetArchivedAsync(id, true, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        templates.MapPost("/{id:guid}/restore", async (Guid id, RowVersionRequest r, ChecklistTemplateService s, CancellationToken ct) => (await s.SetArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+
         var categories = g.MapGroup("/categories");
         categories.MapGet("", async (WorkSetupService s, bool? includeArchived, CancellationToken ct) => Results.Ok(await s.CategoriesAsync(includeArchived ?? false, ct)))
             .RequireAnyPermission(Everyone);
@@ -96,6 +121,58 @@ public static class WorkEndpoints
         g.MapPost("/{id:guid}/close", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.CloseAsync(id, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersVerify, Permissions.WorkOrdersManage);
         g.MapPost("/{id:guid}/reopen", async (Guid id, ReasonRequest r, WorkOrderService s, CancellationToken ct) => (await s.ReopenAsync(id, r.Reason, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersManage);
         g.MapPost("/{id:guid}/cancel", async (Guid id, ReasonRequest r, WorkOrderService s, CancellationToken ct) => (await s.CancelAsync(id, r.Reason, ct)).ToHttp()).RequireAnyPermission(Permissions.WorkOrdersRequest, Permissions.WorkOrdersManage);
+        // Checklist, time, costs, signatures and files. Each service decides what this person may see and do on this work order right now.
+        g.MapGet("/{id:guid}/checklist", async (Guid id, WorkEvidenceService s, CancellationToken ct) => (await s.ChecklistAsync(id, ct)).ToHttp()).RequireAnyPermission(Everyone);
+        g.MapPost("/{id:guid}/checklist", async (Guid id, AttachChecklistRequest r, WorkEvidenceService s, CancellationToken ct) => (await s.AttachChecklistAsync(id, r.TemplateId, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersAssign, Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/checklist/{itemId:guid}", async (Guid id, Guid itemId, SetChecklistResultRequest r, WorkEvidenceService s, CancellationToken ct) => (await s.SetChecklistResultAsync(id, itemId, r, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+
+        g.MapGet("/{id:guid}/time", async (Guid id, WorkEvidenceService s, CancellationToken ct) => (await s.TimeAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersRead);
+        g.MapPost("/{id:guid}/time", async (Guid id, AddTimeRequest r, WorkEvidenceService s, CancellationToken ct) => (await s.AddTimeAsync(id, r, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/time/{entryId:guid}/void", async (Guid id, Guid entryId, ReasonRequest r, WorkEvidenceService s, CancellationToken ct) => (await s.VoidTimeAsync(id, entryId, r.Reason, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapGet("/{id:guid}/costs", async (Guid id, WorkEvidenceService s, CancellationToken ct) => (await s.CostsAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersRead);
+        g.MapPost("/{id:guid}/costs", async (Guid id, AddCostRequest r, WorkEvidenceService s, CancellationToken ct) => (await s.AddCostAsync(id, r, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapPost("/{id:guid}/costs/{lineId:guid}/void", async (Guid id, Guid lineId, ReasonRequest r, WorkEvidenceService s, CancellationToken ct) => (await s.VoidCostAsync(id, lineId, r.Reason, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapGet("/{id:guid}/cost-summary", async (Guid id, WorkEvidenceService s, CancellationToken ct) => (await s.SummaryAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersRead);
+
+        g.MapGet("/{id:guid}/signatures", async (Guid id, WorkFilesService s, CancellationToken ct) => (await s.SignaturesAsync(id, ct)).ToHttp()).RequireAnyPermission(Everyone);
+        g.MapPost("/{id:guid}/signatures", async (Guid id, AddSignatureRequest r, WorkFilesService s, CancellationToken ct) => (await s.AddSignatureAsync(id, r, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapGet("/signatures/{signatureId:guid}/image", async (Guid signatureId, HttpContext http, WorkFilesService s, CancellationToken ct) => await ServeAsync(http, await s.SignatureImageAsync(signatureId, ct)))
+            .RequireAnyPermission(Everyone);
+
+        g.MapGet("/{id:guid}/attachments", async (Guid id, WorkFilesService s, CancellationToken ct) => (await s.AttachmentsAsync(id, ct)).ToHttp()).RequireAnyPermission(Everyone);
+        // multipart/form-data: file (required), kind (Before, After, Other), description.
+        g.MapPost("/{id:guid}/attachments", async (Guid id, HttpContext http, WorkFilesService s, IOptions<WorkOptions> options, CancellationToken ct) =>
+            {
+                if (!http.Request.HasFormContentType) return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Send the file as multipart/form-data.");
+                if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit) limit.MaxRequestBodySize = options.Value.MaxAttachmentBytes + 1024 * 1024;
+                IFormCollection form;
+                try { form = await http.Request.ReadFormAsync(ct); }
+                catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge) { return Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge, title: "File too large."); }
+                catch (InvalidDataException) { return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "The upload could not be read."); }
+
+                if (form.Files.Count != 1 || form.Files[0].Name != "file")
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Send exactly one file in the 'file' field."] });
+                var kind = AttachmentKind.Other;
+                if (form.TryGetValue("kind", out var kindText) && !Enum.TryParse(kindText.ToString(), ignoreCase: true, out kind))
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { ["kind"] = ["Unknown kind."] });
+
+                var file = form.Files[0];
+                await using var stream = file.OpenReadStream();
+                return (await s.UploadAsync(id, kind, form["description"].ToString(), file.FileName, stream, ct)).ToHttp(a => Results.Created($"/api/v1/work-orders/attachments/{a.Id}", a));
+            })
+            .RequireAnyPermission(Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+        g.MapGet("/attachments/{attachmentId:guid}/download", async (Guid attachmentId, HttpContext http, WorkFilesService s, CancellationToken ct) => await ServeAsync(http, await s.DownloadAttachmentAsync(attachmentId, ct)))
+            .RequireAnyPermission(Everyone);
+        g.MapPost("/attachments/{attachmentId:guid}/delete", async (Guid attachmentId, ReasonRequest r, WorkFilesService s, CancellationToken ct) => (await s.DeleteAttachmentAsync(attachmentId, r.Reason, ct)).ToHttp())
+            .RequireAnyPermission(Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.WorkOrdersManage);
+
         g.MapPost("/{id:guid}/comments", async (Guid id, CommentRequest r, WorkOrderService s, CancellationToken ct) =>
                 (await s.AddCommentAsync(id, r, ct)).ToHttp(c => Results.Created($"/api/v1/work-orders/{id}", c)))
             .RequireAnyPermission(Everyone);

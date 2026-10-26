@@ -13,7 +13,7 @@ namespace Fms.Work.Services;
 
 public sealed class WorkOrderService(
     WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IFacilityLookup facilities,
-    SlaClock sla, IOutbox outbox, TimeProvider clock)
+    SlaClock sla, IOutbox outbox, WorkEvidenceService evidence, TimeProvider clock)
 {
     private Actor? _actor;
     private WorkflowSettings? _settings;
@@ -279,10 +279,11 @@ public sealed class WorkOrderService(
         }, ct: ct);
 
     public Task<Result<WorkOrderDto>> CompleteAsync(Guid id, CompleteRequest r, CancellationToken ct = default) =>
-        ActAsync(id, WorkOrderAction.Completed, r.Notes, (wo, now, _) =>
+        ActCoreAsync(id, WorkOrderAction.Completed, r.Notes, async (wo, now, token) =>
         {
             if (r.Code is not { } code || !Enum.IsDefined(code)) return ("code", "Say how it ended (closure code).");
             if (string.IsNullOrWhiteSpace(r.Notes)) return ("notes", "Describe what was done.");
+            if (await evidence.CompletionBlockerAsync(wo.Id, token) is { } blocker) return ("checklist", blocker);
             wo.Status = WorkOrderStatus.Completed;
             wo.CompletedAt = now;
             wo.CompletedBy = user.UserId;
