@@ -25,7 +25,8 @@
     "inventory": "Inventory",
     "vendors": "Vendors",
     "purchasing": "Purchasing",
-    "integrations": "Accounting"
+    "integrations": "Accounting",
+    "portal": "My business"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -1161,5 +1162,61 @@
     "Matched": "Agrees",
     "Mismatch": "Differs",
     "Missing": "Missing there"
+  },
+  "portal": {
+    "title": "Vendor portal",
+    "intro": "Orders, jobs and contracts shared with {{vendor}}.",
+    "sections": "Portal sections",
+    "tab": {
+      "orders": "Orders",
+      "work": "Jobs",
+      "contracts": "Contracts"
+    },
+    "noOrders": "No orders yet.",
+    "noWork": "No jobs have been given to you.",
+    "noContracts": "No contracts yet.",
+    "acknowledge": "Confirm we have this order",
+    "quantity": "Quantity",
+    "asset": "Asset",
+    "underContract": "Under contract {{number}}.",
+    "messages": "Messages",
+    "noMessages": "No messages yet.",
+    "you": "You",
+    "writeMessage": "Write to the team",
+    "send": "Send",
+    "files": "Files ({{count}})",
+    "accept": {
+      "title": "Join the vendor portal",
+      "working": "Checking your invitation…",
+      "missing": "This page needs the link from your invitation email. Open that link again.",
+      "network": "Could not reach the server. Check your connection and open the invitation link again.",
+      "done": "You now have access. Your orders, jobs and contracts are waiting.",
+      "open": "Open the portal"
+    }
+  },
+  "vendorPortal": {
+    "button": "Portal access",
+    "title": "Portal access for {{vendor}}",
+    "intro": "Invite the vendor’s people. Each person sees only this vendor’s orders, jobs and contracts.",
+    "email": "Email of the person to invite",
+    "invite": "Create invitation",
+    "linkTitle": "Invitation link",
+    "linkHelp": "Copy this link and send it to {{email}} yourself. It is shown only now and cannot be shown again.",
+    "people": "People with access",
+    "noPeople": "Nobody has joined yet.",
+    "invitations": "Invitations",
+    "noInvitations": "No invitations.",
+    "state": {
+      "Open": "Waiting",
+      "Accepted": "Accepted",
+      "Expired": "Expired",
+      "Revoked": "Withdrawn"
+    },
+    "revoke": "Withdraw",
+    "deactivate": "Stop access",
+    "reactivate": "Allow access",
+    "expires": "Expires {{date}}",
+    "inactive": "Access stopped",
+    "close": "Close"
   }
 }

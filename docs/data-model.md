@@ -56,4 +56,8 @@ Phase 4 adds, in `inventory`: `Store`, `Item`, `StockLevel` (per store and item:
 append-only `StockMovement` (signed quantity, unit cost, balance after, work order / transfer / stock take, reason), `Reservation` (per work order, store and item), `PmTemplatePart`,
 `StockTake` 1-* `StockTakeLine`. All eight tables are under row-level security; movements are also protected by a database trigger. Work order parts cost is derived from movements, not copied.
 
+Phase 5 adds, in `vendors`: `Vendor`, `VendorContact`, `Contract` 1-* `ContractCoverage` / `ContractSla` / `ContractDocument`, and `VendorUser` (a vendor person's link to one vendor). Work orders gain `AssignedVendorId` and `VendorContractId`.
+In `purchasing`: `PurchasingSettings`, `PurchaseRequest` 1-* line, `PurchaseOrder` 1-* line, append-only `GoodsReceipt` (also trigger-protected). In `integration`: `ErpSettings` and `ErpExportItem` (idempotency key, status, attempts, lease, reference, reconcile state).
+In the platform schema: `GuestIdentity` (provider and subject mapped to one tenant) and `GuestInvitation` (token hash only; tenant-owned, under row-level security). All new tenant tables are under row-level security.
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

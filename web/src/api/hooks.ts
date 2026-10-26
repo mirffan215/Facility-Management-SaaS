@@ -16,6 +16,12 @@ export function usePermissions() {
   return { loaded: me.isSuccess, can: (permission: string) => set.has(permission) };
 }
 
+/** A vendor's person: they have the portal and none of the buyer's own screens (staff may hold the portal permission too, but have no use for it). */
+export function usePortalOnly() {
+  const { can, loaded } = usePermissions();
+  return loaded && can('portal.use') && !can('locations.read') && !can('assets.read') && !can('workorders.read') && !can('workorders.request');
+}
+
 export function useLocationTree() {
   const { api } = useAuth();
   return useQuery({ queryKey: ['locations', 'tree'], queryFn: () => api.get<LocationNode[]>('/locations/tree') });

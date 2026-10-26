@@ -17,6 +17,7 @@ Status: design phase. See [docs/](docs/).
 - [Phase 2d summary](docs/phase-2d-summary.md) (technician PWA, offline sync, retry-safe writes)
 - [Phase 3 summary](docs/phase-3-summary.md) (preventive maintenance: schedules, generation, meter triggers, forecast, compliance)
 - [Phase 4 summary](docs/phase-4-summary.md) (inventory: stores, stock ledger, parts on work orders, reorder, stock takes)
+- [Phase 5 summary](docs/phase-5-summary.md) (vendors, contracts, purchasing, accounting connection, vendor portal)
 - [ADRs](docs/adr/)
 
 ## Quick start

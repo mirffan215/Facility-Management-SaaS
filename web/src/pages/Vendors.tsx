@@ -7,6 +7,7 @@ import { useAssetChoices, useAssetClasses, useContract, useContractDocuments, us
 import type { Contract, ContractDocumentKind, ContractSla, ContractType, CoverageKind, Vendor, VendorStatus } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Dialog } from '../components/InventoryBits';
+import { PortalAccessDialog } from '../components/PortalAccess';
 import { Badge, ErrorBanner, Field, Loading, Pager, QueryState, ReasonDialog, useEnumLabel } from '../components/ui';
 import { downloadBlob } from '../lib/csv';
 import { formatBytes } from '../lib/format';
@@ -60,6 +61,7 @@ function VendorsTab() {
   const [editing, setEditing] = useState<Vendor | 'new' | null>(null);
   const [contactsOf, setContactsOf] = useState<Vendor | null>(null);
   const [statusOf, setStatusOf] = useState<Vendor | null>(null);
+  const [portalOf, setPortalOf] = useState<Vendor | null>(null);
   const vendors = useVendors({ q: q.trim() || undefined, status: status || undefined, includeArchived: true, page, pageSize: 25 });
   const archive = useMutation({
     mutationFn: (v: Vendor) => api.post(`/vendors/${v.id}/${v.isArchived ? 'restore' : 'archive'}`, { rowVersion: v.rowVersion }),
@@ -104,6 +106,7 @@ function VendorsTab() {
                     <td>{v.email ? <bdi>{v.email}</bdi> : '—'}{v.phone ? <div className="muted"><bdi>{v.phone}</bdi></div> : null}</td>
                     <td className="actions">
                       <button type="button" onClick={() => setContactsOf(v)}>{t('vendors.contacts')}</button>
+                      {can('vendors.manage') && !v.isArchived ? <button type="button" onClick={() => setPortalOf(v)}>{t('vendorPortal.button')}</button> : null}
                       {can('vendors.manage') ? (
                         <>
                           <button type="button" onClick={() => setEditing(v)}>{t('common.edit')}</button>
@@ -122,6 +125,7 @@ function VendorsTab() {
       </QueryState>
       {editing ? <VendorDialog vendor={editing === 'new' ? null : editing} onClose={() => setEditing(null)} /> : null}
       {contactsOf ? <ContactsDialog vendor={contactsOf} onClose={() => setContactsOf(null)} /> : null}
+      {portalOf ? <PortalAccessDialog vendor={portalOf} onClose={() => setPortalOf(null)} /> : null}
       {statusOf ? <VendorStatusDialog vendor={statusOf} onClose={() => setStatusOf(null)} /> : null}
     </>
   );

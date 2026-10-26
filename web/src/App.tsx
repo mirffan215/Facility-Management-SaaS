@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
-import { usePermissions } from './api/hooks';
+import { usePermissions, usePortalOnly } from './api/hooks';
 import { SignIn } from './pages/SignIn';
 import { LocationsPage } from './pages/Locations';
 import { AssetsPage } from './pages/Assets';
@@ -24,11 +24,15 @@ import { InventoryPage } from './pages/Inventory';
 import { VendorsPage } from './pages/Vendors';
 import { PurchasingPage } from './pages/Purchasing';
 import { IntegrationsPage } from './pages/Integrations';
+import { PortalPage } from './pages/Portal';
+import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { ScanRedirectPage } from './pages/ScanRedirect';
 
 function Home() {
   const { can, loaded } = usePermissions();
+  const portalOnly = usePortalOnly();
   if (!loaded) return <Loading />;
+  if (portalOnly) return <Navigate to="/portal" replace />; // a vendor's people have the portal and nothing else
   if (can('workorders.work') && !can('workorders.manage')) return <Navigate to="/jobs" replace />; // field staff start the day at their jobs
   if (can('assets.read')) return <Navigate to="/assets" replace />;
   if (can('workorders.read') || can('workorders.request')) return <Navigate to="/work-orders" replace />;
@@ -68,6 +72,7 @@ function OfflineOnly() {
 export function App() {
   const { status, returnTo, offlineSession } = useAuth();
   const navigate = useNavigate();
+  const portalOnly = usePortalOnly();
 
   // After the sign-in callback, drop the ?code=... URL and go back to where the person was.
   useEffect(() => {
@@ -76,6 +81,7 @@ export function App() {
 
   if (status === 'loading') return <Loading />;
   if (status !== 'signedIn') return <SignIn />;
+  if (window.location.pathname === '/portal/accept') return <AcceptInvitationPage />; // may belong to no organisation yet
 
   // Signed in on this phone only (expired session, no connection): the saved jobs, and nothing that needs the server.
   if (offlineSession) {
@@ -86,6 +92,20 @@ export function App() {
           <Route path="jobs" element={<JobsPage />} />
           <Route path="jobs/:id" element={<JobPage />} />
           <Route path="*" element={<OfflineOnly />} />
+        </Route>
+      </Routes>
+    );
+  }
+
+  // A vendor's person has the portal and notifications; any other address leads back to it.
+  if (portalOnly) {
+    return (
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="auth/callback" element={<Loading />} />
+          <Route path="portal" element={<PortalPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="*" element={<Navigate to="/portal" replace />} />
         </Route>
       </Routes>
     );
@@ -112,6 +132,7 @@ export function App() {
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="purchasing" element={<PurchasingPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
+        <Route path="portal" element={<PortalPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />

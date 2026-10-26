@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
-import { useMe, usePermissions, useUnreadCount } from '../api/hooks';
+import { useMe, usePermissions, usePortalOnly, useUnreadCount } from '../api/hooks';
 import { languages } from '../i18n';
 import { usePrefs } from '../lib/prefs';
 import { SyncStatus } from '../offline/SyncStatus';
@@ -15,6 +15,7 @@ export function Layout() {
   const { calendar, setCalendar } = usePrefs();
   const { can } = usePermissions();
   const me = useMe();
+  const portalOnly = usePortalOnly();
   const unread = useUnreadCount().data?.count ?? 0;
 
   return (
@@ -26,6 +27,7 @@ export function Layout() {
         <strong className="brand">{t('app.title')}</strong>
         <nav aria-label={t('nav.main')}>
           {can('workorders.work') || offlineSession || !!offline.snapshot ? <NavLink to="/jobs">{t('nav.jobs')}</NavLink> : null}
+          {portalOnly ? <NavLink to="/portal">{t('nav.portal')}</NavLink> : null}
           {can('locations.read') ? <NavLink to="/locations">{t('nav.locations')}</NavLink> : null}
           {can('assets.read') ? <NavLink to="/assets">{t('nav.assets')}</NavLink> : null}
           {can('workorders.read') || can('workorders.request') ? <NavLink to="/work-orders">{t('nav.workOrders')}</NavLink> : null}

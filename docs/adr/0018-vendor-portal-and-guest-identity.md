@@ -1,0 +1,17 @@
+# ADR-0018: Vendor portal and guest identity (Phase 5d)
+Status: Proposed. Builds on [ADR-0004](0004-authentication.md), [ADR-0005](0005-database-tenant-isolation.md) and [ADR-0016](0016-vendors-contracts-purchasing.md).
+
+## Decisions
+- **Invite-based vendor accounts** (the customer's decision). A vendor's people sign in with their own identity provider account (any configured provider); staff of the buyer cannot be reached by this route and vendor people have no staff rights.
+- **Invitation.** A user with `vendors.manage` invites an email address for one vendor (max 20 open invitations per vendor; blocked or archived vendors refused). The token is random (256 bits), **shown once** to the inviter as a link, and only its **SHA-256 hash** is stored. The link carries the token in the URL fragment (`#token=`), which is never sent to a server or written to logs; the page moves it to session storage across the sign-in redirect and removes it from the address bar. Invitations last 14 days and can be withdrawn. The link is **not emailed** by the system, to avoid keeping the secret in the outbox.
+- **Acceptance** is an authenticated call that needs no tenant yet. All failures say the same thing ("invalid or expired") so tokens cannot be probed. It is idempotent for the same sign-in, and refused for anyone else once used. A sign-in already linked to another organisation, or signed in to a different organisation than the invitation's, is refused.
+- **Guest identity.** A platform table `GuestIdentity` maps (provider, subject) to exactly one tenant. At sign-in the staff directory is checked first; only when it finds nothing is the guest mapping used. A person therefore belongs to one organisation per sign-in. The invitation table is tenant-owned and under row-level security.
+- **Role and scope.** Acceptance creates the user, grants the system role `Vendor`, which holds only `portal.use`, and links the user to the vendor (`VendorUser`; a person belongs to one vendor). **Every portal query is filtered by `IVendorScope`**, which derives the vendor from the signed-in person's active link and never from the request. An order, work order, contract or file of another vendor is indistinguishable from one that does not exist (404). Access ends at once when the person is deactivated, the invitation link removed, or the vendor is blocked or archived.
+- **What the vendor sees.** Own purchase orders (they may confirm receipt of a new one) without requester, approval, store or accounting reference; own contracts and files without internal notes; work orders given to them with the contract's targets and the comments marked external (they can add a message while the job is open). They cannot change a work order's state.
+- **Defence in depth, proven by tests.** A test enumerates every endpoint of the API and requires a vendor user to be refused (403) on all except the portal and a short allow-list. Others cover vendor-versus-vendor isolation, hash-only storage, revoke, expiry and one-organisation rules.
+
+## Consequences
+- A person who works for two vendors, or for a vendor and the buyer, needs two sign-ins.
+- No self-service registration, vendor onboarding forms or document expiry tracking (insurance, licences).
+- Because the link is not emailed, the inviter must pass it on; showing it again is not possible, so a lost link means withdrawing and re-inviting.
+- The portal cannot complete or reassign work, submit invoices or see payments.

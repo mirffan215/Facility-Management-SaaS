@@ -1116,6 +1116,8 @@ test('accounting connection: turned on by an administrator, a new vendor is sent
   await page.getByLabel('Company in the accounting system').fill('E2E');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByLabel('Send changes to the accounting system')).toBeChecked();
+  // The box is ticked on screen before the save lands; a vendor made before the server has it would (rightly) not be queued.
+  await expect.poll(async () => ((await (await api('/integration/erp/settings')).json()) as { enabled: boolean }).enabled).toBe(true);
 
   // A vendor made now is queued by the outbox, sent by the worker, and its reference comes back to the vendor.
   const code = `ERP-${SUFFIX}`;
@@ -1139,6 +1141,66 @@ test('accounting connection: turned on by an administrator, a new vendor is sent
     await expectNoSeriousA11yIssues(`accounting ${lang}`);
   }
   await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('vendor portal: an invited vendor user sees only their own jobs and contracts, and nothing of the buyer’s other screens', async ({ browser }) => {
+  // The buyer gives a job to the vendor made earlier and invites one of the vendor's people.
+  const VENDOR = `VEN-${SUFFIX}`;
+  const vendors = (await (await api(`/vendors?q=${VENDOR}`)).json()) as { items: { id: string }[] };
+  const vendorId = vendors.items[0].id;
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const wo = (await (await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Replace pump seal', type: 'Emergency', priority: 'High', locationId: site.id }) })).json()) as { id: string };
+  expect((await api(`/work-orders/${wo.id}/vendor`, { method: 'POST', body: JSON.stringify({ vendorId }) })).status).toBe(200);
+  const other = (await (await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Internal only job', type: 'Emergency', priority: 'Low', locationId: site.id }) })).json()) as { id: string };
+  expect(other.id).toBeTruthy();
+
+  await page.goto('/vendors');
+  await page.getByLabel('Search').fill(VENDOR);
+  await page.getByRole('row', { name: new RegExp(VENDOR) }).getByRole('button', { name: 'Portal access' }).click();
+  const access = page.getByRole('dialog', { name: /Portal access for/ });
+  const sub = `vendor-${SUFFIX.toLowerCase()}`;
+  await access.getByLabel('Email of the person to invite').fill(`${sub}@example.test`);
+  await access.getByRole('button', { name: 'Create invitation' }).click();
+  const link = await access.getByRole('textbox', { name: 'Invitation link' }).inputValue();
+  expect(link).toContain('/portal/accept#token=');
+  await shot('29-portal-invitation');
+  await access.getByRole('button', { name: 'Close' }).click();
+
+  // The vendor's person signs in (no role yet), opens the link, and ends up in the portal.
+  const vendor = await personaPage(browser, sub, 'Vera Vendor');
+  try {
+    await expect(vendor.getByRole('heading', { name: 'No access' })).toBeVisible();
+    await vendor.goto(link);
+    await expect(vendor.getByText('You now have access.')).toBeVisible();
+    expect(vendor.url()).not.toContain('token='); // the secret left the address bar
+    await vendor.getByRole('link', { name: 'Open the portal' }).click();
+    await expect(vendor.getByRole('heading', { name: 'Vendor portal' })).toBeVisible();
+    await expect(vendor.getByRole('navigation').getByRole('link')).toHaveText(['My business', 'Notifications']);
+
+    await vendor.getByRole('tab', { name: 'Jobs' }).click();
+    await expect(vendor.getByRole('row', { name: /Replace pump seal/ })).toBeVisible();
+    await expect(vendor.getByText('Internal only job')).toHaveCount(0);
+    await vendor.getByRole('row', { name: /Replace pump seal/ }).getByRole('button', { name: 'Expand' }).click();
+    await vendor.getByLabel('Write to the team').fill('We will be on site tomorrow morning.');
+    await vendor.getByRole('button', { name: 'Send' }).click();
+    await expect(vendor.getByText('We will be on site tomorrow morning.')).toBeVisible();
+    await shot('30-vendor-portal');
+
+    // The buyer's screens are closed to them, in the page and in the API.
+    await vendor.goto('/vendors');
+    await expect(vendor.getByRole('heading', { name: 'Vendor portal' })).toBeVisible(); // sent back to the portal
+    expect(new URL(vendor.url()).pathname).toBe('/portal');
+    for (const lang of ['en', 'ar']) {
+      await vendor.locator('.prefs select').first().selectOption(lang);
+      await vendor.goto('/portal');
+      await expect(vendor.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`vendor portal ${lang}`, vendor);
+    }
+  } finally {
+    await vendor.context().close();
+  }
+  expect((await api('/vendors', { sub })).status).toBe(403);
+  expect((await api('/work-orders', { sub })).status).toBe(403);
 });
 
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {

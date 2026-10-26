@@ -8,6 +8,9 @@ import { OfflineProvider } from './offline/OfflineProvider';
 import './i18n';
 import { PrefsProvider } from './lib/prefs';
 import './styles.css';
+import { stashInvitationToken } from './pages/AcceptInvitation';
+
+stashInvitationToken(); // before sign-in redirects drop the link's fragment
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, staleTime: 15_000 } },

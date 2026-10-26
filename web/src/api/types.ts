@@ -877,3 +877,81 @@ export interface ErpItem {
   reconciledAt: string | null;
   reconcileDetail: string | null;
 }
+
+// ---------------- vendor portal ----------------
+
+export interface PortalMe {
+  vendorId: string;
+  vendorName: string;
+  vendorNameAr: string | null;
+  status: VendorStatus;
+}
+
+export interface PortalContract {
+  id: string;
+  number: string;
+  title: string;
+  type: ContractType;
+  startOn: string;
+  endOn: string;
+  status: ContractStatus;
+  daysLeft: number;
+  value: number | null;
+  currencyCode: string;
+  coverage: { kind: CoverageKind; targetId: string; name: string | null }[];
+  sla: ContractSla[];
+  documents: number;
+}
+
+export interface PortalOrder {
+  id: string;
+  display: string;
+  status: OrderStatus;
+  issuedAt: string;
+  expectedOn: string | null;
+  currencyCode: string;
+  total: number;
+  notes: string | null;
+  acknowledgedAt: string | null;
+  cancelReason: string | null;
+  lines: { position: number; description: string; unit: string; quantity: number; unitPrice: number; total: number; receivedQty: number }[] | null;
+}
+
+export interface PortalWorkComment {
+  id: string;
+  authorName: string | null;
+  at: string;
+  body: string;
+  mine: boolean;
+}
+
+export interface PortalWork {
+  id: string;
+  display: string;
+  title: string;
+  description: string | null;
+  priority: WorkPriority;
+  status: WorkOrderStatus;
+  locationName: string | null;
+  assetName: string | null;
+  dueAt: string | null;
+  contractNumber: string | null;
+  responseMinutes: number | null;
+  resolutionMinutes: number | null;
+  comments: PortalWorkComment[] | null;
+}
+
+export interface PortalInvitation {
+  id: string;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  state: string;
+}
+
+export interface PortalAccess {
+  users: { userId: string; name: string | null; email: string | null; isActive: boolean; linkedAt: string }[];
+  invitations: PortalInvitation[];
+}
