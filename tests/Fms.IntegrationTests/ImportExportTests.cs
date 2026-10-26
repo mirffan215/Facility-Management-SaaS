@@ -233,7 +233,13 @@ public sealed class ImportExportTests(SqlServerFixture sql)
         Assert.StartsWith("﻿", locationsCsv);
 
         // Keep only this test's rows, then load them into a tenant that has nothing.
-        string Only(string csv) => string.Join("\n", csv.Split('\n').Where((line, i) => i == 0 || line.Contains(u)));
+        // Custom-field columns are dropped: other tests define fields in tenant A that tenant B (correctly) does not know.
+        string Only(string csv)
+        {
+            var rows = Fms.BuildingBlocks.Csv.Csv.Parse(csv).Where((r, i) => i == 0 || r.Any(c => c.Contains(u))).ToList();
+            var keep = rows[0].Select((h, i) => (h, i)).Where(x => !x.h.TrimStart('\uFEFF').StartsWith("cf.", StringComparison.OrdinalIgnoreCase)).Select(x => x.i).ToList();
+            return string.Join("\n", rows.Select(r => Fms.BuildingBlocks.Csv.Csv.Line(keep.Select(i => r[i]))));
+        }
         await using var b = FacilitiesScope.For(sql, TenantB);
         await b.NewClassAsync($"K-{u}");
         var placed = (await b.ImportExport.ImportLocationsAsync(Only(locationsCsv), false)).Value!;
