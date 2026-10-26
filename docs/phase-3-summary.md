@@ -30,4 +30,4 @@ API (under `/api/v1/pm`): `templates`, `schedules`, `schedules/{id}/plans`, `for
 - **No change history of schedules beyond the audit log**; compliance is by due date, so a changed schedule shows its past as it was.
 - **Technician load levelling** (spreading visits across people or days) and **crew/skill assignment** are not part of this phase.
 - Not tried at large scale: generation visits every active plan each pass (tested with a handful; thousands of plans are expected to be fine but untested).
-- One browser test (offline, session expired) failed once in a full run and passed on rerun; it is unrelated to this phase and looks timing-sensitive.
+- An offline browser test (session expired) raced on its final check and failed in 2 of ~5 runs; the check now waits for the server to hold the comment (fixed in this phase).

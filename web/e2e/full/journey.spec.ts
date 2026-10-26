@@ -804,9 +804,11 @@ test('offline: with the session expired and no connection, the saved jobs still 
     await expect(tech.getByRole('button', { name: 'Sign in to send your work' })).toBeVisible({ timeout: 20_000 });
     expect((await (await api(`/work-orders/${wo.id}`)).json() as { comments: unknown[] }).comments).toHaveLength(0);
     await tech.getByRole('button', { name: 'Sign in to send your work' }).click();
+    // The status line is also absent while the page is away at the identity provider, so wait for the server to have the comment instead.
+    const sentCount = async () => ((await (await api(`/work-orders/${wo.id}`)).json()) as { comments: { body: string }[] }).comments.filter((c) => c.body === 'Display replaced').length;
+    await expect.poll(sentCount, { timeout: 60_000 }).toBe(1);
     await expect(tech.getByRole('status')).toHaveCount(0, { timeout: 40_000 });
-    const sent = (await (await api(`/work-orders/${wo.id}`)).json()) as { comments: { body: string }[] };
-    expect(sent.comments.filter((c) => c.body === 'Display replaced')).toHaveLength(1);
+    expect(await sentCount()).toBe(1); // exactly once
   } finally {
     await fetch(`${IDP}/__ttl?seconds=3600`);
     await tech.context().close();
