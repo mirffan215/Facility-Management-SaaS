@@ -15,6 +15,11 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
     public DbSet<WorkOrderComment> WorkOrderComments => Set<WorkOrderComment>();
     public DbSet<WorkCategory> Categories => Set<WorkCategory>();
     public DbSet<WorkSettings> Settings => Set<WorkSettings>();
+    public DbSet<WorkCalendar> Calendars => Set<WorkCalendar>();
+    public DbSet<WorkCalendarHoliday> CalendarHolidays => Set<WorkCalendarHoliday>();
+    public DbSet<WorkCalendarSite> CalendarSites => Set<WorkCalendarSite>();
+    public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
+    public DbSet<SlaTarget> SlaTargets => Set<SlaTarget>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -36,6 +41,47 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
             e.HasIndex(x => x.TenantId).IsUnique();
         });
 
+        b.Entity<WorkCalendar>(e =>
+        {
+            e.ToTable("Calendars");
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.TimeZoneId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.HoursJson).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique().HasFilter("[IsArchived] = 0");
+            e.HasIndex(x => x.TenantId).IsUnique().HasFilter("[IsDefault] = 1 AND [IsArchived] = 0").HasDatabaseName("IX_Calendars_OneDefault");
+        });
+
+        b.Entity<WorkCalendarHoliday>(e =>
+        {
+            e.ToTable("CalendarHolidays");
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.CalendarId, x.Date }).IsUnique();
+            e.HasOne<WorkCalendar>().WithMany().HasForeignKey(x => x.CalendarId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<WorkCalendarSite>(e =>
+        {
+            e.ToTable("CalendarSites");
+            e.HasIndex(x => new { x.TenantId, x.SiteId }).IsUnique();
+            e.HasOne<WorkCalendar>().WithMany().HasForeignKey(x => x.CalendarId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<SlaPolicy>(e =>
+        {
+            e.ToTable("SlaPolicies");
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => x.TenantId).IsUnique().HasFilter("[IsDefault] = 1 AND [IsArchived] = 0").HasDatabaseName("IX_SlaPolicies_OneDefault");
+            e.HasIndex(x => new { x.TenantId, x.CategoryId }).IsUnique().HasFilter("[CategoryId] IS NOT NULL AND [IsArchived] = 0").HasDatabaseName("IX_SlaPolicies_OnePerCategory");
+            e.HasOne<WorkCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<SlaTarget>(e =>
+        {
+            e.ToTable("SlaTargets");
+            e.HasIndex(x => new { x.TenantId, x.PolicyId, x.Priority }).IsUnique();
+            e.HasOne<SlaPolicy>().WithMany().HasForeignKey(x => x.PolicyId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         b.Entity<WorkOrder>(e =>
         {
             e.ToTable("WorkOrders");
@@ -49,6 +95,7 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
             e.HasIndex(x => new { x.TenantId, x.AssignedTo });
             e.HasIndex(x => new { x.TenantId, x.AssetId });
             e.HasIndex(x => new { x.TenantId, x.LocationId });
+            e.HasIndex(x => new { x.TenantId, x.ResolutionDueAt });
             e.HasOne<WorkCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
         });
 

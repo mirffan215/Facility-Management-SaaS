@@ -60,3 +60,25 @@ public sealed class UserRole : ITenantOwned
     public Guid? GrantedBy { get; set; }
     public DateTimeOffset GrantedAt { get; set; }
 }
+
+/// <summary>An in-app notice for one person. Type and data are rendered in the reader's language by the client.</summary>
+public sealed class Notification : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid UserId { get; set; }
+
+    /// <summary>What happened, e.g. "workorder.Assigned".</summary>
+    public string Type { get; set; } = "";
+
+    public string DataJson { get; set; } = "{}";
+
+    /// <summary>Where to go in the app, e.g. "/work-orders/{id}".</summary>
+    public string? LinkPath { get; set; }
+
+    /// <summary>The event that caused it (an outbox message id); with the person, unique, so a retried event cannot notify twice.</summary>
+    public Guid SourceId { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+}

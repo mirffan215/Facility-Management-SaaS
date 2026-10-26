@@ -18,9 +18,20 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<Notification>(e =>
+        {
+            e.ToTable("Notifications");
+            e.Property(x => x.Type).HasMaxLength(100).IsRequired();
+            e.Property(x => x.DataJson).IsRequired();
+            e.Property(x => x.LinkPath).HasMaxLength(300);
+            e.HasIndex(x => new { x.TenantId, x.UserId, x.ReadAt, x.CreatedAt });
+            e.HasIndex(x => new { x.TenantId, x.SourceId, x.UserId }).IsUnique();
+        });
+
         b.Entity<Tenant>(e =>
         {
             e.ToTable("Tenants");

@@ -16,8 +16,13 @@ public static class WorkServiceCollectionExtensions
             .UseSqlServer(connectionString, WorkDbContextOptions.Sql)
             .AddInterceptors(new TenantSessionContextInterceptor(sp.GetRequiredService<ITenantContext>())));
 
+        services.AddScoped<SlaClock>();
+        services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, WorkOrderEventHandler>();
+        services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, SlaAlertHandler>();
+        services.AddSingleton<SlaMonitor>();
         services.AddScoped<WorkOrderService>();
         services.AddScoped<WorkSetupService>();
+        services.AddScoped<SlaSetupService>();
         services.AddHealthChecks().AddDbContextCheck<WorkDbContext>("work-db", tags: ["ready"]);
         return services;
     }

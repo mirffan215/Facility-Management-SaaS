@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Fms.BuildingBlocks.Identity;
+using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Results;
 using Fms.BuildingBlocks.Security;
@@ -11,7 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Fms.Work.Services;
 
 public sealed class WorkOrderService(
-    WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IFacilityLookup facilities, TimeProvider clock)
+    WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IFacilityLookup facilities,
+    SlaClock sla, IOutbox outbox, TimeProvider clock)
 {
     private Actor? _actor;
     private WorkflowSettings? _settings;
@@ -50,6 +52,11 @@ public sealed class WorkOrderService(
         if (q.OverdueOnly)
             query = query.Where(w => w.DueAt != null && w.DueAt < now && w.Status != WorkOrderStatus.Closed && w.Status != WorkOrderStatus.Cancelled
                                      && w.Status != WorkOrderStatus.Completed && w.Status != WorkOrderStatus.Verified);
+
+        if (q.SlaBreached)
+            query = query.Where(w => w.CompletedAt == null && w.Status != WorkOrderStatus.Closed && w.Status != WorkOrderStatus.Cancelled
+                                     && ((w.SlaPausedAt == null && w.ResolutionDueAt != null && w.ResolutionDueAt < now)
+                                         || (w.RespondedAt == null && w.ResponseDueAt != null && w.ResponseDueAt < now)));
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -151,8 +158,10 @@ public sealed class WorkOrderService(
                     Id = id, Number = next, Title = title, Description = Clean(r.Description), Type = type, Priority = r.Priority ?? category?.DefaultPriority ?? WorkPriority.Medium,
                     Status = status, LocationId = locationId!.Value, AssetId = r.AssetId, CategoryId = r.CategoryId, RequestedBy = me, RequestedAt = now, DueAt = r.DueAt, UpdatedAt = now,
                 };
+                if (status == WorkOrderStatus.Approved) await sla.StartAsync(wo, now, token);
                 db.WorkOrders.Add(wo);
                 db.WorkOrderEvents.Add(Event(wo, WorkOrderAction.Created, null, status, me, now, null));
+                outbox.Enqueue(WorkMessages.Event, new WorkOrderEventMessage(wo.Id, WorkOrderAction.Created, me, null));
                 audit.Record("workorder.created", nameof(WorkOrder), wo.Id.ToString(),
                     JsonSerializer.Serialize(new { wo.Number, wo.Title, wo.Type, wo.Priority, wo.LocationId, wo.AssetId, status }));
                 await db.SaveChangesAsync(token);
@@ -208,12 +217,14 @@ public sealed class WorkOrderService(
 
         wo.Title = title;
         wo.Description = Clean(r.Description);
+        var priorityChanged = r.Priority is { } newPriority && newPriority != wo.Priority;
         wo.Priority = r.Priority ?? wo.Priority;
         wo.LocationId = locationId;
         wo.AssetId = r.AssetId;
         wo.CategoryId = r.CategoryId;
         wo.DueAt = r.DueAt;
         wo.UpdatedAt = clock.GetUtcNow();
+        if (priorityChanged) await sla.RecomputeAsync(wo, ct);
         db.Entry(wo).Property(w => w.RowVersion).OriginalValue = version;
 
         if (changes.Count > 0)
@@ -226,7 +237,12 @@ public sealed class WorkOrderService(
     }
 
     public Task<Result<WorkOrderDto>> ApproveAsync(Guid id, CancellationToken ct = default) =>
-        ActAsync(id, WorkOrderAction.Approved, null, (wo, _, _) => { wo.Status = WorkOrderStatus.Approved; return null; }, ct: ct);
+        ActCoreAsync(id, WorkOrderAction.Approved, null, async (wo, now, token) =>
+        {
+            wo.Status = WorkOrderStatus.Approved;
+            await sla.StartAsync(wo, now, token); // the clocks start when the work is authorised
+            return null;
+        }, ct: ct);
 
     public Task<Result<WorkOrderDto>> RejectAsync(Guid id, string? reason, CancellationToken ct = default) =>
         ActAsync(id, WorkOrderAction.Rejected, reason, (wo, _, _) => { wo.Status = WorkOrderStatus.Cancelled; return null; }, ct: ct);
@@ -243,13 +259,24 @@ public sealed class WorkOrderService(
         }, subject: assigneeId, ct: ct);
 
     public Task<Result<WorkOrderDto>> StartAsync(Guid id, CancellationToken ct = default) =>
-        ActAsync(id, WorkOrderAction.Started, null, (wo, now, _) => { wo.Status = WorkOrderStatus.InProgress; wo.StartedAt ??= now; wo.StatusReason = null; return null; }, ct: ct);
+        ActAsync(id, WorkOrderAction.Started, null, (wo, now, _) => { wo.Status = WorkOrderStatus.InProgress; wo.StartedAt ??= now; wo.RespondedAt ??= now; wo.StatusReason = null; return null; }, ct: ct);
 
     public Task<Result<WorkOrderDto>> HoldAsync(Guid id, string? reason, CancellationToken ct = default) =>
-        ActAsync(id, WorkOrderAction.Held, reason, (wo, _, _) => { wo.Status = WorkOrderStatus.OnHold; return null; }, ct: ct);
+        ActCoreAsync(id, WorkOrderAction.Held, reason, async (wo, now, token) =>
+        {
+            wo.Status = WorkOrderStatus.OnHold;
+            await sla.PauseAsync(wo, now, token); // time on hold does not count against the SLA
+            return null;
+        }, ct: ct);
 
     public Task<Result<WorkOrderDto>> ResumeAsync(Guid id, CancellationToken ct = default) =>
-        ActAsync(id, WorkOrderAction.Resumed, null, (wo, _, _) => { wo.Status = WorkOrderStatus.InProgress; wo.StatusReason = null; return null; }, ct: ct);
+        ActCoreAsync(id, WorkOrderAction.Resumed, null, async (wo, now, token) =>
+        {
+            wo.Status = WorkOrderStatus.InProgress;
+            wo.StatusReason = null;
+            await sla.ResumeAsync(wo, now, token);
+            return null;
+        }, ct: ct);
 
     public Task<Result<WorkOrderDto>> CompleteAsync(Guid id, CompleteRequest r, CancellationToken ct = default) =>
         ActAsync(id, WorkOrderAction.Completed, r.Notes, (wo, now, _) =>
@@ -345,6 +372,7 @@ public sealed class WorkOrderService(
         if (noteIsReason && cleaned is not null && action is not WorkOrderAction.Assigned) wo.StatusReason = cleaned;
         wo.UpdatedAt = now;
         db.WorkOrderEvents.Add(Event(wo, action, from, wo.Status, actor.UserId, now, cleaned, subject));
+        outbox.Enqueue(WorkMessages.Event, new WorkOrderEventMessage(id, action, actor.UserId, cleaned));
         audit.Record("workorder." + action.ToString().ToLowerInvariant(), nameof(WorkOrder), id.ToString(),
             JsonSerializer.Serialize(new { from, to = wo.Status, reason = cleaned, subject }));
         return await SaveAsync(wo, ct);
@@ -390,7 +418,13 @@ public sealed class WorkOrderService(
             o.CategoryId, o.CategoryId is { } c ? categories.GetValueOrDefault(c) : null,
             o.RequestedBy, Person(o.RequestedBy), o.RequestedAt, o.AssignedTo, Person(o.AssignedTo),
             o.DueAt, WorkOrderRules.IsOverdue(o, now), o.StartedAt, o.CompletedAt, o.VerifiedAt, o.ClosedAt,
-            o.StatusReason, o.ClosureCode, o.ClosureNotes, WorkOrderRules.Allowed(o, actor, settings), Convert.ToBase64String(o.RowVersion))).ToList();
+            o.StatusReason, o.ClosureCode, o.ClosureNotes, WorkOrderRules.Allowed(o, actor, settings), Convert.ToBase64String(o.RowVersion), ToSla(o, now))).ToList();
+    }
+
+    private static SlaDto ToSla(WorkOrder o, DateTimeOffset now)
+    {
+        var status = SlaRules.StatusOf(o, now);
+        return new SlaDto(status.State, o.ResponseDueAt, o.ResolutionDueAt, o.RespondedAt, status.ResponseBreached, o.SlaPausedAt is not null);
     }
 
     private static string? Clean(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();

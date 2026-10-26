@@ -11,7 +11,7 @@ public interface IUserDirectory
     Task<IReadOnlyList<DirectoryUser>> WithPermissionAsync(string permission, CancellationToken ct = default);
 }
 
-public sealed record FacilityRef(Guid Id, string Code, string Name, Guid? LocationId);
+public sealed record FacilityRef(Guid Id, string Code, string Name, Guid? LocationId, string? Kind = null);
 
 /// <summary>What other modules may ask the Facilities module (locations and assets are validated and named, never joined across schemas).</summary>
 public interface IFacilityLookup
@@ -27,6 +27,9 @@ public interface IFacilityLookup
     /// it is for people who may raise requests but not browse the asset register.
     /// </summary>
     Task<IReadOnlyList<FacilityRef>> FindAssetsAsync(string? search, string? tag, int limit, CancellationToken ct = default);
+
+    /// <summary>The site a location belongs to (the location itself when it is a site), or null when it does not exist.</summary>
+    Task<Guid?> SiteOfAsync(Guid locationId, CancellationToken ct = default);
 
     Task<IReadOnlyDictionary<Guid, FacilityRef>> LocationsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<IReadOnlyDictionary<Guid, FacilityRef>> AssetsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);

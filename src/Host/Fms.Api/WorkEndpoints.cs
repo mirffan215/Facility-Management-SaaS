@@ -13,7 +13,7 @@ public static class WorkEndpoints
         var g = v1.MapGroup("/work-orders");
 
         g.MapGet("", async (WorkOrderService s, string? status, WorkPriority? priority, Guid? assetId, Guid? locationId, Guid? categoryId, bool? mine, bool? assignedToMe,
-                bool? openOnly, bool? overdue, string? q, int? page, int? pageSize, CancellationToken ct) =>
+                bool? openOnly, bool? overdue, bool? slaBreached, string? q, int? page, int? pageSize, CancellationToken ct) =>
             {
                 var statuses = new List<WorkOrderStatus>();
                 foreach (var part in (status ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -24,7 +24,7 @@ public static class WorkEndpoints
                 }
 
                 return Results.Ok(await s.ListAsync(new WorkOrderQuery(statuses, priority, assetId, locationId, categoryId, mine ?? false, assignedToMe ?? false,
-                    openOnly ?? false, overdue ?? false, q, page, pageSize), ct));
+                    openOnly ?? false, overdue ?? false, slaBreached ?? false, q, page, pageSize), ct));
             })
             .RequireAnyPermission(Everyone);
 
@@ -38,6 +38,30 @@ public static class WorkEndpoints
         g.MapGet("/settings", async (WorkSetupService s, CancellationToken ct) => Results.Ok(await s.GetSettingsAsync(ct)))
             .RequireAnyPermission(Everyone);
         g.MapPut("/settings", async (SaveWorkSettingsRequest r, WorkSetupService s, CancellationToken ct) => (await s.SaveSettingsAsync(r, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+
+        var sla = g.MapGroup("/sla");
+        sla.MapGet("/calendars", async (SlaSetupService s, bool? includeArchived, CancellationToken ct) => Results.Ok(await s.CalendarsAsync(includeArchived ?? false, ct)))
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPost("/calendars", async (SaveCalendarRequest r, SlaSetupService s, CancellationToken ct) =>
+                (await s.CreateCalendarAsync(r, ct)).ToHttp(c => Results.Created($"/api/v1/work-orders/sla/calendars/{c.Id}", c)))
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPut("/calendars/{id:guid}", async (Guid id, SaveCalendarRequest r, SlaSetupService s, CancellationToken ct) => (await s.UpdateCalendarAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPost("/calendars/{id:guid}/archive", async (Guid id, RowVersionRequest r, SlaSetupService s, CancellationToken ct) => (await s.SetCalendarArchivedAsync(id, true, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPost("/calendars/{id:guid}/restore", async (Guid id, RowVersionRequest r, SlaSetupService s, CancellationToken ct) => (await s.SetCalendarArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapGet("/policies", async (SlaSetupService s, bool? includeArchived, CancellationToken ct) => Results.Ok(await s.PoliciesAsync(includeArchived ?? false, ct)))
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPost("/policies", async (SaveSlaPolicyRequest r, SlaSetupService s, CancellationToken ct) =>
+                (await s.CreatePolicyAsync(r, ct)).ToHttp(p => Results.Created($"/api/v1/work-orders/sla/policies/{p.Id}", p)))
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPut("/policies/{id:guid}", async (Guid id, SaveSlaPolicyRequest r, SlaSetupService s, CancellationToken ct) => (await s.UpdatePolicyAsync(id, r, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPost("/policies/{id:guid}/archive", async (Guid id, RowVersionRequest r, SlaSetupService s, CancellationToken ct) => (await s.SetPolicyArchivedAsync(id, true, r.RowVersion, ct)).ToHttp())
+            .RequirePermission(Permissions.WorkOrdersManage);
+        sla.MapPost("/policies/{id:guid}/restore", async (Guid id, RowVersionRequest r, SlaSetupService s, CancellationToken ct) => (await s.SetPolicyArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
             .RequirePermission(Permissions.WorkOrdersManage);
 
         var categories = g.MapGroup("/categories");
@@ -75,5 +99,19 @@ public static class WorkEndpoints
         g.MapPost("/{id:guid}/comments", async (Guid id, CommentRequest r, WorkOrderService s, CancellationToken ct) =>
                 (await s.AddCommentAsync(id, r, ct)).ToHttp(c => Results.Created($"/api/v1/work-orders/{id}", c)))
             .RequireAnyPermission(Everyone);
+    }
+}
+
+public static class NotificationEndpoints
+{
+    /// <summary>A person's own notices. Any signed-in person has them; every query is for the signed-in user only.</summary>
+    public static void MapNotifications(this RouteGroupBuilder v1)
+    {
+        var g = v1.MapGroup("/notifications").RequireAuthorization();
+        g.MapGet("", async (Fms.Platform.Notifications.NotificationService s, bool? unreadOnly, int? page, int? pageSize, CancellationToken ct) =>
+            Results.Ok(await s.ListAsync(unreadOnly ?? false, page, pageSize, ct)));
+        g.MapGet("/unread-count", async (Fms.Platform.Notifications.NotificationService s, CancellationToken ct) => Results.Ok(new { count = await s.UnreadCountAsync(ct) }));
+        g.MapPost("/{id:guid}/read", async (Guid id, Fms.Platform.Notifications.NotificationService s, CancellationToken ct) => await s.MarkReadAsync(id, ct) ? Results.NoContent() : Results.NotFound());
+        g.MapPost("/read-all", async (Fms.Platform.Notifications.NotificationService s, CancellationToken ct) => Results.Ok(new { marked = await s.MarkAllReadAsync(ct) }));
     }
 }

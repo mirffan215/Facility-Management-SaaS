@@ -123,6 +123,193 @@ namespace Fms.Work.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Fms.Work.Domain.SlaPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SlaPolicies_OneDefault")
+                        .HasFilter("[IsDefault] = 1 AND [IsArchived] = 0");
+
+                    b.HasIndex("TenantId", "CategoryId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SlaPolicies_OnePerCategory")
+                        .HasFilter("[CategoryId] IS NOT NULL AND [IsArchived] = 0");
+
+                    b.ToTable("SlaPolicies", "work");
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.SlaTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResolutionMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResponseMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PolicyId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "PolicyId", "Priority")
+                        .IsUnique();
+
+                    b.ToTable("SlaTargets", "work");
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.WorkCalendar", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("HoursJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Calendars_OneDefault")
+                        .HasFilter("[IsDefault] = 1 AND [IsArchived] = 0");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasFilter("[IsArchived] = 0");
+
+                    b.ToTable("Calendars", "work");
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.WorkCalendarHoliday", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalendarId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "CalendarId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("CalendarHolidays", "work");
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.WorkCalendarSite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalendarId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "SiteId")
+                        .IsUnique();
+
+                    b.ToTable("CalendarSites", "work");
+                });
+
             modelBuilder.Entity("Fms.Work.Domain.WorkCategory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -222,11 +409,47 @@ namespace Fms.Work.Persistence.Migrations
                     b.Property<Guid>("RequestedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("ResolutionBreachNotifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ResolutionDueAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("ResolutionRemainingMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("ResolutionWarnedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ResolutionWindowStartAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ResponseBreachNotifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ResponseDueAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<Guid?>("SlaCalendarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SlaPausedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("SlaPolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SlaStartedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("datetimeoffset");
@@ -274,6 +497,8 @@ namespace Fms.Work.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("TenantId", "RequestedBy");
+
+                    b.HasIndex("TenantId", "ResolutionDueAt");
 
                     b.HasIndex("TenantId", "Status");
 
@@ -389,6 +614,41 @@ namespace Fms.Work.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Settings", "work");
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.SlaPolicy", b =>
+                {
+                    b.HasOne("Fms.Work.Domain.WorkCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.SlaTarget", b =>
+                {
+                    b.HasOne("Fms.Work.Domain.SlaPolicy", null)
+                        .WithMany()
+                        .HasForeignKey("PolicyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.WorkCalendarHoliday", b =>
+                {
+                    b.HasOne("Fms.Work.Domain.WorkCalendar", null)
+                        .WithMany()
+                        .HasForeignKey("CalendarId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.WorkCalendarSite", b =>
+                {
+                    b.HasOne("Fms.Work.Domain.WorkCalendar", null)
+                        .WithMany()
+                        .HasForeignKey("CalendarId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Fms.Work.Domain.WorkOrder", b =>

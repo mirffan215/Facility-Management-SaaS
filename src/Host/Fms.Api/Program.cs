@@ -80,6 +80,7 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
 {
     v1.MapFacilities();
     v1.MapWork();
+    v1.MapNotifications();
 
     v1.MapGet("/roles", async (AccessAdministration access, CancellationToken ct) => Results.Ok(await access.ListRolesAsync(ct)))
         .RequirePermission(Permissions.RolesRead);

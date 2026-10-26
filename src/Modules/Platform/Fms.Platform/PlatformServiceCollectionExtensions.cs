@@ -37,6 +37,10 @@ public static class PlatformServiceCollectionExtensions
         services.AddScoped<Fms.BuildingBlocks.Identity.IUserDirectory, UserDirectory>();
         services.AddFmsPendingWrites();
         services.AddScoped<AccessAdministration>();
+        services.AddScoped<Fms.BuildingBlocks.Notifications.INotificationSink, Fms.Platform.Notifications.NotificationSink>();
+        services.AddScoped<Fms.Platform.Notifications.NotificationService>();
+        services.AddOutboxHandler<Fms.Platform.Notifications.EmailSendHandler>();
+        services.TryAddSingleton<Fms.BuildingBlocks.Notifications.IEmailSender>(sp => new Fms.BuildingBlocks.Notifications.NullEmailSender(sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Fms.BuildingBlocks.Notifications.NullEmailSender>>()));
         services.AddSingleton<OutboxProcessor>();
         services.AddHealthChecks().AddDbContextCheck<PlatformDbContext>("platform-db", tags: ["ready"]);
         return services;

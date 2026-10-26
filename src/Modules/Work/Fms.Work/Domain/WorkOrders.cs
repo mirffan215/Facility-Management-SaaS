@@ -54,6 +54,25 @@ public sealed class WorkOrder : ITenantOwned
     public string? ClosureNotes { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
+    // --- SLA clocks (see SlaRules). Started once, when the work is authorised. ---
+    public Guid? SlaPolicyId { get; set; }
+    public Guid? SlaCalendarId { get; set; }
+    public DateTimeOffset? SlaStartedAt { get; set; }
+    public DateTimeOffset? ResponseDueAt { get; set; }
+    public DateTimeOffset? ResolutionDueAt { get; set; }
+
+    /// <summary>When work first started (the response).</summary>
+    public DateTimeOffset? RespondedAt { get; set; }
+
+    /// <summary>Start of the current resolution stretch: when the clocks started, or when work resumed after a hold. "At risk" is measured from here.</summary>
+    public DateTimeOffset? ResolutionWindowStartAt { get; set; }
+
+    public DateTimeOffset? SlaPausedAt { get; set; }
+    public int? ResolutionRemainingMinutes { get; set; }
+    public DateTimeOffset? ResponseBreachNotifiedAt { get; set; }
+    public DateTimeOffset? ResolutionWarnedAt { get; set; }
+    public DateTimeOffset? ResolutionBreachNotifiedAt { get; set; }
+
     [Timestamp]
     public byte[] RowVersion { get; set; } = [];
 }
