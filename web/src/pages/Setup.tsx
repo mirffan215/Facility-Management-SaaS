@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useAssetClasses } from '../api/hooks';
-import type { AssetClass, CustomFieldDefinition, CustomFieldTarget, CustomFieldType } from '../api/types';
+import { useAssetClasses, useWorkCategories, useWorkSettings } from '../api/hooks';
+import type { AssetClass, CustomFieldDefinition, CustomFieldTarget, CustomFieldType, WorkCategory, WorkPriority } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, Can, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 
-const SECTIONS = ['classes', 'fields'] as const;
+const SECTIONS = ['classes', 'fields', 'work'] as const;
 
 export function SetupPage() {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ export function SetupPage() {
           </button>
         ))}
       </div>
-      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : <FieldsSection />}</div>
+      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : <WorkSection />}</div>
     </section>
   );
 }
@@ -194,6 +194,117 @@ function FieldsSection() {
             </table>
           </div>
         )}
+      </QueryState>
+    </>
+  );
+}
+
+const WORK_PRIORITIES: WorkPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
+
+function WorkSection() {
+  const { t } = useTranslation();
+  const { api } = useAuth();
+  const { name } = usePrefs();
+  const client = useQueryClient();
+  const priorityLabel = useEnumLabel('workPriority');
+  const categories = useWorkCategories(true);
+  const settings = useWorkSettings();
+  const [code, setCode] = useState('');
+  const [nameEn, setNameEn] = useState('');
+  const [nameAr, setNameAr] = useState('');
+  const [priority, setPriority] = useState<WorkPriority>('Medium');
+
+  const create = useMutation({
+    mutationFn: () => api.post<WorkCategory>('/work-orders/categories', { code: code.trim(), name: nameEn.trim(), nameAr: nameAr.trim() || null, defaultPriority: priority }),
+    onSuccess: async () => {
+      setCode(''); setNameEn(''); setNameAr(''); setPriority('Medium');
+      await client.invalidateQueries({ queryKey: ['work-categories'] });
+    },
+  });
+  const archive = useMutation({
+    mutationFn: (c: WorkCategory) => api.post<WorkCategory>(`/work-orders/categories/${c.id}/${c.isArchived ? 'restore' : 'archive'}`, { rowVersion: c.rowVersion }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['work-categories'] }),
+  });
+  const saveSettings = useMutation({
+    mutationFn: (next: { requireApproval: boolean; requireVerification: boolean }) => api.put('/work-orders/settings', { ...next, rowVersion: settings.data?.rowVersion ?? null }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['work-settings'] }),
+  });
+  const error = create.error instanceof ApiError ? create.error : null;
+
+  return (
+    <>
+      <h2>{t('work.settingsTitle')}</h2>
+      <QueryState query={settings}>
+        {settings.data ? (
+          <fieldset>
+            <legend>{t('work.settingsLegend')}</legend>
+            <label className="check">
+              <input type="checkbox" checked={settings.data.requireApproval} disabled={saveSettings.isPending}
+                onChange={(e) => saveSettings.mutate({ requireApproval: e.target.checked, requireVerification: settings.data!.requireVerification })} />
+              <span>{t('work.requireApproval')} <small className="muted">{t('work.requireApprovalHint')}</small></span>
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={settings.data.requireVerification} disabled={saveSettings.isPending}
+                onChange={(e) => saveSettings.mutate({ requireApproval: settings.data!.requireApproval, requireVerification: e.target.checked })} />
+              <span>{t('work.requireVerification')} <small className="muted">{t('work.requireVerificationHint')}</small></span>
+            </label>
+            <ErrorBanner error={saveSettings.error} />
+          </fieldset>
+        ) : null}
+      </QueryState>
+
+      <h2>{t('work.categories')}</h2>
+      <Can permission="workorders.manage">
+        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }}>
+          <div className="row">
+            <Field label={t('assets.code')} error={error?.field('code')} required>
+              <input value={code} onChange={(e) => setCode(e.target.value)} maxLength={50} autoComplete="off" />
+            </Field>
+            <Field label={t('assets.name')} error={error?.field('name')} required>
+              <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} maxLength={200} />
+            </Field>
+            <Field label={t('assets.nameAr')} error={error?.field('nameAr')}>
+              <input value={nameAr} onChange={(e) => setNameAr(e.target.value)} maxLength={200} lang="ar" dir="rtl" />
+            </Field>
+            <Field label={t('work.defaultPriority')}>
+              <select value={priority} onChange={(e) => setPriority(e.target.value as WorkPriority)}>
+                {WORK_PRIORITIES.map((p) => <option key={p} value={p}>{priorityLabel(p)}</option>)}
+              </select>
+            </Field>
+          </div>
+          <ErrorBanner error={error?.status === 400 ? null : create.error} />
+          <button type="submit" className="primary" disabled={create.isPending}>{t('work.add')}</button>
+        </form>
+      </Can>
+      <QueryState query={categories}>
+        <div className="table-wrap">
+          <table>
+            <caption className="visually-hidden">{t('work.categories')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('assets.code')}</th>
+                <th scope="col">{t('assets.name')}</th>
+                <th scope="col">{t('work.defaultPriority')}</th>
+                <th scope="col"><span className="visually-hidden">{t('common.actions')}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.data?.map((c) => (
+                <tr key={c.id}>
+                  <td><bdi>{c.code}</bdi></td>
+                  <td><bdi>{name(c)}</bdi> {c.isArchived ? <Badge tone="neutral">{t('common.archived')}</Badge> : null}</td>
+                  <td>{priorityLabel(c.defaultPriority)}</td>
+                  <td className="actions">
+                    <Can permission="workorders.manage">
+                      <button type="button" disabled={archive.isPending} onClick={() => archive.mutate(c)}>{c.isArchived ? t('common.restore') : t('common.archive')}</button>
+                    </Can>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ErrorBanner error={archive.error} />
       </QueryState>
     </>
   );

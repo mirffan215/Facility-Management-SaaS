@@ -180,3 +180,101 @@ export interface RoleSummary {
   isSystem: boolean;
   permissions: string[];
 }
+
+export type WorkOrderType = 'Corrective' | 'Emergency' | 'Planned';
+export type WorkPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+export type WorkOrderStatus = 'Requested' | 'Approved' | 'Assigned' | 'InProgress' | 'OnHold' | 'Completed' | 'Verified' | 'Closed' | 'Cancelled';
+export type WorkOrderAction =
+  | 'Created' | 'Approved' | 'Rejected' | 'Assigned' | 'Started' | 'Held' | 'Resumed' | 'Completed' | 'Verified' | 'Closed' | 'Reopened' | 'Cancelled' | 'Edited';
+export type ClosureCode = 'Fixed' | 'NoFaultFound' | 'TemporaryFix' | 'PartsRequired' | 'Duplicate' | 'NotRequired';
+
+export interface WorkOrder {
+  id: string;
+  number: number;
+  displayNumber: string;
+  title: string;
+  description: string | null;
+  type: WorkOrderType;
+  priority: WorkPriority;
+  status: WorkOrderStatus;
+  locationId: string;
+  locationName: string | null;
+  assetId: string | null;
+  assetName: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  requestedBy: string;
+  requestedByName: string | null;
+  requestedAt: string;
+  assignedTo: string | null;
+  assignedToName: string | null;
+  dueAt: string | null;
+  isOverdue: boolean;
+  startedAt: string | null;
+  completedAt: string | null;
+  verifiedAt: string | null;
+  closedAt: string | null;
+  statusReason: string | null;
+  closureCode: ClosureCode | null;
+  closureNotes: string | null;
+  /** What this person may do right now; the server decides. */
+  allowed: WorkOrderAction[];
+  rowVersion: string;
+}
+
+export interface WorkOrderEvent {
+  id: string;
+  action: WorkOrderAction;
+  fromStatus: WorkOrderStatus | null;
+  toStatus: WorkOrderStatus;
+  actorId: string | null;
+  actorName: string | null;
+  at: string;
+  note: string | null;
+  subjectId: string | null;
+  subjectName: string | null;
+}
+
+export interface WorkOrderComment {
+  id: string;
+  authorId: string;
+  authorName: string | null;
+  at: string;
+  body: string;
+  isInternal: boolean;
+}
+
+export interface WorkOrderDetail {
+  order: WorkOrder;
+  events: WorkOrderEvent[];
+  comments: WorkOrderComment[];
+}
+
+export interface WorkCategory {
+  id: string;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  defaultPriority: WorkPriority;
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export interface WorkSettings {
+  requireApproval: boolean;
+  requireVerification: boolean;
+  rowVersion: string | null;
+}
+
+export interface Assignee {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+}
+
+export interface AssetChoice {
+  id: string;
+  code: string;
+  name: string;
+  locationId: string | null;
+}

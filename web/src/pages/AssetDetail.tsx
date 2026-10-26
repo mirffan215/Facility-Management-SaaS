@@ -51,6 +51,11 @@ export function AssetDetailPage() {
               </h1>
               <div className="actions">
                 <Badge tone={statusTone(query.data.status)}>{statusLabel(query.data.status)}</Badge>
+                <Can permission="workorders.request">
+                  <Link to={`/work-orders/new?tag=${query.data.tagCode}`} className="button">
+                    {t('work.report')}
+                  </Link>
+                </Can>
                 <Can permission="assets.manage">
                   {query.data.status !== 'Retired' ? (
                     <>

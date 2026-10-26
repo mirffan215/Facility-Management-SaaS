@@ -12,6 +12,9 @@ import { AssetDetailPage } from './pages/AssetDetail';
 import { AssetCreatePage } from './pages/AssetCreate';
 import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
+import { WorkOrdersPage } from './pages/WorkOrders';
+import { WorkOrderCreatePage } from './pages/WorkOrderCreate';
+import { WorkOrderDetailPage } from './pages/WorkOrderDetail';
 import { UsersPage } from './pages/Users';
 import { ScanRedirectPage } from './pages/ScanRedirect';
 
@@ -19,6 +22,7 @@ function Home() {
   const { can, loaded } = usePermissions();
   if (!loaded) return <Loading />;
   if (can('assets.read')) return <Navigate to="/assets" replace />;
+  if (can('workorders.read') || can('workorders.request')) return <Navigate to="/work-orders" replace />;
   if (can('locations.read')) return <Navigate to="/locations" replace />;
   return <NoAccess />;
 }
@@ -65,6 +69,9 @@ export function App() {
         <Route path="assets/:id" element={<AssetDetailPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="setup" element={<SetupPage />} />
+        <Route path="work-orders" element={<WorkOrdersPage />} />
+        <Route path="work-orders/new" element={<WorkOrderCreatePage />} />
+        <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />
         <Route path="*" element={<NotFound />} />

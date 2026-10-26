@@ -367,6 +367,113 @@ test('a person with no role sees a clear message, then only what their role allo
   await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
 });
 
+async function giveRole(sub: string, roleName: string) {
+  const users = (await (await api('/users')).json()) as { id: string; email: string }[];
+  const user = users.find((u) => u.email === `${sub}@example.test`)!;
+  const roles = (await (await api('/roles')).json()) as { id: string; name: string }[];
+  const response = await api(`/users/${user.id}/roles`, { method: 'PUT', body: JSON.stringify({ roleIds: [roles.find((r) => r.name === roleName)!.id] }) });
+  expect(response.status).toBe(204);
+}
+
+test('helpdesk: a requester scans a label, the request is approved, assigned, done, verified and closed by different people', async ({ browser }) => {
+  const asset = ((await (await api(`/assets?q=${ASSET}`)).json()) as { items: { tagCode: string }[] }).items[0];
+
+  // 1. A person who may only raise requests scans the label and lands on the report form with the asset already found.
+  const requester = await personaPage(browser, `req-${SUFFIX.toLowerCase()}`, 'Rami Requester');
+  await expect(requester.getByRole('heading', { name: 'No access' })).toBeVisible();
+  await giveRole(`req-${SUFFIX.toLowerCase()}`, 'Requester');
+  await requester.goto(`/a/${asset.tagCode}`);
+  await expect(requester.getByRole('heading', { name: 'Report a problem' })).toBeVisible();
+  await expect(requester.getByText(ASSET).first()).toBeVisible();
+  await requester.getByLabel('Title').fill('Compressor makes a grinding noise');
+  await requester.getByLabel('Details').fill('Started this morning.');
+  await requester.getByRole('button', { name: 'Submit request' }).click();
+  await expect(requester.getByRole('heading', { name: /WO-\d+ · Compressor makes a grinding noise/ })).toBeVisible();
+  await expect(requester.getByText('Requested', { exact: true }).first()).toBeVisible();
+  await expect(requester.getByRole('button', { name: 'Approve' })).toHaveCount(0); // not theirs to approve
+  await expect(requester.getByRole('button', { name: 'Cancel request' })).toBeVisible();
+  const url = requester.url();
+
+  // 2. The administrator approves it and assigns the technician.
+  await page.goto('/work-orders?view=all');
+  await page.getByRole('link', { name: /WO-\d+/ }).first().click();
+  await expect(page.getByRole('heading', { name: /Compressor makes a grinding noise/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('Approved', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Assign', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('Assigned to').selectOption({ label: 'Tina Technician' });
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('Assigned', { exact: true }).first()).toBeVisible();
+  await shot('20-work-order-assigned');
+
+  // 3. The technician starts and completes it.
+  const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
+  await expect(tech.getByRole('link', { name: 'Work orders', exact: true })).toBeVisible(); // signed in
+  await tech.goto('/work-orders?view=assigned');
+  await tech.getByRole('link', { name: /WO-\d+/ }).first().click();
+  await expect(tech.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+  await tech.getByRole('button', { name: 'Start work' }).click();
+  await tech.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(tech.getByText('In progress', { exact: true }).first()).toBeVisible();
+  await tech.getByRole('button', { name: 'Complete', exact: true }).click();
+  await tech.getByRole('dialog').getByLabel('What was done').fill('Replaced the bearing.');
+  await tech.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(tech.getByText('Completed', { exact: true }).first()).toBeVisible();
+  await expect(tech.getByRole('button', { name: 'Verify' })).toHaveCount(0); // cannot check their own work
+  await tech.context().close();
+
+  // 4. Someone else verifies and closes it.
+  await page.reload();
+  await page.getByRole('button', { name: 'Verify', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('Verified', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('Closed', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
+
+  // 5. The requester sees the outcome and the history, and a comment from staff, but not the internal note.
+  await page.getByLabel('Add a comment').fill('Internal: bearing was worn, check the others.');
+  await page.getByLabel(/Internal note/).check();
+  await page.getByRole('button', { name: 'Post comment' }).click();
+  await expect(page.locator('.comments').getByText('Internal: bearing was worn')).toBeVisible();
+  await page.getByLabel('Add a comment').fill('All fixed, thank you for reporting.');
+  await page.getByRole('button', { name: 'Post comment' }).click();
+  await expect(page.getByText('All fixed, thank you for reporting.')).toBeVisible();
+  await shot('21-work-order-closed');
+
+  await requester.goto(url);
+  await expect(requester.getByText('Closed', { exact: true }).first()).toBeVisible();
+  await expect(requester.locator('dl').getByText('Replaced the bearing.')).toBeVisible();
+  await expect(requester.getByText('All fixed, thank you for reporting.')).toBeVisible();
+  await expect(requester.getByText('Internal: bearing was worn')).toHaveCount(0);
+  await expect(requester.getByRole('list', { name: 'History' }).getByRole('listitem')).toHaveCount(7); // requested, approved, assigned, started, completed, verified, closed
+  await requester.context().close();
+  await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+});
+
+test('work order screens have no serious accessibility problems in English or Arabic', async () => {
+  for (const lang of ['en', 'ar']) {
+    await page.goto('/work-orders?view=all');
+    await page.locator('.prefs select').first().selectOption(lang);
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectNoSeriousA11yIssues(`work orders ${lang}`);
+    await page.getByRole('link', { name: /WO-\d+/ }).first().click();
+    await expect(page.getByRole('list', { name: lang === 'en' ? 'History' : 'السجل' })).toBeVisible();
+    await expectNoSeriousA11yIssues(`work order detail ${lang}`);
+    await page.goto('/work-orders/new');
+    await expect(page.getByRole('form').or(page.locator('form')).first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`new request ${lang}`);
+    await page.goto('/setup?section=work');
+    await expect(page.getByRole('tabpanel')).toBeVisible();
+    await expectNoSeriousA11yIssues(`work setup ${lang}`);
+  }
+
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('a session outlives its access token by renewing silently with the refresh token', async ({ browser }) => {
   // Tokens that last 75 s are renewed about a minute before they expire, so within ~15 s the app must have swapped in a new one.
   await fetch(`${IDP}/__ttl?seconds=75`);

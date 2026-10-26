@@ -103,3 +103,14 @@ tr.voided td { color: var(--muted); text-decoration: line-through; }
   #print-label { position: absolute; inset-block-start: 0; inset-inline-start: 0; }
   .no-print { display: none; }
 }
+
+.choices { list-style: none; padding: 0; margin-block: 0.5rem; display: grid; gap: 0.25rem; }
+.choices button { width: 100%; text-align: start; }
+.preline { white-space: pre-line; }
+.timeline, .comments { padding-inline-start: 1.25rem; display: grid; gap: 0.5rem; }
+.comments { list-style: none; padding-inline-start: 0; }
+.comments li { border-inline-start: 3px solid var(--border, #ccc); padding-inline-start: 0.75rem; }
+.filters { display: flex; flex-wrap: wrap; gap: var(--gap); margin-block: var(--gap); }
+.details { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
+.details dt { font-weight: 600; }
+.details dd { margin: 0; }

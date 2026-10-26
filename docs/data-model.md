@@ -31,3 +31,11 @@ Asset 1-* AssetDocument (hash, detected type, soft delete)
 Asset 1-* Meter (Cumulative | Gauge)  1-* MeterReading (append-only)  1-0..1 MeterReadingVoid (append-only)
 ```
 See ADR-0008 for the rules behind these.
+
+## Implemented in Phase 2a (schema `work`)
+```
+WorkOrder (Number, Title, Type, Priority, Status, LocationId, AssetId?, CategoryId?, RequestedBy, AssignedTo?, DueAt?, ClosureCode?, RowVersion)
+WorkOrder 1-* WorkOrderEvent (append-only history)   WorkOrder 1-* WorkOrderComment (append-only, IsInternal)
+WorkCategory (Code, Name, NameAr, DefaultPriority)   WorkSettings (RequireApproval, RequireVerification; one row per tenant)
+```
+The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

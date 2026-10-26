@@ -11,6 +11,7 @@ Status: design phase. See [docs/](docs/).
 - [Roadmap](docs/roadmap.md)
 - [Phase 0 summary](docs/phase-0-summary.md)
 - [Phase 1 summary](docs/phase-1-summary.md) (locations, assets, meters, documents, API list)
+- [Phase 2a summary](docs/phase-2a-summary.md) (requests and work orders: lifecycle, controls, API, gaps)
 - [ADRs](docs/adr/)
 
 ## Quick start

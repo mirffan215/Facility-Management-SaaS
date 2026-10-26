@@ -23,8 +23,9 @@ export function Layout() {
         <nav aria-label={t('nav.main')}>
           {can('locations.read') ? <NavLink to="/locations">{t('nav.locations')}</NavLink> : null}
           {can('assets.read') ? <NavLink to="/assets">{t('nav.assets')}</NavLink> : null}
+          {can('workorders.read') || can('workorders.request') ? <NavLink to="/work-orders">{t('nav.workOrders')}</NavLink> : null}
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
-          {can('assets.manage') || can('customfields.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
+          {can('assets.manage') || can('customfields.manage') || can('workorders.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
           {can('users.read') ? <NavLink to="/users">{t('nav.users')}</NavLink> : null}
         </nav>
         <div className="prefs">
