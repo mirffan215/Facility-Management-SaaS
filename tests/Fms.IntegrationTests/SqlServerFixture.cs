@@ -3,6 +3,7 @@ using Fms.BuildingBlocks.Storage;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities.Persistence;
 using Fms.Inventory.Persistence;
+using Fms.Integration.Persistence;
 using Fms.Purchasing.Persistence;
 using Fms.Vendors.Persistence;
 using Fms.Work.Persistence;
@@ -55,6 +56,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var inventoryOwner = InventoryContext(OwnerConnectionString, null, platform: true)) await inventoryOwner.Database.MigrateAsync();
             await using (var vendorsOwner = VendorsContext(OwnerConnectionString, null, platform: true)) await vendorsOwner.Database.MigrateAsync();
             await using (var purchasingOwner = PurchasingContext(OwnerConnectionString, null, platform: true)) await purchasingOwner.Database.MigrateAsync();
+            await using (var integrationOwner = IntegrationContext(OwnerConnectionString, null, platform: true)) await integrationOwner.Database.MigrateAsync();
             owner.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owner.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owner.SaveChangesAsync();
@@ -133,6 +135,25 @@ public sealed class SqlServerFixture : IAsyncLifetime
         var db = PurchasingContext(AppConnectionString, tenantId, platform, pending);
         _pending.Add(db, pending);
         return db;
+    }
+
+    /// <summary>An Integration context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public IntegrationDbContext Integration(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = IntegrationContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
+    private static IntegrationDbContext IntegrationContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new IntegrationDbContext(
+            new DbContextOptionsBuilder<IntegrationDbContext>().UseSqlServer(connectionString, IntegrationDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
     }
 
     private static PurchasingDbContext PurchasingContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
@@ -215,6 +236,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var inventoryOwned = InventoryContext(owner, null, platform: true)) await inventoryOwned.Database.MigrateAsync();
             await using (var vendorsOwned = VendorsContext(owner, null, platform: true)) await vendorsOwned.Database.MigrateAsync();
             await using (var purchasingOwned = PurchasingContext(owner, null, platform: true)) await purchasingOwned.Database.MigrateAsync();
+            await using (var integrationOwned = IntegrationContext(owner, null, platform: true)) await integrationOwned.Database.MigrateAsync();
             owned.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owned.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owned.SaveChangesAsync();

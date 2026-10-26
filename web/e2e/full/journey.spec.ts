@@ -1109,6 +1109,38 @@ test('purchasing: a technician asks, a different person approves, the order is m
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('accounting connection: turned on by an administrator, a new vendor is sent by the worker and shows its reference', async () => {
+  await page.goto('/integrations');
+  await expect(page.getByRole('heading', { name: 'Accounting connection' })).toBeVisible();
+  await page.getByLabel('Send changes to the accounting system').check();
+  await page.getByLabel('Company in the accounting system').fill('E2E');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByLabel('Send changes to the accounting system')).toBeChecked();
+
+  // A vendor made now is queued by the outbox, sent by the worker, and its reference comes back to the vendor.
+  const code = `ERP-${SUFFIX}`;
+  const made = await api('/vendors', { method: 'POST', body: JSON.stringify({ code, name: 'Synced Supplies' }) });
+  expect(made.status).toBe(201);
+  await expect(async () => {
+    await page.goto('/integrations');
+    await expect(page.getByRole('row', { name: new RegExp(`Vendor: ${code} Synced Supplies`) })).toContainText('Sent', { timeout: 1500 });
+  }).toPass({ timeout: 40_000 });
+  await expect(page.getByRole('row', { name: new RegExp(code) })).toContainText('FAKE-VENDOR-');
+  await shot('28-accounting');
+
+  await page.goto('/vendors');
+  await page.getByLabel('Search').fill(code);
+  await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/integrations');
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectNoSeriousA11yIssues(`accounting ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

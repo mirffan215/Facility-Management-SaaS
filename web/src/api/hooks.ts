@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -298,4 +298,21 @@ export function useOrders(params: Record<string, string | number | boolean | und
 export function useOrder(id: string | undefined) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['purchasing', 'order', id], enabled: !!id, queryFn: () => api.get<PurchaseOrder>(`/purchasing/orders/${id}`) });
+}
+
+// ---------------- accounting integration ----------------
+
+export function useErpSettings() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['integration', 'settings'], queryFn: () => api.get<ErpSettings>('/integration/erp/settings') });
+}
+
+export function useErpSummary() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['integration', 'summary'], queryFn: () => api.get<ErpSummary>('/integration/erp/summary'), refetchInterval: 15_000 });
+}
+
+export function useErpItems(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['integration', 'items', params], queryFn: () => api.get<Page<ErpItem>>('/integration/erp/items', params), refetchInterval: 15_000 });
 }

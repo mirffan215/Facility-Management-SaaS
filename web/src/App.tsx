@@ -23,6 +23,7 @@ import { PmPage } from './pages/Pm';
 import { InventoryPage } from './pages/Inventory';
 import { VendorsPage } from './pages/Vendors';
 import { PurchasingPage } from './pages/Purchasing';
+import { IntegrationsPage } from './pages/Integrations';
 import { ScanRedirectPage } from './pages/ScanRedirect';
 
 function Home() {
@@ -110,6 +111,7 @@ export function App() {
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="purchasing" element={<PurchasingPage />} />
+        <Route path="integrations" element={<IntegrationsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />

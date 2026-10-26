@@ -27,6 +27,7 @@ public static class SystemRoles
             Permissions.VendorsRead, Permissions.VendorsManage,
             Permissions.PurchasingRead, Permissions.PurchasingRequest, Permissions.PurchasingApprove1, Permissions.PurchasingApprove2,
             Permissions.PurchasingOrder, Permissions.PurchasingReceive, Permissions.PurchasingManage,
+            Permissions.IntegrationRead,
         ],
         [Technician] =
         [

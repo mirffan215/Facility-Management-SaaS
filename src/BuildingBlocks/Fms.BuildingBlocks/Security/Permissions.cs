@@ -72,6 +72,12 @@ public static class Permissions
     /// <summary>Set the approval limits.</summary>
     public const string PurchasingManage = "purchasing.manage";
 
+    /// <summary>See the state of the connection to the accounting system and what has been sent.</summary>
+    public const string IntegrationRead = "integration.read";
+
+    /// <summary>Turn the accounting connection on or off, retry what failed and run a reconciliation.</summary>
+    public const string IntegrationManage = "integration.manage";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
@@ -82,6 +88,7 @@ public static class Permissions
         InventoryRead, InventoryManage, InventoryIssue, InventoryApprove,
         VendorsRead, VendorsManage,
         PurchasingRead, PurchasingRequest, PurchasingApprove1, PurchasingApprove2, PurchasingApprove3, PurchasingOrder, PurchasingReceive, PurchasingManage,
+        IntegrationRead, IntegrationManage,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;

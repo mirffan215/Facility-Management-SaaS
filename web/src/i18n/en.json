@@ -24,7 +24,8 @@
     "pm": "Preventive",
     "inventory": "Inventory",
     "vendors": "Vendors",
-    "purchasing": "Purchasing"
+    "purchasing": "Purchasing",
+    "integrations": "Accounting"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -1114,5 +1115,51 @@
     "PartiallyReceived": "Partly received",
     "Received": "Received",
     "Cancelled": "Cancelled"
+  },
+  "integration": {
+    "title": "Accounting connection",
+    "intro": "Vendors, purchase orders and goods received are sent to your accounting system as they change. Nothing is ever written to its database directly.",
+    "connection": "Connection",
+    "sendToErp": "Send changes to the accounting system",
+    "adapter": "Connector",
+    "adapterHint": "The connector that knows how to talk to your accounting system.",
+    "noAdapters": "No connector is installed",
+    "company": "Company in the accounting system",
+    "companyHint": "For example the legal entity code, such as USMF in Dynamics 365 Finance.",
+    "readOnly": "Only an administrator can change the connection.",
+    "activity": "What has been sent",
+    "waiting": "Waiting to be sent",
+    "needsAttention": "Needs attention",
+    "disagreements": "Do not agree",
+    "sent": "Sent",
+    "problemsOnly": "Problems only",
+    "reconcile": "Check against the accounting system",
+    "reconciled": "Checked {{checked}}: {{matched}} agree, {{mismatched}} differ, {{missing}} missing.",
+    "nothingSent": "Nothing has been sent yet. Changes are sent once the connection is on.",
+    "noProblems": "No problems.",
+    "what": "What",
+    "erpReference": "Accounting reference",
+    "check": "Check",
+    "attempts": "{{count}} attempt(s)",
+    "nextTry": "Next try {{when}}",
+    "retry": "Retry"
+  },
+  "exportStatus": {
+    "Pending": "Waiting",
+    "Sending": "Sending",
+    "Succeeded": "Sent",
+    "DeadLetter": "Needs attention",
+    "Superseded": "Replaced by a newer version"
+  },
+  "erpEntity": {
+    "Vendor": "Vendor",
+    "PurchaseOrder": "Purchase order",
+    "GoodsReceipt": "Goods receipt"
+  },
+  "reconcileState": {
+    "NotChecked": "Not checked",
+    "Matched": "Agrees",
+    "Mismatch": "Differs",
+    "Missing": "Missing there"
   }
 }

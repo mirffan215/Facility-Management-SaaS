@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Fms.BuildingBlocks.Integration;
+using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Results;
 using Fms.BuildingBlocks.Security;
@@ -9,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Fms.Vendors.Services;
 
 /// <summary>Vendors and their contacts. Reading needs vendors.read; changing needs vendors.manage.</summary>
-public sealed class VendorService(VendorsDbContext db, IAuditPort audit, TimeProvider clock)
+public sealed class VendorService(VendorsDbContext db, IAuditPort audit, IOutbox outbox, TimeProvider clock)
 {
     public async Task<Page<VendorDto>> ListAsync(string? q, VendorStatus? status, bool includeArchived, int? page, int? pageSize, CancellationToken ct = default)
     {
@@ -87,6 +89,7 @@ public sealed class VendorService(VendorsDbContext db, IAuditPort audit, TimePro
         }
 
         audit.Record(existing is null ? "vendor.created" : "vendor.updated", nameof(Vendor), vendor.Id.ToString(), JsonSerializer.Serialize(new { vendor.Code, vendor.Name, vendor.TaxNumber }));
+        AnnounceToErp(vendor);
         return await CommitAsync(vendor, ct);
     }
 
@@ -107,6 +110,7 @@ public sealed class VendorService(VendorsDbContext db, IAuditPort audit, TimePro
         vendor.StatusReason = vendor.Status == VendorStatus.Active ? null : reason;
         db.Entry(vendor).Property(x => x.RowVersion).OriginalValue = version;
         audit.Record("vendor.status_changed", nameof(Vendor), id.ToString(), JsonSerializer.Serialize(new { from, to = vendor.Status, reason }));
+        AnnounceToErp(vendor);
         return await CommitAsync(vendor, ct);
     }
 
@@ -119,6 +123,7 @@ public sealed class VendorService(VendorsDbContext db, IAuditPort audit, TimePro
         vendor.IsArchived = archived;
         db.Entry(vendor).Property(x => x.RowVersion).OriginalValue = version;
         audit.Record(archived ? "vendor.archived" : "vendor.restored", nameof(Vendor), id.ToString());
+        AnnounceToErp(vendor);
         return await CommitAsync(vendor, ct);
     }
 
@@ -145,6 +150,13 @@ public sealed class VendorService(VendorsDbContext db, IAuditPort audit, TimePro
     private async Task<IReadOnlyList<VendorContactDto>> ContactDtosAsync(Guid vendorId, CancellationToken ct) =>
         (await db.Contacts.AsNoTracking().Where(c => c.VendorId == vendorId).OrderByDescending(c => c.IsPrimary).ThenBy(c => c.Name).ToListAsync(ct))
         .Select(c => new VendorContactDto(c.Id, c.Name, c.Role, c.Email, c.Phone, c.IsPrimary)).ToList();
+
+    /// <summary>Tells the accounting integration this vendor changed. Sent in the same save as the change, so it exists only if the change does.</summary>
+    private void AnnounceToErp(Vendor v) =>
+        outbox.Enqueue(ErpMessages.Export, new ErpExportMessage(ErpEntity.Vendor, v.Id, clock.GetUtcNow().UtcTicks, JsonSerializer.Serialize(new
+        {
+            label = $"{v.Code} {v.Name}", vendorId = v.Id, v.Code, v.Name, v.NameAr, status = v.Status.ToString(), v.TaxNumber, v.RegistrationNumber, v.Email, v.Phone, v.Address, v.Country, v.PaymentTerms, archived = v.IsArchived,
+        })));
 
     private async Task<Dictionary<Guid, int>> ActiveContractCountsAsync(List<Guid> vendorIds, CancellationToken ct)
     {

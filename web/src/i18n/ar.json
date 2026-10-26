@@ -24,7 +24,8 @@
     "pm": "الوقائية",
     "inventory": "المخزون",
     "vendors": "الموردون",
-    "purchasing": "المشتريات"
+    "purchasing": "المشتريات",
+    "integrations": "المحاسبة"
   },
   "auth": {
     "prompt": "سجّل الدخول للمتابعة.",
@@ -1114,5 +1115,51 @@
     "PartiallyReceived": "مستلم جزئيًا",
     "Received": "مستلم",
     "Cancelled": "ملغى"
+  },
+  "integration": {
+    "title": "الربط المحاسبي",
+    "intro": "يُرسل الموردون وأوامر الشراء والبضائع المستلمة إلى نظامك المحاسبي كلما تغيّرت. ولا يُكتب شيء في قاعدة بياناته مباشرة.",
+    "connection": "الربط",
+    "sendToErp": "إرسال التغييرات إلى النظام المحاسبي",
+    "adapter": "الموصّل",
+    "adapterHint": "الموصّل الذي يعرف كيف يتحدث مع نظامك المحاسبي.",
+    "noAdapters": "لا يوجد موصّل مثبّت",
+    "company": "الشركة في النظام المحاسبي",
+    "companyHint": "مثلًا رمز الكيان القانوني، مثل USMF في Dynamics 365 Finance.",
+    "readOnly": "المسؤول وحده يستطيع تغيير الربط.",
+    "activity": "ما أُرسل",
+    "waiting": "بانتظار الإرسال",
+    "needsAttention": "يحتاج إلى متابعة",
+    "disagreements": "غير متطابق",
+    "sent": "مُرسل",
+    "problemsOnly": "المشكلات فقط",
+    "reconcile": "التحقق من النظام المحاسبي",
+    "reconciled": "تم فحص {{checked}}: {{matched}} متطابق، {{mismatched}} مختلف، {{missing}} مفقود.",
+    "nothingSent": "لم يُرسل شيء بعد. تُرسل التغييرات بعد تشغيل الربط.",
+    "noProblems": "لا توجد مشكلات.",
+    "what": "الكيان",
+    "erpReference": "المرجع المحاسبي",
+    "check": "التحقق",
+    "attempts": "{{count}} محاولة",
+    "nextTry": "المحاولة التالية {{when}}",
+    "retry": "إعادة المحاولة"
+  },
+  "exportStatus": {
+    "Pending": "بالانتظار",
+    "Sending": "قيد الإرسال",
+    "Succeeded": "مُرسل",
+    "DeadLetter": "يحتاج إلى متابعة",
+    "Superseded": "حلّ محله إصدار أحدث"
+  },
+  "erpEntity": {
+    "Vendor": "مورد",
+    "PurchaseOrder": "أمر شراء",
+    "GoodsReceipt": "استلام بضاعة"
+  },
+  "reconcileState": {
+    "NotChecked": "لم يُفحص",
+    "Matched": "متطابق",
+    "Mismatch": "مختلف",
+    "Missing": "مفقود هناك"
   }
 }

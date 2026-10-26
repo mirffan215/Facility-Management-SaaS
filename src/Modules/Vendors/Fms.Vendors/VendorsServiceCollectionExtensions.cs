@@ -28,6 +28,7 @@ public static class VendorsServiceCollectionExtensions
         services.AddScoped<ContractAlerts>();
         services.AddSingleton<ContractMonitor>();
         services.AddScoped<IOutboxHandler, ContractAlertHandler>();
+        services.AddScoped<IOutboxHandler, VendorSyncedHandler>();
         services.AddHealthChecks().AddDbContextCheck<VendorsDbContext>("vendors-db", tags: ["ready"]);
         return services;
     }

@@ -834,3 +834,46 @@ export interface PurchaseOrder {
   receipts: { id: string; lineId: string; quantity: number; receivedAt: string; receivedByName: string | null; deliveryNote: string | null }[] | null;
   rowVersion: string;
 }
+
+// ---------------- accounting integration ----------------
+
+export type ErpEntity = 'Vendor' | 'PurchaseOrder' | 'GoodsReceipt';
+export type ExportStatus = 'Pending' | 'Sending' | 'Succeeded' | 'DeadLetter' | 'Superseded';
+export type ReconcileState = 'NotChecked' | 'Matched' | 'Mismatch' | 'Missing';
+
+export interface ErpSettings {
+  enabled: boolean;
+  adapter: string;
+  companyId: string;
+  availableAdapters: string[];
+  rowVersion: string | null;
+}
+
+export interface ErpSummary {
+  enabled: boolean;
+  pending: number;
+  sending: number;
+  succeeded: number;
+  deadLetter: number;
+  superseded: number;
+  mismatched: number;
+  oldestPendingAt: string | null;
+}
+
+export interface ErpItem {
+  id: string;
+  entity: ErpEntity;
+  entityId: string;
+  label: string | null;
+  revision: number;
+  status: ExportStatus;
+  attempts: number;
+  nextAttemptAt: string;
+  lastError: string | null;
+  erpReference: string | null;
+  createdAt: string;
+  succeededAt: string | null;
+  reconcile: ReconcileState;
+  reconciledAt: string | null;
+  reconcileDetail: string | null;
+}

@@ -5,6 +5,8 @@ using Fms.BuildingBlocks.Observability;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities;
 using Fms.Inventory;
+using Fms.Integration;
+using Fms.Integration.Services;
 using Fms.Purchasing;
 using Fms.Vendors;
 using Fms.Vendors.Services;
@@ -34,12 +36,14 @@ builder.Services.AddFmsWork(connectionString);
 builder.Services.AddFmsInventory(connectionString);
 builder.Services.AddFmsVendors(connectionString);
 builder.Services.AddFmsPurchasing(connectionString);
+builder.Services.AddFmsIntegration(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddFmsEmail(builder.Configuration);
 builder.Services.AddHostedService<OutboxWorker>();
 builder.Services.AddHostedService<SlaMonitorWorker>();
 builder.Services.AddHostedService<PmWorker>();
 builder.Services.AddHostedService<ContractWorker>();
+builder.Services.AddHostedService<ErpSyncWorker>();
 
 // Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
 
@@ -163,6 +167,31 @@ internal sealed class ContractWorker(ContractMonitor monitor, ILogger<ContractWo
             {
                 log.LogError(ex, "Contract reminder run failed");
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Sends queued changes to the accounting system. Every few seconds: a send is quick, and a person waiting to see a vendor appear in the ERP should not wait minutes.</summary>
+internal sealed class ErpSyncWorker(ErpSyncRunner runner, ILogger<ErpSyncWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var sent = await runner.RunOnceAsync(ct: stoppingToken);
+                await Task.Delay(sent > 0 ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(10), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "ERP sync run failed");
+                await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
             }
         }
     }

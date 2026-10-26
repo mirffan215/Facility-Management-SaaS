@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Fms.BuildingBlocks.Identity;
+using Fms.BuildingBlocks.Integration;
 using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Results;
 using Fms.BuildingBlocks.Security;
@@ -89,6 +90,7 @@ public sealed class OrderService(
                 foreach (var l in orderLines) { l.OrderId = order.Id; db.OrderLines.Add(l); }
                 req.Status = RequestStatus.Ordered;
                 outbox.Enqueue(PurchasingMessages.Event, new PurchasingEventMessage(requestId, PurchasingEvent.Ordered, me));
+                AnnounceOrder(order, orderLines);
                 audit.Record("purchaseorder.issued", nameof(PurchaseOrder), order.Id.ToString(), JsonSerializer.Serialize(new { order.Number, requestId, order.VendorId, vendor.Name, order.Total, order.CurrencyCode }));
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
@@ -127,6 +129,7 @@ public sealed class OrderService(
         var request = await db.Requests.FirstOrDefaultAsync(x => x.Id == o.RequestId, ct);
         if (request is { Status: RequestStatus.Ordered }) request.Status = RequestStatus.Approved; // the request can be ordered again, from another vendor perhaps
         audit.Record("purchaseorder.cancelled", nameof(PurchaseOrder), id.ToString(), JsonSerializer.Serialize(new { reason }));
+        AnnounceOrder(o, await db.OrderLines.AsNoTracking().Where(l => l.OrderId == id).ToListAsync(ct));
         return await SaveThenGetAsync(o, ct);
     }
 
@@ -179,6 +182,7 @@ public sealed class OrderService(
             var receipt = new GoodsReceipt { OrderId = id, LineId = line.Id, Quantity = l.Quantity!.Value, ReceivedAt = now, ReceivedBy = user.UserId, DeliveryNote = note };
             db.Receipts.Add(receipt);
             line.ReceivedQty += l.Quantity.Value;
+            AnnounceReceipt(order, line, receipt);
             if (line.ItemId is { } item && line.StoreId is { } store)
                 outbox.Enqueue(GoodsReceived.MessageType, new GoodsReceivedMessage(receipt.Id, PurchasingRules.DisplayOrder(order.Number), store, item, l.Quantity.Value, line.UnitPrice));
         }
@@ -189,6 +193,24 @@ public sealed class OrderService(
         await db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
     }
+
+    // ---------------- accounting ----------------
+
+    /// <summary>Tells the accounting integration about this order as it stands now. Sent in the same save as the change.</summary>
+    private void AnnounceOrder(PurchaseOrder o, IEnumerable<PurchaseOrderLine> lines) =>
+        outbox.Enqueue(ErpMessages.Export, new ErpExportMessage(ErpEntity.PurchaseOrder, o.Id, clock.GetUtcNow().UtcTicks, JsonSerializer.Serialize(new
+        {
+            label = $"{PurchasingRules.DisplayOrder(o.Number)} {o.VendorName}", orderId = o.Id, number = PurchasingRules.DisplayOrder(o.Number), vendorId = o.VendorId, o.VendorCode, o.VendorName,
+            currency = o.CurrencyCode, o.Total, o.ExpectedOn, status = o.Status.ToString(), o.IssuedAt,
+            lines = lines.OrderBy(l => l.Position).Select(l => new { l.Position, l.Description, l.Unit, l.Quantity, l.UnitPrice }),
+        })));
+
+    private void AnnounceReceipt(PurchaseOrder o, PurchaseOrderLine line, GoodsReceipt r) =>
+        outbox.Enqueue(ErpMessages.Export, new ErpExportMessage(ErpEntity.GoodsReceipt, r.Id, 1, JsonSerializer.Serialize(new
+        {
+            label = $"{PurchasingRules.DisplayOrder(o.Number)} line {line.Position}", receiptId = r.Id, orderId = o.Id, orderNumber = PurchasingRules.DisplayOrder(o.Number), vendorId = o.VendorId,
+            line = line.Position, description = line.Description, r.Quantity, r.ReceivedAt, r.DeliveryNote,
+        })));
 
     // ---------------- shaping ----------------
 

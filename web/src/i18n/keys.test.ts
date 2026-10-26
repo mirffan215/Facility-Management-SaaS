@@ -61,6 +61,9 @@ describe('translations', () => {
       requestStatus: ['Draft', 'Submitted', 'Approved', 'Rejected', 'Cancelled', 'Ordered'],
       orderStatus: ['Issued', 'Acknowledged', 'PartiallyReceived', 'Received', 'Cancelled'],
       'purchasing.tab': ['requests', 'orders', 'settings'],
+      exportStatus: ['Pending', 'Sending', 'Succeeded', 'DeadLetter', 'Superseded'],
+      erpEntity: ['Vendor', 'PurchaseOrder', 'GoodsReceipt'],
+      reconcileState: ['NotChecked', 'Matched', 'Mismatch', 'Missing'],
       'pm.tab': ['forecast', 'schedules', 'templates', 'compliance'],
     };
     for (const [group, values] of Object.entries(groups)) for (const v of values) {
