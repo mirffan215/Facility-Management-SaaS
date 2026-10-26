@@ -844,9 +844,15 @@ test('preventive maintenance: a template and a schedule create a work order ahea
   await expect(page.getByRole('cell', { name: /Chiller quarterly/ }).first()).toBeVisible();
   await shot('21-pm-forecast');
 
+  // Compliance: the visit just created is upcoming, so nothing is overdue and nobody is counted against yet.
+  await page.getByRole('tab', { name: 'Compliance' }).click();
+  await expect(page.getByRole('heading', { name: 'By template' })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Quarterly chiller service/ })).toBeVisible();
+  await shot('22-pm-compliance');
+
   for (const lang of ['en', 'ar']) {
     await page.locator('.prefs select').first().selectOption(lang);
-    for (const tab of ['forecast', 'schedules', 'templates']) {
+    for (const tab of ['forecast', 'schedules', 'templates', 'compliance']) {
       await page.goto(`/pm?tab=${tab}`);
       await expect(page.getByRole('tabpanel')).toBeVisible();
       await expectNoSeriousA11yIssues(`pm ${tab} ${lang}`);

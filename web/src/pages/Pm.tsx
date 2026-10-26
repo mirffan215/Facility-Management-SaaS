@@ -3,13 +3,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useAssetChoices, useAssetClasses, useAssignees, useChecklistTemplates, usePermissions, usePmForecast, usePmSchedules, usePmTemplates } from '../api/hooks';
-import type { ForecastItem, PmIntervalUnit, PmSchedule, PmTargetKind, PmTemplate, PmTimeBasis, WorkPriority } from '../api/types';
+import { useAssetChoices, useAssetClasses, useAssignees, useChecklistTemplates, usePermissions, usePmCompliance, usePmForecast, usePmSchedules, usePmTemplates } from '../api/hooks';
+import type { ComplianceCounts, ForecastItem, PmIntervalUnit, PmSchedule, PmTargetKind, PmTemplate, PmTimeBasis, WorkPriority } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 
-const TABS = ['forecast', 'schedules', 'templates'] as const;
+const TABS = ['forecast', 'schedules', 'templates', 'compliance'] as const;
 const PRIORITIES: WorkPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
 const UNITS: PmIntervalUnit[] = ['Day', 'Week', 'Month', 'Year'];
 
@@ -28,7 +28,7 @@ export function PmPage() {
           </button>
         ))}
       </div>
-      <div role="tabpanel">{tab === 'forecast' ? <ForecastTab /> : tab === 'schedules' ? <SchedulesTab /> : <TemplatesTab />}</div>
+      <div role="tabpanel">{tab === 'forecast' ? <ForecastTab /> : tab === 'schedules' ? <SchedulesTab /> : tab === 'templates' ? <TemplatesTab /> : <ComplianceTab />}</div>
     </section>
   );
 }
@@ -116,6 +116,109 @@ function ForecastTab() {
             </div>
           </div>
         ))}
+      </QueryState>
+    </>
+  );
+}
+
+// ---------------- compliance ----------------
+
+function ComplianceTab() {
+  const { t } = useTranslation();
+  const { month: monthName, num } = usePrefs();
+  const classes = useAssetClasses();
+  const { name } = usePrefs();
+  const [classId, setClassId] = useState('');
+  const [months, setMonths] = useState(12);
+  const params = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { from: isoDay(from), to: isoDay(to), assetClassId: classId || undefined };
+  }, [months, classId]);
+  const report = usePmCompliance(params);
+  const percent = (c: ComplianceCounts) => (c.onTimeRate === null ? '—' : `${num(Math.round(c.onTimeRate * 1000) / 10)}%`);
+
+  const Bar = ({ c }: { c: ComplianceCounts }) => {
+    const total = c.due + c.upcoming;
+    if (total === 0) return null;
+    const part = (n: number, cls: string) => (n > 0 ? <span className={`seg ${cls}`} style={{ inlineSize: `${(n / total) * 100}%` }} /> : null);
+    return <span className="bar" aria-hidden="true">{part(c.onTime, 'ok')}{part(c.late, 'warn')}{part(c.skipped, 'neutral')}{part(c.overdue, 'bad')}{part(c.upcoming, 'upcoming')}</span>;
+  };
+
+  const columns = (
+    <>
+      <th scope="col">{t('pm.kpi.due')}</th>
+      <th scope="col">{t('pm.kpi.onTime')}</th>
+      <th scope="col">{t('pm.kpi.late')}</th>
+      <th scope="col">{t('pm.kpi.skipped')}</th>
+      <th scope="col">{t('pm.kpi.overdue')}</th>
+      <th scope="col">{t('pm.kpi.upcoming')}</th>
+      <th scope="col">{t('pm.kpi.rate')}</th>
+    </>
+  );
+  const cells = (c: ComplianceCounts) => (
+    <>
+      <td>{num(c.due)}</td><td>{num(c.onTime)}</td><td>{num(c.late)}</td><td>{num(c.skipped)}</td><td>{num(c.overdue)}</td><td>{num(c.upcoming)}</td>
+      <td><strong>{percent(c)}</strong> <Bar c={c} /></td>
+    </>
+  );
+
+  return (
+    <>
+      <p className="muted">{t('pm.kpi.intro')}</p>
+      <div className="filters">
+        <Field label={t('pm.kpi.period')}>
+          <select value={months} onChange={(e) => setMonths(Number(e.target.value))}>
+            {[3, 6, 12, 24].map((m) => <option key={m} value={m}>{t('pm.kpi.lastMonths', { count: m })}</option>)}
+          </select>
+        </Field>
+        <Field label={t('pm.assetClass')}>
+          <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+            <option value="">{t('common.all')}</option>
+            {classes.data?.filter((c) => !c.isArchived).map((c) => <option key={c.id} value={c.id}>{name(c)}</option>)}
+          </select>
+        </Field>
+      </div>
+      <QueryState query={report}>
+        {report.data ? (
+          <>
+            <dl className="tiles">
+              <div><dt>{t('pm.kpi.rate')}</dt><dd>{percent(report.data.total)}</dd></div>
+              <div><dt>{t('pm.kpi.overdue')}</dt><dd>{num(report.data.total.overdue)}</dd></div>
+              <div><dt>{t('pm.kpi.plannedShare')}</dt><dd>{report.data.plannedShare === null ? '—' : `${num(Math.round(report.data.plannedShare * 1000) / 10)}%`}</dd></div>
+            </dl>
+            <p className="muted">{t('pm.kpi.plannedNote', { planned: report.data.plannedWorkOrders, other: report.data.otherWorkOrders })}</p>
+            {report.data.total.due + report.data.total.upcoming === 0 ? <p className="muted">{t('pm.kpi.none')}</p> : null}
+
+            <h2>{t('pm.kpi.byMonth')}</h2>
+            <div className="table-wrap">
+              <table>
+                <caption className="visually-hidden">{t('pm.kpi.byMonth')}</caption>
+                <thead><tr><th scope="col">{t('pm.kpi.month')}</th>{columns}</tr></thead>
+                <tbody>{report.data.months.map((m) => <tr key={m.month}><th scope="row">{monthName(m.month)}</th>{cells(m.counts)}</tr>)}</tbody>
+              </table>
+            </div>
+
+            <h2>{t('pm.kpi.byTemplate')}</h2>
+            <div className="table-wrap">
+              <table>
+                <caption className="visually-hidden">{t('pm.kpi.byTemplate')}</caption>
+                <thead><tr><th scope="col">{t('pm.template')}</th>{columns}</tr></thead>
+                <tbody>{report.data.byTemplate.map((g) => <tr key={g.id ?? 'none'}><th scope="row"><bdi>{g.name}</bdi></th>{cells(g.counts)}</tr>)}</tbody>
+              </table>
+            </div>
+
+            <h2>{t('pm.kpi.byClass')}</h2>
+            <div className="table-wrap">
+              <table>
+                <caption className="visually-hidden">{t('pm.kpi.byClass')}</caption>
+                <thead><tr><th scope="col">{t('pm.assetClass')}</th>{columns}</tr></thead>
+                <tbody>{report.data.byAssetClass.map((g) => <tr key={g.id ?? 'none'}><th scope="row"><bdi>{g.name || t('common.notSet')}</bdi></th>{cells(g.counts)}</tr>)}</tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
       </QueryState>
     </>
   );

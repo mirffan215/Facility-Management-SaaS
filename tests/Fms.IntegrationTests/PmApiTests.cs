@@ -371,6 +371,67 @@ public sealed class PmApiTests(SqlServerFixture sql) : IDisposable
         Assert.InRange(item.Date.DayNumber - Today.DayNumber, 29, 31);
     }
 
+    // ---------------- compliance ----------------
+
+    [Fact]
+    public async Task Compliance_counts_visits_done_on_time_late_skipped_and_overdue_and_the_share_of_planned_work()
+    {
+        var rig = await NewRigAsync();
+        var template = await NewTemplateAsync(rig, "Compliance", checklist: null);
+        var other = await ReadAsync<AssetClassDto>(await PostAsync(rig.Manager, "/api/v1/asset-classes", new { code = FacilitiesScope.Code("C"), name = "Pumps" }));
+
+        async Task<(AssetDto Asset, PmScheduleDto Schedule)> Plan(string name, int startInDays)
+        {
+            var asset = await NewAssetAsync(rig.Manager, rig.Site, rig.Class);
+            var schedule = await NewScheduleAsync(rig, template, new
+            {
+                name, templateId = template.Id, targetKind = "Asset", assetId = asset.Id, timeBasis = "Fixed", intervalUnit = "Month", interval = 6, startOn = Today.AddDays(startInDays),
+                leadDays = 7, assignToUserId = rig.TechId,
+            });
+            return (asset, schedule);
+        }
+
+        var onTime = await Plan("On time", 1);
+        var late = await Plan("Late", 2);
+        var overdue = await Plan("Overdue", 3);
+        var skipped = await Plan("Skipped", 4);
+        var upcoming = await Plan("Upcoming", 5);
+        Assert.Equal(5, (await RunOk(rig.Manager)).WorkOrdersCreated);
+
+        // Time passes: a plan never starts in the past, so move three of the due dates back as if they had been waiting.
+        await using (var platform = sql.Work(null, platform: true))
+        {
+            foreach (var (schedule, daysAgo) in new[] { (late.Schedule, 10), (overdue.Schedule, 5), (skipped.Schedule, 3) })
+                await platform.Database.ExecuteSqlRawAsync("UPDATE work.PmOccurrences SET DueOn = {0} WHERE TenantId = {1} AND ScheduleId = {2}", Today.AddDays(-daysAgo).ToDateTime(TimeOnly.MinValue), rig.Tenant, schedule.Id);
+        }
+
+        WorkOrderDto For(PmScheduleDto s, WorkOrderDto[] all) => all.Single(w => w.Title.Contains(all.Length > 0 ? template.Name : "") && w.AssetId == AssetOf(s));
+        Guid AssetOf(PmScheduleDto s) => new[] { onTime, late, overdue, skipped, upcoming }.Single(x => x.Schedule.Id == s.Id).Asset.Id;
+        var orders = await PlannedOrdersAsync(rig.Manager);
+        await CompleteAsync(rig, For(onTime.Schedule, orders));
+        await CompleteAsync(rig, For(late.Schedule, orders));
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(rig.Manager, $"/api/v1/work-orders/{For(skipped.Schedule, orders).Id}/cancel", new { reason = "Not needed" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await PostAsync(rig.Requester, "/api/v1/work-orders", new { title = "Leak", locationId = rig.Site.Id })).StatusCode);
+
+        var report = await ReadAsync<ComplianceDto>(await rig.Viewer.GetAsync($"/api/v1/pm/compliance?from={Today.AddDays(-30):yyyy-MM-dd}&to={Today.AddDays(30):yyyy-MM-dd}"));
+        Assert.Equal(new ComplianceCounts(4, 1, 1, 1, 1, 1, 0.25m), report.Total);
+        Assert.Equal(report.Total.Due, report.Months.Sum(m => m.Counts.Due));
+        var byTemplate = Assert.Single(report.ByTemplate);
+        Assert.Equal("Compliance", byTemplate.Name);
+        Assert.Equal(report.Total, byTemplate.Counts);
+        Assert.Equal(report.Total, Assert.Single(report.ByAssetClass).Counts);
+        Assert.Equal(4, report.PlannedWorkOrders); // the cancelled visit is not work that was raised
+        Assert.Equal(1, report.OtherWorkOrders);
+        Assert.Equal(0.8m, report.PlannedShare);
+
+        // Filtering to a class with nothing in it, and bad ranges.
+        var empty = await ReadAsync<ComplianceDto>(await rig.Viewer.GetAsync($"/api/v1/pm/compliance?assetClassId={other.Id}&to={Today.AddDays(30):yyyy-MM-dd}"));
+        Assert.Equal(new ComplianceCounts(0, 0, 0, 0, 0, 0, null), empty.Total);
+        Assert.Equal(HttpStatusCode.BadRequest, (await rig.Viewer.GetAsync($"/api/v1/pm/compliance?from={Today.AddDays(-900):yyyy-MM-dd}&to={Today:yyyy-MM-dd}")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await rig.Viewer.GetAsync($"/api/v1/pm/compliance?from={Today:yyyy-MM-dd}&to={Today.AddDays(-1):yyyy-MM-dd}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await rig.Requester.GetAsync("/api/v1/pm/compliance")).StatusCode);
+    }
+
     [Fact]
     public async Task A_schedule_for_an_asset_class_follows_the_assets_in_it()
     {

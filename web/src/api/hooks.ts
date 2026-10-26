@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Forecast, PmSchedule, PmTemplate,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, Forecast, PmSchedule, PmTemplate,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -192,4 +192,9 @@ export function usePmSchedules(includeArchived = false) {
 export function usePmForecast(params: Record<string, string | undefined>) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['pm', 'forecast', params], queryFn: () => api.get<Forecast>('/pm/forecast', params) });
+}
+
+export function usePmCompliance(params: Record<string, string | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['pm', 'compliance', params], queryFn: () => api.get<Compliance>('/pm/compliance', params) });
 }

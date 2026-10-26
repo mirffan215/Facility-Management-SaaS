@@ -25,6 +25,9 @@ public static class PmEndpoints
         g.MapGet("/forecast", async (PmService s, DateOnly? from, DateOnly? to, Guid? assetClassId, Guid? locationId, CancellationToken ct) => (await s.ForecastAsync(from, to, assetClassId, locationId, ct)).ToHttp())
             .RequirePermission(Permissions.PmRead);
 
+        g.MapGet("/compliance", async (PmService s, DateOnly? from, DateOnly? to, Guid? assetClassId, CancellationToken ct) => (await s.ComplianceAsync(from, to, assetClassId, ct)).ToHttp())
+            .RequirePermission(Permissions.PmRead);
+
         // The worker does this on a timer; this lets a manager do it now (after changing a schedule, or to see what would be created).
         g.MapPost("/run", async (PmEngine engine, CancellationToken ct) => Results.Ok(await engine.RunAsync(ct))).RequirePermission(Permissions.PmManage);
     }

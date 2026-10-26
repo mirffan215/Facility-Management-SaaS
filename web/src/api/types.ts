@@ -495,3 +495,26 @@ export interface Forecast {
   items: ForecastItem[];
   truncated: boolean;
 }
+
+export interface ComplianceCounts {
+  due: number;
+  onTime: number;
+  late: number;
+  skipped: number;
+  overdue: number;
+  upcoming: number;
+  onTimeRate: number | null;
+}
+
+export interface Compliance {
+  from: string;
+  to: string;
+  today: string;
+  total: ComplianceCounts;
+  months: { month: string; counts: ComplianceCounts }[];
+  byTemplate: { id: string | null; name: string; counts: ComplianceCounts }[];
+  byAssetClass: { id: string | null; name: string; counts: ComplianceCounts }[];
+  plannedWorkOrders: number;
+  otherWorkOrders: number;
+  plannedShare: number | null;
+}

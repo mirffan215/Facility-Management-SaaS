@@ -685,7 +685,8 @@
     "tab": {
       "forecast": "Forecast",
       "schedules": "Schedules",
-      "templates": "Templates"
+      "templates": "Templates",
+      "compliance": "Compliance"
     },
     "horizon": "Look ahead",
     "nextDays": "Next {{count}} days",
@@ -739,7 +740,26 @@
     "meterInterval": "Every (meter units)",
     "assignTo": "Assign to",
     "assignHint": "Leave empty to put the work in the approved queue for dispatch.",
-    "noAssignee": "Nobody (dispatch decides)"
+    "noAssignee": "Nobody (dispatch decides)",
+    "kpi": {
+      "intro": "Planned visits by their due date. A visit counts as on time when it was finished on or before its due date. Visits not yet due are shown separately and are not counted against anyone.",
+      "period": "Period",
+      "lastMonths": "Last {{count}} months",
+      "due": "Due so far",
+      "onTime": "On time",
+      "late": "Late",
+      "skipped": "Skipped",
+      "overdue": "Overdue",
+      "upcoming": "Upcoming",
+      "rate": "On-time rate",
+      "plannedShare": "Planned share of work",
+      "plannedNote": "{{planned}} planned and {{other}} other work orders raised in this period (cancelled ones are left out).",
+      "none": "No planned visits fall in this period.",
+      "byMonth": "By month",
+      "month": "Month",
+      "byTemplate": "By template",
+      "byClass": "By asset class"
+    }
   },
   "pmKind": {
     "Open": "Created",

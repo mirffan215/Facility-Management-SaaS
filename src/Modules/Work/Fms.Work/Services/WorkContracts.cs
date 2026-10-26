@@ -148,3 +148,17 @@ public sealed record ForecastItemDto(
     Guid? AssetClassId, Guid? WorkOrderId, string? WorkOrderNumber, WorkOrderStatus? Status, bool Overdue);
 
 public sealed record ForecastDto(DateOnly From, DateOnly To, DateOnly Today, IReadOnlyList<ForecastItemDto> Items, bool Truncated);
+
+/// <summary>
+/// How well planned work was kept. <c>Due</c> counts the visits that should be finished by now (done, skipped, or still open past their date);
+/// <c>OnTimeRate</c> is the share of those done on or before their due date. Visits not yet due are <c>Upcoming</c> and do not count against anyone.
+/// </summary>
+public sealed record ComplianceCounts(int Due, int OnTime, int Late, int Skipped, int Overdue, int Upcoming, decimal? OnTimeRate);
+
+public sealed record ComplianceMonthDto(string Month, ComplianceCounts Counts);
+
+public sealed record ComplianceGroupDto(Guid? Id, string Name, ComplianceCounts Counts);
+
+public sealed record ComplianceDto(
+    DateOnly From, DateOnly To, DateOnly Today, ComplianceCounts Total, IReadOnlyList<ComplianceMonthDto> Months, IReadOnlyList<ComplianceGroupDto> ByTemplate,
+    IReadOnlyList<ComplianceGroupDto> ByAssetClass, int PlannedWorkOrders, int OtherWorkOrders, decimal? PlannedShare);

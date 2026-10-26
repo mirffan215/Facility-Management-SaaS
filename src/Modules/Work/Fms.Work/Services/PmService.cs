@@ -301,6 +301,67 @@ public sealed class PmService(WorkDbContext db, IAuditPort audit, ICurrentUser u
         return Result<ForecastDto>.Ok(new ForecastDto(start, end, today, ordered, truncated));
     }
 
+    public const int MaxComplianceDays = 800;
+
+    /// <summary>Preventive-maintenance compliance over a period, by due date: overall, per month, per template and per asset class, with the planned-to-other work balance.</summary>
+    public async Task<Result<ComplianceDto>> ComplianceAsync(DateOnly? from, DateOnly? to, Guid? assetClassId, CancellationToken ct = default)
+    {
+        var today = await engine.TodayAsync(ct);
+        var end = to ?? new DateOnly(today.Year, today.Month, 1).AddMonths(1).AddDays(-1); // to the end of this month, so visits already done early or still coming show
+        var start = from ?? new DateOnly(end.Year, end.Month, 1).AddMonths(-11);
+        if (end < start) return Result<ComplianceDto>.Invalid("to", "The end cannot be before the start.");
+        if (end.DayNumber - start.DayNumber > MaxComplianceDays) return Result<ComplianceDto>.Invalid("to", $"The range is at most {MaxComplianceDays} days.");
+
+        var rows = await db.PmOccurrences.AsNoTracking().Where(o => o.DueOn >= start && o.DueOn <= end)
+            .Select(o => new { o.ScheduleId, o.AssetId, o.DueOn, o.Outcome, o.OnTime }).ToListAsync(ct);
+        var assets = await facilities.AssetsAsync(rows.Select(r => r.AssetId), ct);
+        if (assetClassId is { } ac) rows = rows.Where(r => assets.GetValueOrDefault(r.AssetId)?.ClassId == ac).ToList();
+
+        var scheduleTemplates = await db.PmSchedules.AsNoTracking().Select(s => new { s.Id, s.TemplateId }).ToDictionaryAsync(s => s.Id, s => s.TemplateId, ct);
+        var templateNames = await db.PmTemplates.AsNoTracking().ToDictionaryAsync(t => t.Id, t => t.Name, ct);
+        var classNames = await facilities.AssetClassNamesAsync(rows.Select(r => assets.GetValueOrDefault(r.AssetId)?.ClassId).OfType<Guid>(), ct);
+
+        static ComplianceCounts Count(IEnumerable<(PmOutcome Outcome, bool? OnTime, DateOnly DueOn)> items, DateOnly today)
+        {
+            int onTime = 0, late = 0, skipped = 0, overdue = 0, upcoming = 0;
+            foreach (var (outcome, onTimeFlag, dueOn) in items)
+            {
+                if (outcome == PmOutcome.Completed) { if (onTimeFlag == true) onTime++; else late++; }
+                else if (outcome == PmOutcome.Skipped) skipped++;
+                else if (dueOn < today) overdue++;
+                else upcoming++;
+            }
+
+            var due = onTime + late + skipped + overdue;
+            return new ComplianceCounts(due, onTime, late, skipped, overdue, upcoming, due == 0 ? null : Math.Round((decimal)onTime / due, 4));
+        }
+
+        var items = rows.Select(r => (r.Outcome, r.OnTime, r.DueOn, r.ScheduleId, r.AssetId)).ToList();
+        var months = items.GroupBy(i => $"{i.DueOn.Year:D4}-{i.DueOn.Month:D2}").OrderBy(g => g.Key)
+            .Select(g => new ComplianceMonthDto(g.Key, Count(g.Select(i => (i.Outcome, i.OnTime, i.DueOn)), today))).ToList();
+        var byTemplate = items.GroupBy(i => scheduleTemplates.GetValueOrDefault(i.ScheduleId))
+            .Select(g => new ComplianceGroupDto(g.Key, g.Key is { } t ? templateNames.GetValueOrDefault(t) ?? "" : "", Count(g.Select(i => (i.Outcome, i.OnTime, i.DueOn)), today))).OrderBy(g => g.Name).ToList();
+        var byClass = items.GroupBy(i => assets.GetValueOrDefault(i.AssetId)?.ClassId)
+            .Select(g => new ComplianceGroupDto(g.Key, g.Key is { } c ? classNames.GetValueOrDefault(c) ?? "" : "", Count(g.Select(i => (i.Outcome, i.OnTime, i.DueOn)), today))).OrderBy(g => g.Name).ToList();
+
+        // Planned work against everything else raised in the same period: a healthy programme is mostly planned.
+        var zone = await engine.ZoneAsync(ct);
+        var startUtc = new DateTimeOffset(start.ToDateTime(TimeOnly.MinValue), zone.GetUtcOffset(start.ToDateTime(TimeOnly.MinValue)));
+        var endUtc = new DateTimeOffset(end.AddDays(1).ToDateTime(TimeOnly.MinValue), zone.GetUtcOffset(end.AddDays(1).ToDateTime(TimeOnly.MinValue)));
+        var workOrders = db.WorkOrders.AsNoTracking().Where(w => w.RequestedAt >= startUtc && w.RequestedAt < endUtc && w.Status != WorkOrderStatus.Cancelled);
+        if (assetClassId is { } cls)
+        {
+            var inClass = (await facilities.AssetsInClassAsync(cls, ct)).Select(a => a.Id).ToList();
+            workOrders = workOrders.Where(w => w.AssetId != null && inClass.Contains(w.AssetId.Value));
+        }
+
+        var planned = await workOrders.CountAsync(w => w.Type == WorkOrderType.Planned, ct);
+        var other = await workOrders.CountAsync(w => w.Type != WorkOrderType.Planned, ct);
+        var share = planned + other == 0 ? (decimal?)null : Math.Round((decimal)planned / (planned + other), 4);
+
+        return Result<ComplianceDto>.Ok(new ComplianceDto(start, end, today, Count(items.Select(i => (i.Outcome, i.OnTime, i.DueOn)), today), months, byTemplate, byClass, planned, other, share));
+    }
+
     /// <summary>When a meter will reach its service interval at the pace of the last 30 days, or null when there is not enough to go on.</summary>
     private async Task<DateOnly?> EstimateMeterDueAsync(PmPlan plan, decimal interval, DateOnly today, CancellationToken ct)
     {

@@ -136,3 +136,10 @@ tr.voided td:last-child, tr.voided td .badge { text-decoration: none; }
 .jobs { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
 .jobs a { display: grid; gap: 0.25rem; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: inherit; min-height: 3.5rem; }
 .actions.big button { min-height: 3rem; font-size: 1.1rem; padding-inline: 1.25rem; }
+.tiles { display: flex; flex-wrap: wrap; gap: var(--gap); margin: var(--gap) 0; }
+.tiles div { flex: 1 1 10rem; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; background: var(--surface); }
+.tiles dt { color: var(--muted); }
+.tiles dd { margin: 0; font-size: 1.75rem; font-weight: 600; }
+.bar { display: inline-flex; inline-size: 8rem; block-size: 0.6rem; vertical-align: middle; border-radius: 999px; overflow: hidden; background: var(--border); margin-inline-start: 0.5rem; }
+.bar .seg { display: block; block-size: 100%; }
+.bar .ok { background: var(--ok); } .bar .warn { background: var(--warn); } .bar .bad { background: var(--bad); } .bar .neutral { background: var(--muted); } .bar .upcoming { background: var(--accent); opacity: 0.35; }

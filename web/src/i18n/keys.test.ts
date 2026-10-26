@@ -48,7 +48,7 @@ describe('translations', () => {
       pmUnit: ['Day', 'Week', 'Month', 'Year'],
       pmTarget: ['Asset', 'AssetClass'],
       'pm.basisHint': ['Fixed', 'Floating', 'None'],
-      'pm.tab': ['forecast', 'schedules', 'templates'],
+      'pm.tab': ['forecast', 'schedules', 'templates', 'compliance'],
     };
     for (const [group, values] of Object.entries(groups)) for (const v of values) {
       expect(english[`${group}.${v}`], `${group}.${v}`).toBeTruthy();
