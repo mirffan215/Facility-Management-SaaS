@@ -116,4 +116,4 @@ public sealed record OfflineJobDto(
     IReadOnlyList<SignatureDto> Signatures, IReadOnlyList<AttachmentDto> Attachments, IReadOnlyList<TimeEntryDto> Time, IReadOnlyList<CostLineDto> Costs, string? CurrencyCode);
 
 /// <summary>The jobs assigned to the signed-in person that are still open, with the server's clock so the phone can correct its own.</summary>
-public sealed record OfflineJobsDto(DateTimeOffset ServerTime, IReadOnlyList<OfflineJobDto> Jobs);
+public sealed record OfflineJobsDto(DateTimeOffset ServerTime, IReadOnlyList<OfflineJobDto> Jobs, bool RequireCompletionSignature = false);

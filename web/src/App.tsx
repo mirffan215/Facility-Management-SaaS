@@ -17,11 +17,14 @@ import { WorkOrdersPage } from './pages/WorkOrders';
 import { WorkOrderCreatePage } from './pages/WorkOrderCreate';
 import { WorkOrderDetailPage } from './pages/WorkOrderDetail';
 import { UsersPage } from './pages/Users';
+import { JobsPage } from './pages/Jobs';
+import { JobPage } from './pages/Job';
 import { ScanRedirectPage } from './pages/ScanRedirect';
 
 function Home() {
   const { can, loaded } = usePermissions();
   if (!loaded) return <Loading />;
+  if (can('workorders.work') && !can('workorders.manage')) return <Navigate to="/jobs" replace />; // field staff start the day at their jobs
   if (can('assets.read')) return <Navigate to="/assets" replace />;
   if (can('workorders.read') || can('workorders.request')) return <Navigate to="/work-orders" replace />;
   if (can('locations.read')) return <Navigate to="/locations" replace />;
@@ -47,8 +50,18 @@ function NotFound() {
   );
 }
 
+function OfflineOnly() {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <h1>{t('offline.limitedTitle')}</h1>
+      <p>{t('offline.limited')}</p>
+    </section>
+  );
+}
+
 export function App() {
-  const { status, returnTo } = useAuth();
+  const { status, returnTo, offlineSession } = useAuth();
   const navigate = useNavigate();
 
   // After the sign-in callback, drop the ?code=... URL and go back to where the person was.
@@ -58,6 +71,20 @@ export function App() {
 
   if (status === 'loading') return <Loading />;
   if (status !== 'signedIn') return <SignIn />;
+
+  // Signed in on this phone only (expired session, no connection): the saved jobs, and nothing that needs the server.
+  if (offlineSession) {
+    return (
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Navigate to="/jobs" replace />} />
+          <Route path="jobs" element={<JobsPage />} />
+          <Route path="jobs/:id" element={<JobPage />} />
+          <Route path="*" element={<OfflineOnly />} />
+        </Route>
+      </Routes>
+    );
+  }
 
   return (
     <Routes>
@@ -70,6 +97,8 @@ export function App() {
         <Route path="assets/:id" element={<AssetDetailPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="setup" element={<SetupPage />} />
+        <Route path="jobs" element={<JobsPage />} />
+        <Route path="jobs/:id" element={<JobPage />} />
         <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="work-orders/new" element={<WorkOrderCreatePage />} />
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />

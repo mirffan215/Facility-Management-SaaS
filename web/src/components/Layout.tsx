@@ -5,10 +5,13 @@ import { ApiError } from '../api/client';
 import { useMe, usePermissions, useUnreadCount } from '../api/hooks';
 import { languages } from '../i18n';
 import { usePrefs } from '../lib/prefs';
+import { SyncStatus } from '../offline/SyncStatus';
+import { useOffline } from '../offline/OfflineProvider';
 
 export function Layout() {
   const { t, i18n } = useTranslation();
-  const { displayName, signOut } = useAuth();
+  const { displayName, signOut, offlineSession } = useAuth();
+  const offline = useOffline();
   const { calendar, setCalendar } = usePrefs();
   const { can } = usePermissions();
   const me = useMe();
@@ -22,13 +25,14 @@ export function Layout() {
       <header className="topbar">
         <strong className="brand">{t('app.title')}</strong>
         <nav aria-label={t('nav.main')}>
+          {can('workorders.work') || offlineSession || !!offline.snapshot ? <NavLink to="/jobs">{t('nav.jobs')}</NavLink> : null}
           {can('locations.read') ? <NavLink to="/locations">{t('nav.locations')}</NavLink> : null}
           {can('assets.read') ? <NavLink to="/assets">{t('nav.assets')}</NavLink> : null}
           {can('workorders.read') || can('workorders.request') ? <NavLink to="/work-orders">{t('nav.workOrders')}</NavLink> : null}
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
           {can('assets.manage') || can('customfields.manage') || can('workorders.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
           {can('users.read') ? <NavLink to="/users">{t('nav.users')}</NavLink> : null}
-          <NavLink to="/notifications">
+          {!offlineSession ? <NavLink to="/notifications">
             {t('notify.title')}
             {unread > 0 ? (
               <>
@@ -37,7 +41,7 @@ export function Layout() {
                 <span className="visually-hidden"> {t('notify.unreadSuffix')}</span>
               </>
             ) : null}
-          </NavLink>
+          </NavLink> : null}
         </nav>
         <div className="prefs">
           <label>
@@ -58,11 +62,17 @@ export function Layout() {
             </select>
           </label>
           {displayName ? <span className="who">{displayName}</span> : null}
-          <button type="button" onClick={() => void signOut()}>
+          <button type="button" onClick={async () => {
+            // Signing out removes the saved jobs from this phone. Work that has not been sent would be lost: ask first.
+            if (offline.state.pending + offline.state.failed > 0 && !window.confirm(t('offline.signOutWarning', { count: offline.state.pending + offline.state.failed }))) return;
+            await offline.forgetEverything();
+            await signOut();
+          }}>
             {t('auth.signOut')}
           </button>
         </div>
       </header>
+      <SyncStatus />
       <main id="main" tabIndex={-1}>
         {me.error instanceof ApiError && me.error.isForbidden ? (
           <section>

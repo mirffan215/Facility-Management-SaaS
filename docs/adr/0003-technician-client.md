@@ -1,5 +1,5 @@
 # ADR-0003: Technician client: PWA first, native optional
-Status: Proposed (supersedes the earlier "offline-first PWA" draft)
+Status: Proposed (supersedes the earlier "offline-first PWA" draft). The PWA and its sync contract are built: see ADR-0013.
 
 Decision: The technician experience is built against a client-agnostic API (idempotent sync endpoints, client-generated
 IDs, delta pull by version token) so several clients can coexist:

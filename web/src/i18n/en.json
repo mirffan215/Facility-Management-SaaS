@@ -19,7 +19,8 @@
     "import": "Import",
     "setup": "Setup",
     "users": "Users",
-    "workOrders": "Work orders"
+    "workOrders": "Work orders",
+    "jobs": "My jobs"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -632,5 +633,48 @@
     "addLine": "Add a line",
     "moveUp": "Move line {{number}} up",
     "moveDown": "Move line {{number}} down"
+  },
+  "offline": {
+    "online": "Online",
+    "offline": "Offline: your work is saved on this phone",
+    "waiting": "{{count}} waiting to be sent",
+    "issues": "{{count}} need attention",
+    "syncNow": "Send now",
+    "signInToSend": "Sign in to send your work",
+    "limitedTitle": "You are offline",
+    "limited": "Only your saved jobs are available until you are back online and sign in again.",
+    "signOutWarning": "{{count}} change(s) have not reached the server yet. Signing out deletes them from this phone. Sign out anyway?"
+  },
+  "jobs": {
+    "title": "My jobs",
+    "updated": "Updated {{when}}",
+    "refresh": "Refresh",
+    "issuesTitle": "These could not be sent",
+    "retry": "Try again",
+    "discard": "Discard",
+    "notDownloaded": "Your jobs are being downloaded…",
+    "neverDownloaded": "No jobs are saved on this phone yet. Open this page once while online.",
+    "none": "No open jobs are assigned to you.",
+    "waiting": "Waiting to send",
+    "notFound": "This job is not saved on this phone.",
+    "blockedChecklist": "Answer every required checklist line first.",
+    "blockedSignature": "The technician’s signature is required first.",
+    "failedNeedsNote": "A failed line needs a note.",
+    "timeAndParts": "Time and parts",
+    "timeTotal": "Total time: {{minutes}} min",
+    "minutesShort": "{{count}} min",
+    "takePhoto": "Take a photo",
+    "op": {
+      "start": "Start work",
+      "hold": "Put on hold",
+      "resume": "Resume",
+      "complete": "Complete",
+      "checklist": "Checklist answer",
+      "time": "Time",
+      "cost": "Cost",
+      "comment": "Comment",
+      "signature": "Signature",
+      "photo": "Photo"
+    }
   }
 }

@@ -84,7 +84,20 @@ export function createApi(options: ApiOptions) {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
 
+  /**
+   * A call for the offline sync engine: adds the token but never throws for a status and never signs the person out on 401 (their queued work
+   * must survive an expired session). Throws only when the network is unreachable.
+   */
+  async function raw(path: string, init: RequestInit = {}): Promise<Response> {
+    const token = options.getToken();
+    const headers = new Headers(init.headers);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    else headers.set('X-No-Token', '1'); // lets the caller tell "not signed in" from a server 401
+    return doFetch(`/api/v1${path}`, { ...init, headers });
+  }
+
   return {
+    raw,
     async get<T>(path: string, params?: Query): Promise<T> {
       return (await request(path + toQuery(params))).json() as Promise<T>;
     },

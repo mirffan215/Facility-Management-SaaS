@@ -6,8 +6,8 @@ import type {
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
 export function useMe() {
-  const { api, status } = useAuth();
-  return useQuery({ queryKey: ['me'], queryFn: () => api.get<Me>('/me'), enabled: status === 'signedIn', staleTime: 60_000 });
+  const { api, status, offlineSession } = useAuth();
+  return useQuery({ queryKey: ['me'], queryFn: () => api.get<Me>('/me'), enabled: status === 'signedIn' && !offlineSession, staleTime: 60_000 });
 }
 
 export function usePermissions() {
@@ -112,11 +112,11 @@ export function useAssetChoices(search: string, tag: string) {
 
 /** How many unread notices the signed-in person has; refreshed every half minute while the app is open. */
 export function useUnreadCount() {
-  const { api, status } = useAuth();
+  const { api, status, offlineSession } = useAuth();
   return useQuery({
     queryKey: ['notifications', 'unread'],
     queryFn: () => api.get<{ count: number }>('/notifications/unread-count'),
-    enabled: status === 'signedIn',
+    enabled: status === 'signedIn' && !offlineSession,
     refetchInterval: 30_000,
   });
 }

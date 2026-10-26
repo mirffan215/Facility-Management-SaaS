@@ -35,8 +35,8 @@ async function shot(name: string) {
   await page.screenshot({ path: `e2e/screens/${name}.png`, fullPage: true });
 }
 
-async function expectNoSeriousA11yIssues(label: string) {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+async function expectNoSeriousA11yIssues(label: string, target: Page = page) {
+  const results = await new AxeBuilder({ page: target }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(serious.map((v) => `${label}: ${v.id} (${v.nodes.length}) ${v.help}`)).toEqual([]);
 }
@@ -337,6 +337,8 @@ test('a person with no role sees a clear message, then only what their role allo
   await expect(tech.getByRole('link', { name: 'Setup', exact: true })).toHaveCount(0);
   await expect(tech.getByRole('link', { name: 'New asset' })).toHaveCount(0);
 
+  await expect(tech.getByRole('heading', { name: 'My jobs' })).toBeVisible(); // field staff start at their jobs
+  await tech.getByRole('link', { name: 'Assets', exact: true }).first().click();
   await tech.getByLabel('Search').fill(ASSET);
   await tech.getByRole('link', { name: ASSET }).click();
   await tech.getByRole('tab', { name: 'Meters' }).click();
@@ -615,6 +617,201 @@ test('field work: checklist, time, costs, photo and signature, with completion b
   await page.locator('.prefs select').first().selectOption('en');
   await shot('23-field-work');
   await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+});
+
+test('offline: a technician works a whole job without a connection, and it all arrives once, with the times it really happened', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const users = (await (await api('/users')).json()) as { id: string; email: string }[];
+  const techId = users.find((u) => u.email === `tech-${SUFFIX.toLowerCase()}@example.test`)!.id;
+  const templates = (await (await api('/work-orders/checklists')).json()) as { id: string; name: string }[];
+
+  const made = await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Boiler tripping', type: 'Emergency', priority: 'High', locationId: site.id }) });
+  const wo = (await made.json()) as { id: string };
+  expect((await api(`/work-orders/${wo.id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeId: techId }) })).status).toBe(200);
+  expect((await api(`/work-orders/${wo.id}/checklist`, { method: 'POST', body: JSON.stringify({ templateId: templates.find((t) => t.name === 'Pump inspection')!.id }) })).status).toBe(200);
+
+  // Signed in and online: the jobs are downloaded to the phone, and the app is saved by the service worker.
+  const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
+  await expect(tech.getByRole('heading', { name: 'My jobs' })).toBeVisible();
+  await expect(tech.getByRole('list', { name: 'My jobs' }).getByText('Boiler tripping')).toBeVisible();
+  await tech.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await tech.waitForFunction(async () => (await (await caches.open('fms-shell-v1')).keys()).length > 3);
+
+  // The connection goes away. Even a reload works, and the job is still there.
+  await tech.context().setOffline(true);
+  await tech.reload();
+  await expect(tech.getByRole('heading', { name: 'My jobs' })).toBeVisible();
+  await expect(tech.getByRole('status')).toContainText('Offline');
+  await tech.getByRole('link', { name: /Boiler tripping/ }).click();
+
+  const startedAt = Date.now();
+  await tech.getByRole('button', { name: 'Start work' }).click();
+  await expect(tech.getByText('In progress', { exact: true }).first()).toBeVisible();
+  await expect(tech.getByRole('status')).toContainText('waiting to be sent');
+  await expectNoSeriousA11yIssues('job screen en', tech);
+  await tech.locator('.prefs select').first().selectOption('ar');
+  await expect(tech.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expectNoSeriousA11yIssues('job screen ar', tech);
+  await tech.goto('/jobs');
+  await expectNoSeriousA11yIssues('jobs list ar', tech);
+  await tech.locator('.prefs select').first().selectOption('en');
+  await tech.getByRole('link', { name: /Boiler tripping/ }).click();
+
+  // Completing is blocked on the phone for the same reason as on the server.
+  await tech.getByRole('button', { name: 'Complete', exact: true }).click();
+  await expect(tech.getByRole('dialog').getByRole('alert')).toContainText('required checklist');
+  await tech.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+
+  await tech.getByLabel('Result: Isolate power').selectOption('Done');
+  await expect(tech.getByRole('listitem').filter({ hasText: 'Isolate power' }).getByText('Waiting to send')).toBeVisible();
+  await tech.getByLabel('Result: Check seals').selectOption('Done');
+  await tech.getByLabel('Minutes').fill('30');
+  await tech.getByRole('button', { name: 'Record time' }).click();
+  await tech.getByLabel('Description').first().fill('Thermostat');
+  await tech.getByLabel('Unit cost').fill('40');
+  await tech.getByRole('button', { name: 'Add cost' }).click();
+  await tech.getByLabel('Add a comment').fill('Tripped on a faulty thermostat');
+  await tech.getByRole('button', { name: 'Post comment' }).click();
+  await tech.locator('input[type=file]').setInputFiles({ name: 'boiler.png', mimeType: 'image/png', buffer: PNG });
+  await expect(tech.getByRole('list', { name: 'Photos and files' }).getByRole('listitem')).toHaveCount(1);
+
+  await tech.getByLabel('Printed name').fill('Tina Technician');
+  const pad = tech.getByRole('img', { name: /Signature area/ });
+  const box = (await pad.boundingBox())!;
+  await tech.mouse.move(box.x + 20, box.y + 20);
+  await tech.mouse.down();
+  await tech.mouse.move(box.x + 150, box.y + 70, { steps: 6 });
+  await tech.mouse.up();
+  await tech.getByRole('button', { name: 'Save signature' }).click();
+  await expect(tech.getByRole('list', { name: 'Signatures' }).getByRole('listitem')).toHaveCount(1);
+
+  await tech.getByRole('button', { name: 'Complete', exact: true }).click();
+  await tech.getByRole('dialog').getByLabel('What was done').fill('Replaced the thermostat');
+  await tech.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(tech.getByText('Completed', { exact: true }).first()).toBeVisible();
+
+  // Nothing has reached the server, and a reload (or a closed app) does not lose any of it.
+  const before = (await (await api(`/work-orders/${wo.id}`)).json()) as { order: { status: string } };
+  expect(before.order.status).toBe('Assigned');
+  await tech.reload();
+  await expect(tech.getByRole('status')).toContainText('waiting to be sent');
+  await expect(tech.getByText('Completed', { exact: true }).first()).toBeVisible();
+
+  // Let a while pass offline, so that sending late would be visible in the history.
+  await tech.waitForTimeout(6000);
+
+  // The connection returns: everything is sent, once.
+  await tech.context().setOffline(false);
+  await expect(tech.getByRole('status')).toHaveCount(0, { timeout: 40_000 });
+
+  const after = (await (await api(`/work-orders/${wo.id}`)).json()) as {
+    order: { status: string; closureCode: string; sla: { respondedAt: string | null } };
+    events: { action: string; at: string }[];
+    comments: { body: string }[];
+  };
+  expect(after.order.status).toBe('Completed');
+  const started = after.events.find((e) => e.action === 'Started')!;
+  expect(Math.abs(Date.parse(started.at) - startedAt)).toBeLessThan(8000); // the moment it was done, not the moment it was sent
+  expect(Date.now() - Date.parse(started.at)).toBeGreaterThan(6000);
+  expect(Date.parse(after.order.sla.respondedAt ?? started.at)).toBeLessThan(startedAt + 8000);
+  expect(after.events.filter((e) => e.action === 'Completed')).toHaveLength(1);
+  expect(after.comments.filter((c) => c.body === 'Tripped on a faulty thermostat')).toHaveLength(1);
+  const checklist = (await (await api(`/work-orders/${wo.id}/checklist`)).json()) as { result: string }[];
+  expect(checklist.every((i) => i.result === 'Done')).toBe(true);
+  expect(((await (await api(`/work-orders/${wo.id}/time`)).json()) as unknown[]).length).toBe(1);
+  expect(((await (await api(`/work-orders/${wo.id}/costs`)).json()) as unknown[]).length).toBe(1);
+  expect(((await (await api(`/work-orders/${wo.id}/attachments`)).json()) as unknown[]).length).toBe(1);
+  expect(((await (await api(`/work-orders/${wo.id}/signatures`)).json()) as unknown[]).length).toBe(1);
+
+  await tech.getByRole('link', { name: 'My jobs', exact: true }).click();
+  await expect(tech.getByText('No open jobs are assigned to you.')).toBeVisible({ timeout: 20_000 });
+  await tech.context().close();
+  await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+});
+
+test('offline: work the server can no longer accept is set aside for the person to see, not lost or forced through', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const users = (await (await api('/users')).json()) as { id: string; email: string }[];
+  const techId = users.find((u) => u.email === `tech-${SUFFIX.toLowerCase()}@example.test`)!.id;
+  const made = await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Door closer loose', type: 'Emergency', locationId: site.id }) });
+  const wo = (await made.json()) as { id: string };
+  expect((await api(`/work-orders/${wo.id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeId: techId }) })).status).toBe(200);
+
+  const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
+  await expect(tech.getByRole('list', { name: 'My jobs' }).getByText('Door closer loose')).toBeVisible();
+  await tech.getByRole('link', { name: /Door closer loose/ }).click();
+
+  await tech.context().setOffline(true);
+  await tech.getByRole('button', { name: 'Start work' }).click();
+  await tech.getByLabel('Add a comment').fill('Looking at it now');
+  await tech.getByRole('button', { name: 'Post comment' }).click();
+  await expect(tech.getByRole('status')).toContainText('2 waiting to be sent');
+
+  // Meanwhile the dispatcher cancels the job.
+  expect((await api(`/work-orders/${wo.id}/cancel`, { method: 'POST', body: JSON.stringify({ reason: 'Fixed by the contractor' }) })).status).toBe(200);
+
+  await tech.context().setOffline(false);
+  await expect(tech.getByRole('status')).toContainText('need attention', { timeout: 40_000 });
+  await tech.goto('/jobs');
+  await expect(tech.getByRole('alert')).toContainText('These could not be sent');
+  await expect(tech.getByRole('alert')).toContainText('Start work');
+  await shot('24-sync-issues');
+
+  // Discarding clears the notice; the cancelled job is gone from the phone's list.
+  await tech.getByRole('alert').getByRole('button', { name: 'Discard' }).first().click();
+  await tech.getByRole('alert').getByRole('button', { name: 'Discard' }).first().click().catch(() => undefined);
+  await expect(tech.getByRole('alert')).toHaveCount(0);
+  await tech.context().close();
+  await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+});
+
+test('offline: with the session expired and no connection, the saved jobs still open, and the work is sent after signing in again', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const users = (await (await api('/users')).json()) as { id: string; email: string }[];
+  const techId = users.find((u) => u.email === `tech-${SUFFIX.toLowerCase()}@example.test`)!.id;
+  const made = await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Lift display dark', type: 'Emergency', locationId: site.id }) });
+  const wo = (await made.json()) as { id: string };
+  expect((await api(`/work-orders/${wo.id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeId: techId }) })).status).toBe(200);
+
+  await fetch(`${IDP}/__ttl?seconds=20`); // sign-in tokens that last 20 seconds
+  const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
+  try {
+    await expect(tech.getByRole('list', { name: 'My jobs' }).getByText('Lift display dark')).toBeVisible();
+    await tech.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await tech.waitForFunction(async () => (await (await caches.open('fms-shell-v1')).keys()).length > 3);
+    await fetch(`${IDP}/__ttl?seconds=3600`);
+
+    await tech.context().setOffline(true);
+    await tech.getByRole('link', { name: /Lift display dark/ }).click();
+    await tech.getByLabel('Add a comment').fill('Display replaced');
+    await tech.getByRole('button', { name: 'Post comment' }).click();
+    await expect(tech.getByRole('status')).toContainText('1 waiting to be sent');
+
+    await tech.waitForTimeout(25_000); // the session is now expired, and it cannot be renewed
+    await tech.reload();
+    await expect(tech.getByRole('heading', { name: /Lift display dark/ })).toBeVisible();
+    await expect(tech.getByRole('status')).toContainText('Offline');
+    await expect(tech.getByRole('link', { name: 'Assets', exact: true })).toHaveCount(0); // only the saved jobs
+    await tech.goto('/assets');
+    await expect(tech.getByRole('heading', { name: 'You are offline' })).toBeVisible();
+
+    // Back online: the work waits for a sign-in, then goes.
+    await tech.context().setOffline(false);
+    await expect(tech.getByRole('button', { name: 'Sign in to send your work' })).toBeVisible({ timeout: 20_000 });
+    expect((await (await api(`/work-orders/${wo.id}`)).json() as { comments: unknown[] }).comments).toHaveLength(0);
+    await tech.getByRole('button', { name: 'Sign in to send your work' }).click();
+    await expect(tech.getByRole('status')).toHaveCount(0, { timeout: 40_000 });
+    const sent = (await (await api(`/work-orders/${wo.id}`)).json()) as { comments: { body: string }[] };
+    expect(sent.comments.filter((c) => c.body === 'Display replaced')).toHaveLength(1);
+  } finally {
+    await fetch(`${IDP}/__ttl?seconds=3600`);
+    await tech.context().close();
+    await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+  }
 });
 
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {

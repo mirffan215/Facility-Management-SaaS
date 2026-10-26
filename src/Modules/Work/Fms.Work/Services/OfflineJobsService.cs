@@ -3,7 +3,7 @@ using Fms.Work.Domain;
 namespace Fms.Work.Services;
 
 /// <summary>Assembles the offline bundle from the same services (and so the same permission rules) as the screens use.</summary>
-public sealed class OfflineJobsService(WorkOrderService orders, WorkEvidenceService evidence, WorkFilesService files, TimeProvider clock)
+public sealed class OfflineJobsService(WorkOrderService orders, WorkEvidenceService evidence, WorkFilesService files, WorkSetupService setup, TimeProvider clock)
 {
     public const int MaxJobs = 50;
 
@@ -26,6 +26,6 @@ public sealed class OfflineJobsService(WorkOrderService orders, WorkEvidenceServ
                 settings.Value?.CurrencyCode));
         }
 
-        return new OfflineJobsDto(clock.GetUtcNow(), jobs);
+        return new OfflineJobsDto(clock.GetUtcNow(), jobs, (await setup.GetSettingsAsync(ct)).RequireCompletionSignature);
     }
 }

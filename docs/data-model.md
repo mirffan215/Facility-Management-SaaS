@@ -46,4 +46,6 @@ Phase 2c adds, in `work`: `ChecklistTemplate` 1-* `ChecklistTemplateItem`; `Work
 `WorkOrderCostLine`, `WorkOrderVoid` (one per cancelled entry) and `WorkOrderSignature`; `WorkOrderAttachment` (soft delete). Settings gain currency, labour rate
 and "require completion signature".
 
+Phase 2d adds, in `dbo`: `IdempotencyKey` (per person, request hash, stored answer for 2xx, purged after 7 days).
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

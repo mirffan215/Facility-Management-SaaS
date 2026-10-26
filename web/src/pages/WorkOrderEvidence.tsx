@@ -340,7 +340,7 @@ export function FilesTab({ order }: { order: WorkOrder }) {
 // ---------------- signatures ----------------
 
 /** A drawing pad. Works with finger, pen and mouse; the printed name beside it is what a keyboard user types. */
-function SignaturePad({ onChange }: { onChange: (png: string | null) => void }) {
+export function SignaturePad({ onChange }: { onChange: (png: string | null) => void }) {
   const { t } = useTranslation();
   const canvas = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
