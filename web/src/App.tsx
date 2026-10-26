@@ -19,6 +19,7 @@ import { WorkOrderDetailPage } from './pages/WorkOrderDetail';
 import { UsersPage } from './pages/Users';
 import { JobsPage } from './pages/Jobs';
 import { JobPage } from './pages/Job';
+import { PmPage } from './pages/Pm';
 import { ScanRedirectPage } from './pages/ScanRedirect';
 
 function Home() {
@@ -102,6 +103,7 @@ export function App() {
         <Route path="work-orders" element={<WorkOrdersPage />} />
         <Route path="work-orders/new" element={<WorkOrderCreatePage />} />
         <Route path="work-orders/:id" element={<WorkOrderDetailPage />} />
+        <Route path="pm" element={<PmPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />

@@ -20,7 +20,8 @@
     "setup": "Setup",
     "users": "Users",
     "workOrders": "Work orders",
-    "jobs": "My jobs"
+    "jobs": "My jobs",
+    "pm": "Preventive"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -676,5 +677,88 @@
       "signature": "Signature",
       "photo": "Photo"
     }
+  },
+  "pm": {
+    "title": "Preventive maintenance",
+    "sections": "Preventive maintenance sections",
+    "intro": "Recurring maintenance planned in advance. Work orders are created automatically ahead of each due date.",
+    "tab": {
+      "forecast": "Forecast",
+      "schedules": "Schedules",
+      "templates": "Templates"
+    },
+    "horizon": "Look ahead",
+    "nextDays": "Next {{count}} days",
+    "assetClass": "Asset class",
+    "generateNow": "Create due work orders now",
+    "generated": "{{count}} work order(s) created.",
+    "noForecast": "Nothing is planned in this period.",
+    "truncated": "Too many items to show; narrow the period or filter by asset class.",
+    "forecastFor": "Planned maintenance for {{month}}",
+    "due": "Due",
+    "schedule": "Schedule",
+    "asset": "Asset",
+    "overdue": "Overdue",
+    "newTemplate": "New template",
+    "editTemplate": "Edit template",
+    "templatesHint": "A template says what the work is: instructions, priority, and a checklist. Schedules use it to create work orders.",
+    "noTemplates": "No templates yet.",
+    "instructions": "Instructions",
+    "estimatedMinutes": "Estimated minutes",
+    "checklist": "Checklist",
+    "newSchedule": "New schedule",
+    "editSchedule": "Edit schedule",
+    "noSchedules": "No schedules yet.",
+    "appliesTo": "Applies to",
+    "repeats": "Repeats",
+    "starts": "Starts on",
+    "firstDue": "Due on",
+    "openCount": "Open",
+    "assetsCount": "{{count}} asset(s)",
+    "every": "Every {{count}} {{unit}}",
+    "everyMeter": "every {{interval}} on meter {{meter}}",
+    "template": "Template",
+    "target": "Applies to",
+    "findAsset": "Find an asset",
+    "findAssetHint": "Type at least 2 letters of its name or code.",
+    "selectedAsset": "Selected: {{name}}",
+    "chooseAsset": "Matching assets",
+    "basis": "Counting",
+    "interval": "Interval",
+    "unit": "Unit",
+    "leadDays": "Create work order days ahead",
+    "leadHint": "The work order appears this many days before it is due.",
+    "basisHint": {
+      "Fixed": "Fixed dates: the next one is due on the calendar, even if the last one was late.",
+      "Floating": "From completion: the next one is due after the last one is finished.",
+      "None": "Meter only: no calendar dates; due when the meter reaches the interval."
+    },
+    "meterTrigger": "Meter trigger (optional)",
+    "meterHint": "Also create work when a meter reading has advanced by an amount since the last service. Whichever comes first applies.",
+    "meterName": "Meter name",
+    "meterInterval": "Every (meter units)",
+    "assignTo": "Assign to",
+    "assignHint": "Leave empty to put the work in the approved queue for dispatch.",
+    "noAssignee": "Nobody (dispatch decides)"
+  },
+  "pmKind": {
+    "Open": "Created",
+    "Projected": "Planned",
+    "MeterEstimate": "Estimated by meter"
+  },
+  "pmBasis": {
+    "Fixed": "Fixed dates",
+    "Floating": "From completion",
+    "None": "Meter only"
+  },
+  "pmUnit": {
+    "Day": "Days",
+    "Week": "Weeks",
+    "Month": "Months",
+    "Year": "Years"
+  },
+  "pmTarget": {
+    "Asset": "One asset",
+    "AssetClass": "All assets of a class"
   }
 }

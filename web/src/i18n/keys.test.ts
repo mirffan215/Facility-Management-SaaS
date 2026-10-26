@@ -43,6 +43,12 @@ describe('translations', () => {
       docKind: ['Manual', 'Warranty', 'Certificate', 'Photo', 'Drawing', 'Other'],
       fieldType: ['Text', 'Number', 'Date', 'Boolean', 'Choice'],
       fieldTarget: ['Asset', 'Location'],
+      pmKind: ['Open', 'Projected', 'MeterEstimate'],
+      pmBasis: ['Fixed', 'Floating', 'None'],
+      pmUnit: ['Day', 'Week', 'Month', 'Year'],
+      pmTarget: ['Asset', 'AssetClass'],
+      'pm.basisHint': ['Fixed', 'Floating', 'None'],
+      'pm.tab': ['forecast', 'schedules', 'templates'],
     };
     for (const [group, values] of Object.entries(groups)) for (const v of values) {
       expect(english[`${group}.${v}`], `${group}.${v}`).toBeTruthy();

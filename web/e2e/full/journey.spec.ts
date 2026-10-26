@@ -814,6 +814,47 @@ test('offline: with the session expired and no connection, the saved jobs still 
   }
 });
 
+test('preventive maintenance: a template and a schedule create a work order ahead of its due date, shown on the forecast', async () => {
+  await page.goto('/pm?tab=templates');
+  await page.getByRole('button', { name: 'New template' }).click();
+  const template = page.getByRole('dialog', { name: 'New template' });
+  await template.getByRole('textbox', { name: 'Name *' }).fill('Quarterly chiller service');
+  await template.getByLabel('Instructions').fill('Follow the OEM sheet');
+  await template.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Quarterly chiller service')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Schedules' }).click();
+  await page.getByRole('button', { name: 'New schedule' }).click();
+  const schedule = page.getByRole('dialog', { name: 'New schedule' });
+  await schedule.getByRole('textbox', { name: 'Name *' }).fill('Chiller quarterly');
+  await schedule.getByRole('combobox', { name: 'Template *' }).selectOption({ label: 'Quarterly chiller service' });
+  await schedule.getByLabel('Find an asset').fill(ASSET);
+  await schedule.getByRole('combobox', { name: 'Matching assets' }).selectOption({ index: 1 });
+  await schedule.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('cell', { name: /Chiller quarterly/ })).toBeVisible();
+  await shot('20-pm-schedules');
+
+  // A new schedule is picked up straight away when it is due inside its lead time; the button forces another pass.
+  await page.getByRole('tab', { name: 'Forecast' }).click();
+  await page.getByRole('button', { name: 'Create due work orders now' }).click();
+  await expect(page.getByRole('status').first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /WO-\d+/ }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: /Chiller quarterly/ }).first()).toBeVisible();
+  await shot('21-pm-forecast');
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['forecast', 'schedules', 'templates']) {
+      await page.goto(`/pm?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`pm ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

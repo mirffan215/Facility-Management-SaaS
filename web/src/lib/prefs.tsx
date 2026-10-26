@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDate, formatNumber, localizedName, type Calendar } from './format';
+import { formatDate, formatMonth, formatNumber, localizedName, type Calendar } from './format';
 
 interface Prefs {
   lang: string;
   calendar: Calendar;
   setCalendar: (calendar: Calendar) => void;
   date: (value: string | null | undefined, withTime?: boolean) => string;
+  month: (key: string) => string;
   num: (value: number | null | undefined) => string;
   name: (entity: { name: string; nameAr: string | null }) => string;
 }
@@ -41,6 +42,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
       calendar,
       setCalendar: setCalendarState,
       date: (v, withTime) => formatDate(v, lang, calendar, withTime),
+      month: (k) => formatMonth(k, lang, calendar),
       num: (v) => formatNumber(v, lang),
       name: (e) => localizedName(e, lang),
     }),

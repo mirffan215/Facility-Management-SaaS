@@ -424,3 +424,74 @@ export interface WorkAttachment {
   uploadedByName: string | null;
   uploadedBy: string;
 }
+
+// ---------------- preventive maintenance ----------------
+
+export type PmTargetKind = 'Asset' | 'AssetClass';
+export type PmTimeBasis = 'None' | 'Fixed' | 'Floating';
+export type PmIntervalUnit = 'Day' | 'Week' | 'Month' | 'Year';
+export type ForecastKind = 'Open' | 'Projected' | 'MeterEstimate';
+
+export interface PmTemplate {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  instructions: string | null;
+  priority: WorkPriority;
+  estimatedMinutes: number | null;
+  categoryId: string | null;
+  checklistTemplateId: string | null;
+  checklistName: string | null;
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export interface PmSchedule {
+  id: string;
+  name: string;
+  templateId: string;
+  templateName: string | null;
+  targetKind: PmTargetKind;
+  assetId: string | null;
+  assetName: string | null;
+  assetClassId: string | null;
+  assetClassName: string | null;
+  timeBasis: PmTimeBasis;
+  intervalUnit: PmIntervalUnit;
+  interval: number;
+  startOn: string;
+  leadDays: number;
+  meterName: string | null;
+  meterInterval: number | null;
+  assignToUserId: string | null;
+  assignToName: string | null;
+  isArchived: boolean;
+  assets: number;
+  open: number;
+  rowVersion: string;
+}
+
+export interface ForecastItem {
+  date: string;
+  kind: ForecastKind;
+  scheduleId: string;
+  scheduleName: string;
+  templateName: string | null;
+  assetId: string;
+  assetCode: string | null;
+  assetName: string | null;
+  locationId: string | null;
+  assetClassId: string | null;
+  workOrderId: string | null;
+  workOrderNumber: string | null;
+  status: WorkOrderStatus | null;
+  overdue: boolean;
+}
+
+export interface Forecast {
+  from: string;
+  to: string;
+  today: string;
+  items: ForecastItem[];
+  truncated: boolean;
+}

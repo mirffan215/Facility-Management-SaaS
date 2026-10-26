@@ -22,6 +22,13 @@ export function formatDate(value: string | null | undefined, lang: string, calen
   }).format(date);
 }
 
+/** Month and year of a "yyyy-MM" key, in the chosen calendar (a Hijri month can straddle two Gregorian ones; the first of the month is used). */
+export function formatMonth(key: string, lang: string, calendar: Calendar): string {
+  const date = new Date(`${key}-15T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return key;
+  return new Intl.DateTimeFormat(localeFor(lang, calendar), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+}
+
 export function formatNumber(value: number | null | undefined, lang: string, maximumFractionDigits = 4): string {
   if (value === null || value === undefined) return '';
   return new Intl.NumberFormat(localeFor(lang, 'gregorian'), { maximumFractionDigits }).format(value);

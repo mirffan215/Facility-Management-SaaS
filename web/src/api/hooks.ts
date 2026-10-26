@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Forecast, PmSchedule, PmTemplate,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -177,4 +177,19 @@ export function useSignatures(id: string | undefined) {
 export function useAttachments(id: string | undefined) {
   const { api } = useAuth();
   return useQuery({ ...evidence(id, 'attachments'), queryFn: () => api.get<WorkAttachment[]>(`/work-orders/${id}/attachments`) });
+}
+
+export function usePmTemplates(includeArchived = false) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['pm', 'templates', includeArchived], queryFn: () => api.get<PmTemplate[]>('/pm/templates', { includeArchived }) });
+}
+
+export function usePmSchedules(includeArchived = false) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['pm', 'schedules', includeArchived], queryFn: () => api.get<PmSchedule[]>('/pm/schedules', { includeArchived }) });
+}
+
+export function usePmForecast(params: Record<string, string | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['pm', 'forecast', params], queryFn: () => api.get<Forecast>('/pm/forecast', params) });
 }
