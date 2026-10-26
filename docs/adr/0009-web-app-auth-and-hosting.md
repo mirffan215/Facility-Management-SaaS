@@ -20,7 +20,7 @@ Status: Proposed
 - **QR labels resolve through the app.** A label encodes `{PublicBaseUrl}/a/{tag}`; that route looks the tag up and opens the asset, signing
   the person in first if needed.
 - **Testing has three layers.** Unit and component tests (Vitest, Testing Library) for logic and widgets. A full-stack browser journey
-  (Playwright) against the real web build, real API, real SQL Server and a **fake OpenID Connect provider** (`web/e2e/fake-idp.mjs`) that
+  (Playwright) against the real web build served by the production nginx configuration (so the strict CSP applies and any violation fails the run), real API, real SQL Server and a **fake OpenID Connect provider** (`web/e2e/fake-idp.mjs`) that
   does real PKCE and signs real tokens, so sign-in is exercised for real. Automated accessibility scans (axe) of the main screens in both
   languages. The fake provider is a test tool only: the API accepts an `http://` authority solely when `Authentication:AllowInsecureAuthority`
   is set **and** the environment is Development; anywhere else that setting stops the app from starting.

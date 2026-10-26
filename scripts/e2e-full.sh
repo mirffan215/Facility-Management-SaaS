@@ -9,7 +9,7 @@ APP_PASSWORD='E2eApp#Passw0rd!2026'
 TENANT=11111111-2222-3333-4444-555555555555
 SQL_PORT=${SQL_PORT:-14339}
 PIDS=()
-cleanup() { for p in "${PIDS[@]:-}"; do kill "$p" 2>/dev/null || true; done; docker rm -f fms-e2e-sql >/dev/null 2>&1 || true; rm -rf "$STORAGE"; }
+cleanup() { for p in "${PIDS[@]:-}"; do kill "$p" 2>/dev/null || true; done; docker rm -f fms-e2e-sql fms-e2e-web >/dev/null 2>&1 || true; rm -rf "$STORAGE"; }
 STORAGE=$(mktemp -d)
 LOGS=${E2E_LOGS:-/tmp/fms-e2e}
 mkdir -p "$LOGS"
@@ -31,7 +31,7 @@ ConnectionStrings__Migrator="Server=localhost,$SQL_PORT;Database=Fms;User Id=sa;
 
 node web/e2e/fake-idp.mjs > "$LOGS/idp.log" 2>&1 & PIDS+=($!)
 
-ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5080 \
+ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://0.0.0.0:5080 \
 ConnectionStrings__Default="Server=localhost,$SQL_PORT;Database=Fms;User Id=fms_app;Password=$APP_PASSWORD;TrustServerCertificate=True" \
 Deployment__Mode=OnPrem Deployment__SingleTenantId=$TENANT Deployment__LocalStoragePath="$STORAGE" Storage__Provider=Local \
 Authentication__AllowInsecureAuthority=true Authentication__Providers__0__Name=fake Authentication__Providers__0__Authority=http://localhost:9099 \
@@ -39,7 +39,16 @@ Authentication__Providers__0__Audience=api://fms Authentication__Providers__0__C
 Facilities__PublicBaseUrl=http://localhost:5173 \
   dotnet src/Host/Fms.Api/bin/Debug/net10.0/Fms.Api.dll > "$LOGS/api.log" 2>&1 & PIDS+=($!)
 
-(cd web && npm run build >/dev/null && exec npx vite preview --port 5173 --strictPort) > "$LOGS/web.log" 2>&1 & PIDS+=($!)
+# The web tier is the production nginx image (headers, content-security policy, /api proxy) unless WEB_TIER=vite is set for a quicker run.
+(cd web && npm run build >/dev/null)
+if [ "${WEB_TIER:-nginx}" = "vite" ]; then
+  (cd web && exec node node_modules/vite/bin/vite.js preview --port 5173 --strictPort) > "$LOGS/web.log" 2>&1 & PIDS+=($!)
+else
+  docker rm -f fms-e2e-web >/dev/null 2>&1 || true
+  docker run -d --name fms-e2e-web --add-host=host.docker.internal:host-gateway -p 5173:80 \
+    -e API_UPSTREAM=http://host.docker.internal:5080 -e CSP_CONNECT_SRC=http://localhost:9099 -e NGINX_ENVSUBST_FILTER='API_UPSTREAM|CSP_CONNECT_SRC' \
+    -v "$ROOT/web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro" -v "$ROOT/web/dist:/usr/share/nginx/html:ro" nginx:alpine >/dev/null
+fi
 
 for url in http://localhost:9099/__health http://localhost:5080/health/ready http://localhost:5173/; do
   for i in $(seq 1 60); do curl -fs "$url" >/dev/null 2>&1 && break; sleep 1; done

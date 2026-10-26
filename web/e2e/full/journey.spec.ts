@@ -17,9 +17,13 @@ const CLASS = `HVAC-${SUFFIX}`;
 const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF');
 
 let page: Page;
+const cspViolations: string[] = [];
 
 test.beforeAll(async ({ browser }) => {
   page = await (await browser.newContext({ acceptDownloads: true, viewport: { width: 1280, height: 900 } })).newPage();
+  // The production web tier sends a strict content-security policy; any page that breaks it shows up here.
+  page.on('console', (m) => m.text().includes('Content Security Policy') && cspViolations.push(m.text()));
+  page.on('pageerror', (e) => cspViolations.push(`page error: ${e.message}`));
 });
 
 test.afterAll(async () => {
@@ -342,6 +346,17 @@ test('a person with no role sees a clear message, then only what their role allo
 
   await tech.context().close();
   await fetch(`${IDP}/__user`, { method: 'POST', body: JSON.stringify({ sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' }) });
+});
+
+test('the strict content-security policy was never violated and the security headers are served', async () => {
+  expect(cspViolations).toEqual([]);
+  const headers = (await page.request.get('/')).headers();
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['content-security-policy']).toContain("script-src 'self'");
+  // A deep link reloads into the app (the web server falls back to index.html for app routes).
+  const response = await page.goto('/assets');
+  expect(response?.status()).toBe(200);
 });
 
 test('signing out returns to the sign-in page', async () => {

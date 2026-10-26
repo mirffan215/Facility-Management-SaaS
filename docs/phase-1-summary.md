@@ -37,9 +37,9 @@ location tree (create, edit, move, archive), asset list with filters and CSV exp
 voiding, files, QR label with print), bulk import with check-first and a per-line problem report, setup (asset classes, custom fields), and
 the `/a/<tag>` address that QR labels open. See ADR-0009 for the decisions and `web/` for the code.
 
-Tested at three levels: 49 unit/component tests; a 16-step full-stack browser journey (`scripts/e2e-full.sh`: real SQL Server, migrator, API, web
-build and a fake OpenID Connect provider doing real PKCE) covering sign-in, setup, locations, assets, meters, files, labels, QR scan, status, export,
-import, Arabic/RTL/Hijri, a role-restricted user, sign-out and axe accessibility scans in both languages; and the 338 .NET tests. The accessibility
+Tested at three levels: 49 unit/component tests; a 17-step full-stack browser journey (`scripts/e2e-full.sh`: real SQL Server, migrator, API, the built web app served by the
+production nginx configuration with its strict content-security policy, and a fake OpenID Connect provider doing real PKCE) covering sign-in, setup, locations, assets, meters, files, labels, QR scan, status, export,
+import, Arabic/RTL/Hijri, a role-restricted user, no content-security-policy violations, sign-out and axe accessibility scans in both languages; and the 338 .NET tests. The accessibility
 scan was checked by deliberately breaking colour contrast, which made it fail.
 
 Bugs the browser tests found and fixed: required-field markers inside label text; language not remembered across reloads (and no right-to-left
@@ -50,7 +50,7 @@ having no page to open; an empty Arabic name pushed to the wrong edge; mixed Ara
 - **No screens for user and role administration** (the API exists); people get roles through the API for now. A new user with no role sees a
   clear "no access" message. No screens yet for editing/archiving meters, editing asset classes or custom-field definitions (create and archive only).
 - **Sessions end when the token expires** (no silent renewal yet); the person signs in again. Not yet tried against real Entra or Google, only
-  the fake provider. The web container image and nginx config were run against the built files here, but the Docker image build itself was not.
+  the fake provider. The nginx configuration is exercised for real by the browser test (the official nginx image with the built files mounted), but the web Docker image build itself was not run here.
 - **No offline mode** for the technician PWA yet (the API supports idempotent offline sync; the screens do not use it). Dark mode is styled but
   not scanned for contrast. The JavaScript bundle is one file (about 148 KB gzipped); route-level splitting is a later optimisation.
 - **No malware scanning.** `IFileScanner` is a seam; the default accepts everything. Do not accept files from untrusted uploaders until a
