@@ -11,6 +11,9 @@ public static class SystemRoles
     public const string Requester = "Requester";
     public const string Viewer = "Viewer";
 
+    /// <summary>People from a vendor, invited to the vendor portal. Holds no staff permission at all.</summary>
+    public const string Vendor = "Vendor";
+
     public static IReadOnlyDictionary<string, IReadOnlyList<string>> Definitions { get; } = new Dictionary<string, IReadOnlyList<string>>
     {
         [Administrator] = Permissions.All,
@@ -36,6 +39,7 @@ public static class SystemRoles
             Permissions.InventoryRead, Permissions.InventoryIssue, Permissions.PurchasingRequest,
         ],
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest],
+        [Vendor] = [Permissions.PortalUse],
         [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead],
     };
 }

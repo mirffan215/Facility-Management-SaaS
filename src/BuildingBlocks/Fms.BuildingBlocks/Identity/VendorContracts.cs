@@ -26,3 +26,12 @@ public interface IVendorLookup
     /// <summary>The contract's target for a priority, or null when it sets none.</summary>
     Task<ContractSlaRef?> SlaAsync(Guid contractId, int priority, CancellationToken ct = default);
 }
+
+/// <summary>
+/// The vendor the signed-in person belongs to, for the vendor portal. Null for anyone who is not a vendor user, or whose access has been withdrawn, or whose vendor is blocked.
+/// Everything a vendor user sees is filtered by this one answer.
+/// </summary>
+public interface IVendorScope
+{
+    Task<Guid?> CurrentVendorIdAsync(CancellationToken ct = default);
+}

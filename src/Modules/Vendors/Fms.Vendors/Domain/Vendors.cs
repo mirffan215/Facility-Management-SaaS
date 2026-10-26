@@ -144,3 +144,18 @@ public static class ContractRules
 
     public static int DaysLeft(Contract c, DateOnly today) => c.EndOn.DayNumber - today.DayNumber;
 }
+
+/// <summary>A person from a vendor who may use the vendor portal, and which vendor they belong to. A person belongs to exactly one vendor. This one row decides everything they can see.</summary>
+public sealed class VendorUser : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid UserId { get; set; }
+    public Guid VendorId { get; set; }
+    public DateTimeOffset LinkedAt { get; set; }
+
+    /// <summary>False once someone has withdrawn this person's access. The row stays, as the record that they once had it.</summary>
+    public bool IsActive { get; set; } = true;
+
+    public DateTimeOffset? DeactivatedAt { get; set; }
+}

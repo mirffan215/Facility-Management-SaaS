@@ -105,3 +105,44 @@ public sealed class IdempotencyKey : ITenantOwned
     public byte[]? ResponseBody { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+/// <summary>
+/// Links an outside person's sign-in (provider and subject) to the one tenant that invited them. Created only by accepting an invitation. Platform-level, like
+/// <see cref="TenantIdentityMapping"/>, because it is read before the tenant is known. One tenant per sign-in.
+/// </summary>
+public sealed class GuestIdentity
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Provider { get; set; } = "";
+    public string Subject { get; set; } = "";
+    public Guid TenantId { get; set; }
+    public Guid InvitationId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>An invitation to an outside person to use part of the system (a vendor's portal). Only a hash of the token is stored; the token itself is shown once, to the inviter.</summary>
+public sealed class GuestInvitation : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+
+    /// <summary>What the invitation is for, e.g. "Vendor".</summary>
+    public string Kind { get; set; } = "";
+
+    /// <summary>Which one: the vendor's id.</summary>
+    public Guid TargetId { get; set; }
+
+    public string Email { get; set; } = "";
+
+    /// <summary>SHA-256 of the token, in hex.</summary>
+    public string TokenHash { get; set; } = "";
+
+    public Guid? CreatedBy { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? AcceptedAt { get; set; }
+    public string? AcceptedProvider { get; set; }
+    public string? AcceptedSubject { get; set; }
+    public Guid? AcceptedUserId { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+}

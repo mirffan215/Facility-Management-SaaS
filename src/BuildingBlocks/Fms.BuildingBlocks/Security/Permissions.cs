@@ -78,6 +78,9 @@ public static class Permissions
     /// <summary>Turn the accounting connection on or off, retry what failed and run a reconciliation.</summary>
     public const string IntegrationManage = "integration.manage";
 
+    /// <summary>Use the vendor portal: see the orders, work and contracts of one's own vendor. Held by nobody but vendor users.</summary>
+    public const string PortalUse = "portal.use";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
@@ -89,6 +92,7 @@ public static class Permissions
         VendorsRead, VendorsManage,
         PurchasingRead, PurchasingRequest, PurchasingApprove1, PurchasingApprove2, PurchasingApprove3, PurchasingOrder, PurchasingReceive, PurchasingManage,
         IntegrationRead, IntegrationManage,
+        PortalUse,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;

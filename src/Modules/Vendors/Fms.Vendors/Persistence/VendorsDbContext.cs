@@ -16,6 +16,7 @@ public sealed class VendorsDbContext(DbContextOptions<VendorsDbContext> options,
     public DbSet<ContractCoverage> Coverage => Set<ContractCoverage>();
     public DbSet<ContractSla> SlaTargets => Set<ContractSla>();
     public DbSet<ContractDocument> Documents => Set<ContractDocument>();
+    public DbSet<VendorUser> VendorUsers => Set<VendorUser>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -88,6 +89,13 @@ public sealed class VendorsDbContext(DbContextOptions<VendorsDbContext> options,
             e.Property(x => x.Description).HasMaxLength(500);
             e.Property(x => x.DeleteReason).HasMaxLength(500);
             e.HasIndex(x => new { x.TenantId, x.ContractId });
+        });
+
+        b.Entity<VendorUser>(e =>
+        {
+            e.ToTable("VendorUsers");
+            e.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.VendorId });
         });
 
         base.OnModelCreating(b);

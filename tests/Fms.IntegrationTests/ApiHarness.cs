@@ -95,6 +95,26 @@ public sealed class ApiHarness : IDisposable
         return client;
     }
 
+    /// <summary>
+    /// A signed-in person whose identity directory is mapped to no tenant (a vendor's employee with their own company account). They get a tenant only by accepting an invitation.
+    /// The same client keeps working after that, because the tenant is worked out from the token on every request.
+    /// </summary>
+    public HttpClient GuestClient(string? subject = null)
+    {
+        subject ??= "g-" + Guid.NewGuid().ToString("N");
+        var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = $"{Prefix}{Guid.NewGuid()}/v2.0",
+            Audience = Audience,
+            Claims = new Dictionary<string, object> { ["sub"] = subject, ["tid"] = Guid.NewGuid().ToString(), ["email"] = subject + "@vendor.test", ["name"] = "Guest " + subject[^4..] },
+            Expires = DateTime.UtcNow.AddMinutes(30),
+            SigningCredentials = new SigningCredentials(new RsaSecurityKey(_key) { KeyId = "k1" }, SecurityAlgorithms.RsaSha256),
+        });
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
+
     private async Task<string> ExternalTenantAsync(Guid tenant)
     {
         if (_external.TryGetValue(tenant, out var existing)) return existing;

@@ -112,7 +112,17 @@ public static class AuthenticationExtensions
                     : identity.FindFirst(provider.ExternalTenantClaim)?.Value;
 
                 var directory = ctx.HttpContext.RequestServices.GetRequiredService<ITenantDirectory>();
-                if (await directory.ResolveAsync(provider.Name, external, ctx.HttpContext.RequestAborted) is { } tenantId)
+                var resolved = await directory.ResolveAsync(provider.Name, external, ctx.HttpContext.RequestAborted);
+
+                // Someone outside every customer's own directory (a vendor's employee) has a tenant only through an invitation they accepted. Checked second, so it can never
+                // take a person away from the tenant their own directory puts them in.
+                if (resolved is null && identity.FindFirst("sub")?.Value is { Length: > 0 } subject
+                    && ctx.HttpContext.RequestServices.GetService<IGuestDirectory>() is { } guests)
+                {
+                    resolved = await guests.ResolveAsync(provider.Name, subject, ctx.HttpContext.RequestAborted);
+                }
+
+                if (resolved is { } tenantId)
                 {
                     identity.AddClaim(new Claim(FmsClaims.TenantId, tenantId.ToString()));
                 }

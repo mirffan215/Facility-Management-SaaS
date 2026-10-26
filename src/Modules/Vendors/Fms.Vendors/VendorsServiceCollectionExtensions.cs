@@ -25,6 +25,9 @@ public static class VendorsServiceCollectionExtensions
         services.AddScoped<ContractService>();
         services.AddScoped<ContractDocumentService>();
         services.AddScoped<IVendorLookup, VendorLookup>();
+        services.AddScoped<IVendorScope, VendorScope>();
+        services.AddScoped<PortalAdminService>();
+        services.AddScoped<PortalService>();
         services.AddScoped<ContractAlerts>();
         services.AddSingleton<ContractMonitor>();
         services.AddScoped<IOutboxHandler, ContractAlertHandler>();

@@ -32,6 +32,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, SlaAlertHandler>();
         services.AddSingleton<SlaMonitor>();
         services.AddScoped<WorkOrderService>();
+        services.AddScoped<PortalWorkService>();
         services.AddScoped<WorkSetupService>();
         services.AddScoped<SlaSetupService>();
         services.AddHealthChecks().AddDbContextCheck<WorkDbContext>("work-db", tags: ["ready"]);

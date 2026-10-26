@@ -65,7 +65,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
         await reader.ReadAsync();
 
         Assert.Equal(1, reader.GetInt32(0));
-        Assert.Equal(5, reader.GetInt32(1));
+        Assert.Equal(6, reader.GetInt32(1));
         Assert.Equal(1, reader.GetInt32(2));
         Assert.Equal(1, reader.GetInt32(3));
         Assert.Equal(reader.GetInt32(5), reader.GetInt32(4)); // every facilities table is under row-level security
@@ -74,7 +74,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(reader.GetInt32(9), reader.GetInt32(8)); // and every inventory table
         Assert.Equal(8, reader.GetInt32(9)); // stores, items, levels, movements, reservations, template parts, stock takes, stock take lines
         Assert.Equal(reader.GetInt32(11), reader.GetInt32(10)); // and every vendors table
-        Assert.Equal(6, reader.GetInt32(11)); // vendors, contacts, contracts, coverage, service targets, contract documents
+        Assert.Equal(7, reader.GetInt32(11)); // vendors, contacts, contracts, coverage, service targets, contract documents, portal users
         Assert.Equal(reader.GetInt32(13), reader.GetInt32(12)); // and every purchasing table
         Assert.Equal(6, reader.GetInt32(13)); // settings, requests, request lines, orders, order lines, goods receipts
         Assert.Equal(reader.GetInt32(15), reader.GetInt32(14)); // and every integration table

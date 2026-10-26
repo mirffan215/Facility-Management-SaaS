@@ -31,6 +31,9 @@ public static class PlatformServiceCollectionExtensions
 
         services.Replace(ServiceDescriptor.Scoped<ITenantDirectory, DbTenantDirectory>());
         services.AddScoped<IUserProvisioner, UserProvisioner>();
+        services.AddScoped<GuestAccessService>();
+        services.AddScoped<Fms.BuildingBlocks.Identity.IGuestInvitations>(sp => sp.GetRequiredService<GuestAccessService>());
+        services.AddScoped<Fms.BuildingBlocks.Identity.IGuestDirectory>(sp => sp.GetRequiredService<GuestAccessService>());
         services.AddScoped<PermissionService>();
         services.AddScoped<IPermissionService>(sp => sp.GetRequiredService<PermissionService>());
         services.AddScoped<Fms.BuildingBlocks.Security.ICurrentPermissions>(sp => sp.GetRequiredService<PermissionService>());

@@ -94,6 +94,7 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapVendors();
     v1.MapPurchasing();
     v1.MapIntegration();
+    v1.MapPortal();
     v1.MapNotifications();
 
     v1.MapGet("/roles", async (AccessAdministration access, CancellationToken ct) => Results.Ok(await access.ListRolesAsync(ct)))

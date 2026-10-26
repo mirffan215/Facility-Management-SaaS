@@ -21,6 +21,12 @@ public static class VendorsEndpoints
         v.MapGet("/{id:guid}/contacts", async (Guid id, VendorService s, CancellationToken ct) => (await s.ContactsAsync(id, ct)).ToHttp()).RequirePermission(Permissions.VendorsRead);
         v.MapPut("/{id:guid}/contacts", async (Guid id, SaveContactsRequest r, VendorService s, CancellationToken ct) => (await s.SaveContactsAsync(id, r, ct)).ToHttp()).RequirePermission(Permissions.VendorsManage);
 
+        // The vendor portal's people: invitations (the link is shown once) and who has access.
+        v.MapGet("/{id:guid}/portal-access", async (Guid id, PortalAdminService s, CancellationToken ct) => (await s.AccessAsync(id, ct)).ToHttp()).RequirePermission(Permissions.VendorsRead);
+        v.MapPost("/{id:guid}/invitations", async (Guid id, InviteRequest r, PortalAdminService s, CancellationToken ct) => (await s.InviteAsync(id, r, ct)).ToHttp(x => Results.Created($"/api/v1/vendors/{id}/portal-access", x))).RequirePermission(Permissions.VendorsManage);
+        v.MapPost("/{id:guid}/invitations/{invitationId:guid}/revoke", async (Guid id, Guid invitationId, PortalAdminService s, CancellationToken ct) => (await s.RevokeInvitationAsync(id, invitationId, ct)).ToHttp()).RequirePermission(Permissions.VendorsManage);
+        v.MapPost("/{id:guid}/portal-users/{userId:guid}/active", async (Guid id, Guid userId, SetPortalUserActiveRequest r, PortalAdminService s, CancellationToken ct) => (await s.SetUserActiveAsync(id, userId, r.Active ?? false, ct)).ToHttp()).RequirePermission(Permissions.VendorsManage);
+
         var c = v1.MapGroup("/contracts");
         c.MapGet("", async (ContractService s, Guid? vendorId, ContractStatus? status, string? q, int? page, int? pageSize, CancellationToken ct) =>
             Results.Ok(await s.ListAsync(vendorId, status, q, page, pageSize, ct))).RequirePermission(Permissions.VendorsRead);

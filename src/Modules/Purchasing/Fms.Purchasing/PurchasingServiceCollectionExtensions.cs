@@ -20,6 +20,7 @@ public static class PurchasingServiceCollectionExtensions
         services.AddScoped<SettingsService>();
         services.AddScoped<RequestService>();
         services.AddScoped<OrderService>();
+        services.AddScoped<PortalOrderService>();
         services.AddScoped<IOutboxHandler, PurchasingEventHandler>();
         services.AddScoped<IOutboxHandler, OrderSyncedHandler>();
         services.AddHealthChecks().AddDbContextCheck<PurchasingDbContext>("purchasing-db", tags: ["ready"]);
