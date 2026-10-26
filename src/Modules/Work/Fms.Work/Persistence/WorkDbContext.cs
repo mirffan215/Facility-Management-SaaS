@@ -169,7 +169,7 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
         b.Entity<PmOccurrence>(e =>
         {
             e.ToTable("PmOccurrences");
-            e.HasIndex(x => new { x.TenantId, x.PlanId, x.DueOn, x.Trigger }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.PlanId, x.DueOn, x.Trigger }).IsUnique().HasFilter("[Trigger] = 1"); // one calendar visit per due date; meter visits may repeat
             e.HasIndex(x => new { x.TenantId, x.WorkOrderId });
             e.HasIndex(x => new { x.TenantId, x.DueOn });
             e.HasOne<PmPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Restrict);

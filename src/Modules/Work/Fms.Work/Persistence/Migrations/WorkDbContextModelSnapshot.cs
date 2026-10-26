@@ -245,7 +245,8 @@ namespace Fms.Work.Persistence.Migrations
                     b.HasIndex("TenantId", "WorkOrderId");
 
                     b.HasIndex("TenantId", "PlanId", "DueOn", "Trigger")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Trigger] = 1");
 
                     b.ToTable("PmOccurrences", "work");
                 });

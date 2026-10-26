@@ -241,6 +241,136 @@ public sealed class PmApiTests(SqlServerFixture sql) : IDisposable
         Assert.Equal(Today.AddDays(90), (await rig.Viewer.GetFromJsonAsync<PmPlanDto[]>($"/api/v1/pm/schedules/{schedule.Id}/plans", Json))![0].NextDueOn);
     }
 
+    // ---------------- meter triggers ----------------
+
+    private static async Task<MeterDto> NewMeterAsync(Rig rig, string name = "Run hours", Guid? assetId = null) =>
+        await ReadAsync<MeterDto>(await PostAsync(rig.Manager, $"/api/v1/assets/{assetId ?? rig.Asset.Id}/meters", new { name, unit = "h", kind = "Cumulative" }));
+
+    private static async Task ReadingAsync(Rig rig, MeterDto meter, decimal value, int daysAgo = 0, bool reset = false) =>
+        Assert.Equal(HttpStatusCode.Created, (await PostAsync(rig.Technician, $"/api/v1/meters/{meter.Id}/readings",
+            new { value, readAt = DateTimeOffset.UtcNow.AddDays(-daysAgo).AddMinutes(-1), isReset = reset })).StatusCode);
+
+    private static async Task CompleteAsync(Rig rig, WorkOrderDto order)
+    {
+        await PostAsync(rig.Technician, $"/api/v1/work-orders/{order.Id}/start", new { });
+        foreach (var item in (await rig.Technician.GetFromJsonAsync<ChecklistItemDto[]>($"/api/v1/work-orders/{order.Id}/checklist", Json))!)
+            await PostAsync(rig.Technician, $"/api/v1/work-orders/{order.Id}/checklist/{item.Id}", new { result = "Done" });
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(rig.Technician, $"/api/v1/work-orders/{order.Id}/complete", new { code = "Fixed", notes = "serviced" })).StatusCode);
+    }
+
+    private static async Task<PmPlanDto> PlanAsync(Rig rig, PmScheduleDto schedule) =>
+        Assert.Single((await rig.Viewer.GetFromJsonAsync<PmPlanDto[]>($"/api/v1/pm/schedules/{schedule.Id}/plans", Json))!);
+
+    [Fact]
+    public async Task A_meter_schedule_creates_work_when_the_meter_has_run_its_interval_since_the_last_service()
+    {
+        var rig = await NewRigAsync();
+        var template = await NewTemplateAsync(rig, "Oil change", checklist: null);
+        var meter = await NewMeterAsync(rig);
+        await ReadingAsync(rig, meter, 1000, daysAgo: 2);
+        var schedule = await NewScheduleAsync(rig, template, new
+        {
+            name = "Every 500 h", templateId = template.Id, targetKind = "Asset", assetId = rig.Asset.Id, timeBasis = "None", intervalUnit = "Day", interval = 1, startOn = Today,
+            leadDays = 3, meterName = "Run hours", meterInterval = 500, assignToUserId = rig.TechId,
+        });
+
+        var plan = await PlanAsync(rig, schedule);
+        Assert.Equal(1000m, plan.LastServiceMeterValue); // counting starts from the meter as it was when the schedule was made
+        Assert.Null(plan.NextDueOn); // no calendar dates
+        Assert.False(plan.MeterMissing);
+
+        await ReadingAsync(rig, meter, 1400, daysAgo: 1);
+        Assert.Equal(0, (await RunOk(rig.Manager)).WorkOrdersCreated);
+        await ReadingAsync(rig, meter, 1500);
+        Assert.Equal(1, (await RunOk(rig.Manager)).WorkOrdersCreated);
+        Assert.Equal(0, (await RunOk(rig.Manager)).WorkOrdersCreated); // one open job at a time
+
+        var order = Assert.Single(await PlannedOrdersAsync(rig.Manager));
+        Assert.Equal(WorkOrderStatus.Assigned, order.Status);
+        await using (var db = sql.Work(rig.Tenant))
+            Assert.Equal(PmTrigger.Meter, (await db.PmOccurrences.SingleAsync(o => o.WorkOrderId == order.Id)).Trigger);
+
+        // Servicing resets the count to where the meter stands now, so the next visit is a further 500 hours on.
+        await CompleteAsync(rig, order);
+        Assert.Equal(1500m, (await PlanAsync(rig, schedule)).LastServiceMeterValue);
+        await ReadingAsync(rig, meter, 1900);
+        Assert.Equal(0, (await RunOk(rig.Manager)).WorkOrdersCreated);
+        await ReadingAsync(rig, meter, 2000);
+        Assert.Equal(1, (await RunOk(rig.Manager)).WorkOrdersCreated);
+    }
+
+    [Fact]
+    public async Task With_both_a_calendar_and_a_meter_whichever_comes_first_creates_the_work_and_a_meter_visit_leaves_the_dates_alone()
+    {
+        var rig = await NewRigAsync();
+        var template = await NewTemplateAsync(rig, "Combined", checklist: null);
+        var meter = await NewMeterAsync(rig);
+        await ReadingAsync(rig, meter, 100, daysAgo: 3);
+        var schedule = await NewScheduleAsync(rig, template, new
+        {
+            name = "Quarterly or 200 h", templateId = template.Id, targetKind = "Asset", assetId = rig.Asset.Id, timeBasis = "Fixed", intervalUnit = "Month", interval = 3,
+            startOn = Today.AddDays(60), leadDays = 7, meterName = "Run hours", meterInterval = 200, assignToUserId = rig.TechId,
+        });
+        Assert.Equal(0, (await RunOk(rig.Manager)).WorkOrdersCreated);
+
+        await ReadingAsync(rig, meter, 320);
+        Assert.Equal(1, (await RunOk(rig.Manager)).WorkOrdersCreated);
+        var order = Assert.Single(await PlannedOrdersAsync(rig.Manager));
+        await CompleteAsync(rig, order);
+
+        var plan = await PlanAsync(rig, schedule);
+        Assert.Equal(Today.AddDays(60), plan.NextDueOn); // the calendar date is still ahead, untouched by the early visit
+        Assert.Equal(320m, plan.LastServiceMeterValue);
+    }
+
+    [Fact]
+    public async Task A_missing_meter_is_flagged_and_picked_up_when_it_appears_and_a_replaced_meter_counts_again_from_its_new_start()
+    {
+        var rig = await NewRigAsync();
+        var template = await NewTemplateAsync(rig, "Meter check", checklist: null);
+        var schedule = await NewScheduleAsync(rig, template, new
+        {
+            name = "Hours based", templateId = template.Id, targetKind = "Asset", assetId = rig.Asset.Id, timeBasis = "None", intervalUnit = "Day", interval = 1, startOn = Today,
+            leadDays = 3, meterName = "Run hours", meterInterval = 100,
+        });
+        Assert.True((await PlanAsync(rig, schedule)).MeterMissing); // the asset has no meter by that name yet
+        Assert.Equal(0, (await RunOk(rig.Manager)).WorkOrdersCreated);
+
+        var meter = await NewMeterAsync(rig);
+        await ReadingAsync(rig, meter, 5000, daysAgo: 2);
+        await RunOk(rig.Manager); // first sight of the meter sets the baseline, it does not create work
+        var plan = await PlanAsync(rig, schedule);
+        Assert.False(plan.MeterMissing);
+        Assert.Equal(5000m, plan.LastServiceMeterValue);
+
+        // The unit is replaced and starts again from 5: counting restarts from there, not from 5000.
+        await ReadingAsync(rig, meter, 5, reset: true);
+        Assert.Equal(0, (await RunOk(rig.Manager)).WorkOrdersCreated);
+        Assert.Equal(5m, (await PlanAsync(rig, schedule)).LastServiceMeterValue);
+        await ReadingAsync(rig, meter, 106);
+        Assert.Equal(1, (await RunOk(rig.Manager)).WorkOrdersCreated);
+    }
+
+    [Fact]
+    public async Task The_forecast_estimates_when_a_meter_will_reach_its_interval_from_the_recent_pace()
+    {
+        var rig = await NewRigAsync();
+        var template = await NewTemplateAsync(rig, "Estimate", checklist: null);
+        var meter = await NewMeterAsync(rig);
+        await ReadingAsync(rig, meter, 1000, daysAgo: 20);
+        await NewScheduleAsync(rig, template, new
+        {
+            name = "Every 500 h", templateId = template.Id, targetKind = "Asset", assetId = rig.Asset.Id, timeBasis = "None", intervalUnit = "Day", interval = 1, startOn = Today,
+            leadDays = 0, meterName = "Run hours", meterInterval = 500,
+        });
+        await ReadingAsync(rig, meter, 1200); // 10 hours a day; 300 more to go
+
+        var forecast = await rig.Viewer.GetFromJsonAsync<ForecastDto>("/api/v1/pm/forecast", Json);
+        var item = Assert.Single(forecast!.Items);
+        Assert.Equal(ForecastKind.MeterEstimate, item.Kind);
+        Assert.InRange(item.Date.DayNumber - Today.DayNumber, 29, 31);
+    }
+
     [Fact]
     public async Task A_schedule_for_an_asset_class_follows_the_assets_in_it()
     {
