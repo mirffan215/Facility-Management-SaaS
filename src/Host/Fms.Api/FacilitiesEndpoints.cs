@@ -26,6 +26,16 @@ public static class FacilitiesEndpoints
                 Results.Ok(await s.ListAsync(new LocationQuery(parentId, underId, type, q, includeArchived ?? false, page, pageSize), ct)))
             .RequirePermission(Permissions.LocationsRead);
 
+        g.MapPost("/import", async (HttpContext http, ImportExportService s, bool? dryRun, CancellationToken ct) =>
+            {
+                var (csv, problem) = await ReadCsvAsync(http, ct);
+                return problem ?? (await s.ImportLocationsAsync(csv!, dryRun ?? false, ct)).ToHttp();
+            })
+            .RequirePermission(Permissions.LocationsManage);
+
+        g.MapGet("/export.csv", async (ImportExportService s, CancellationToken ct) => CsvFile(await s.ExportLocationsAsync(ct), "locations.csv"))
+            .RequirePermission(Permissions.LocationsRead);
+
         g.MapGet("/tree", async (LocationService s, CancellationToken ct) => Results.Ok(await s.TreeAsync(ct)))
             .RequirePermission(Permissions.LocationsRead);
 
@@ -96,6 +106,16 @@ public static class FacilitiesEndpoints
                     warrantyExpiresBefore, includeRetired ?? false, page, pageSize), ct)))
             .RequirePermission(Permissions.AssetsRead);
 
+        g.MapPost("/import", async (HttpContext http, ImportExportService s, bool? dryRun, CancellationToken ct) =>
+            {
+                var (csv, problem) = await ReadCsvAsync(http, ct);
+                return problem ?? (await s.ImportAssetsAsync(csv!, dryRun ?? false, ct)).ToHttp();
+            })
+            .RequirePermission(Permissions.AssetsManage);
+
+        g.MapGet("/export.csv", async (ImportExportService s, CancellationToken ct) => CsvFile(await s.ExportAssetsAsync(ct), "assets.csv"))
+            .RequirePermission(Permissions.AssetsRead);
+
         g.MapGet("/{id:guid}", async (Guid id, AssetService s, CancellationToken ct) => (await s.GetAsync(id, ct)).ToHttp())
             .RequirePermission(Permissions.AssetsRead);
 
@@ -164,6 +184,56 @@ public static class FacilitiesEndpoints
         v1.MapPost("/meter-readings/{readingId:guid}/void", async (Guid readingId, VoidReadingRequest r, MeterService s, CancellationToken ct) =>
                 (await s.VoidAsync(readingId, r, ct)).ToHttp())
             .RequirePermission(Permissions.MetersManage);
+    }
+
+    private static IResult CsvFile(Fms.BuildingBlocks.Results.Result<string> result, string fileName) =>
+        result.ToHttp(csv => Results.File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", fileName));
+
+    /// <summary>Accepts the CSV as a multipart upload (field "file", what browsers send) or as a text/csv request body (scripts).</summary>
+    private static async Task<(string? Csv, IResult? Problem)> ReadCsvAsync(HttpContext http, CancellationToken ct)
+    {
+        const int limit = ImportExportService.MaxBytes + 64 * 1024;
+        if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } feature) feature.MaxRequestBodySize = limit;
+
+        try
+        {
+            Stream input;
+            if (http.Request.HasFormContentType)
+            {
+                var form = await http.Request.ReadFormAsync(ct);
+                if (form.Files.Count != 1 || form.Files[0].Name != "file")
+                    return (null, Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Send exactly one file in the 'file' field."] }));
+                input = form.Files[0].OpenReadStream();
+            }
+            else if (http.Request.ContentType?.StartsWith("text/csv", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                input = http.Request.Body;
+            }
+            else
+            {
+                return (null, Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Send a CSV file (multipart/form-data, field 'file') or a text/csv body."));
+            }
+
+            await using (input)
+            {
+                var buffer = new MemoryStream();
+                var chunk = new byte[81920];
+                int read;
+                while ((read = await input.ReadAsync(chunk, ct)) > 0)
+                {
+                    if (buffer.Length + read > ImportExportService.MaxBytes)
+                        return (null, Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge, title: $"The file is larger than {ImportExportService.MaxBytes / (1024 * 1024)} MB."));
+                    buffer.Write(chunk, 0, read);
+                }
+
+                try { return (new System.Text.UTF8Encoding(false, true).GetString(buffer.ToArray()), null); }
+                catch (System.Text.DecoderFallbackException) { return (null, Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["The file must be UTF-8 text. In Excel, save as 'CSV UTF-8'."] })); }
+            }
+        }
+        catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            return (null, Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge, title: "The file is too large."));
+        }
     }
 
     private static void MapDocuments(RouteGroupBuilder v1)

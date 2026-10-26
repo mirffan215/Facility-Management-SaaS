@@ -63,7 +63,7 @@ v1.MapGet("/system/info", (IOptions<DeploymentOptions> deployment, ILicenseProvi
 
 // Public: what the web app needs to start an OIDC sign-in (authority and client id are not secrets).
 v1.MapGet("/auth/providers", (IOptions<AuthOptions> auth) =>
-    Results.Ok(auth.Value.Providers.Select(p => new AuthProviderInfo(p.Name, p.Authority, p.ClientId)))).AllowAnonymous();
+    Results.Ok(auth.Value.Providers.Select(p => new AuthProviderInfo(p.Name, p.Authority, p.ClientId, p.Scope)))).AllowAnonymous();
 
 v1.MapGet("/me", async (ICurrentUser user, HttpContext http) =>
 {
@@ -101,7 +101,7 @@ namespace Fms.Api
 {
     public sealed record SystemInfo(string DeploymentMode, string Edition, bool Licensed, bool TenantResolved);
 
-    public sealed record AuthProviderInfo(string Name, string Authority, string? ClientId);
+    public sealed record AuthProviderInfo(string Name, string Authority, string? ClientId, string? Scope = null);
 
     public sealed record MeInfo(string? Subject, string? Provider, Guid? TenantId, Guid? UserId = null, IReadOnlyList<string>? Permissions = null);
 

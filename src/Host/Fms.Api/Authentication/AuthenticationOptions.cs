@@ -37,6 +37,9 @@ public sealed class IdentityProviderOptions
     /// <summary>Public client id the web app signs in with. Returned by the auth config endpoint.</summary>
     public string? ClientId { get; set; }
 
+    /// <summary>Scopes the web app requests, e.g. "openid profile email api://fms/access_as_user". Entra needs the API scope here for the token's audience to match.</summary>
+    public string Scope { get; set; } = "openid profile email";
+
     public string SchemeName => $"idp:{Name}";
 }
 

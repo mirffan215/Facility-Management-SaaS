@@ -29,6 +29,7 @@ internal sealed class FacilitiesScope : IAsyncDisposable
     public required AssetService Assets { get; init; }
     public required MeterService Meters { get; init; }
     public required DocumentService Documents { get; init; }
+    public required ImportExportService ImportExport { get; init; }
     public Guid UserId { get; init; }
     public required Guid Tenant { get; init; }
 
@@ -48,6 +49,7 @@ internal sealed class FacilitiesScope : IAsyncDisposable
             CustomFields = new CustomFieldService(db, audit),
             Classes = new AssetClassService(db, audit),
             Assets = new AssetService(db, audit, clock),
+            ImportExport = new ImportExportService(db, new LocationService(db, audit, clock), new AssetService(db, audit, clock), audit),
             Meters = new MeterService(db, audit, user, clock),
             Documents = new DocumentService(db, new TenantScopedFileStore(sql.Blobs, tenantContext), scanner ?? new NoOpFileScanner(), audit, user, Options.Create(options ?? new FacilitiesOptions()), clock),
             UserId = user.UserId!.Value,
