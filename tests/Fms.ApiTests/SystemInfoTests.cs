@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Fms.Api;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Fms.ApiTests;
@@ -77,5 +78,40 @@ public sealed class SystemInfoTests
         // The fallback policy requires sign-in, so anonymous callers cannot probe which routes exist.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+}
+
+public sealed class LoggingIsolationTests
+{
+    private sealed class Sink : Serilog.Core.ILogEventSink
+    {
+        public readonly System.Collections.Concurrent.ConcurrentQueue<string> Paths = new();
+
+        public void Emit(Serilog.Events.LogEvent e)
+        {
+            if (e.MessageTemplate.Text.StartsWith("HTTP ", StringComparison.Ordinal) && e.Properties.TryGetValue("RequestPath", out var path))
+                Paths.Enqueue(path.ToString().Trim('"'));
+        }
+    }
+
+    private static WebApplicationFactory<Program> Host(Sink sink) =>
+        new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.ConfigureServices(s => s.AddSingleton<Serilog.Core.ILogEventSink>(sink)));
+
+    [Fact]
+    public async Task Hosts_in_one_process_never_receive_each_others_request_logs()
+    {
+        var sinkA = new Sink();
+        var sinkB = new Sink();
+        await using var a = Host(sinkA);
+        var clientA = a.CreateClient();
+        await using var b = Host(sinkB); // built last: with a process-wide logger it would take over A's request logs
+        var clientB = b.CreateClient();
+
+        await clientA.GetAsync("/api/v1/system/info");
+        await clientB.GetAsync("/api/v1/auth/providers");
+        await clientA.GetAsync("/api/v1/system/info");
+
+        Assert.Equal(["/api/v1/system/info", "/api/v1/system/info"], sinkA.Paths);
+        Assert.Equal(["/api/v1/auth/providers"], sinkB.Paths);
     }
 }

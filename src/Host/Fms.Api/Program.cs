@@ -43,7 +43,8 @@ app.Use(async (context, next) =>
 });
 
 app.UseExceptionHandler();
-app.UseSerilogRequestLogging();
+// Use THIS host's logger (not the process-wide static one) so hosts sharing a process never receive each other's request logs.
+app.UseSerilogRequestLogging(o => o.Logger = app.Services.GetRequiredService<Serilog.ILogger>());
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();

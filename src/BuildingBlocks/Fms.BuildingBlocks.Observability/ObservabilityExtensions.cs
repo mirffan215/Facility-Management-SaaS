@@ -26,7 +26,7 @@ public static class ObservabilityExtensions
             .ReadFrom.Services(sp)
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Service", serviceName)
-            .WriteTo.Console(new RenderedCompactJsonFormatter()));
+            .WriteTo.Console(new RenderedCompactJsonFormatter()), preserveStaticLogger: true);
 
         var otel = builder.Services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(serviceName))
