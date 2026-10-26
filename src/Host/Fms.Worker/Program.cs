@@ -31,6 +31,7 @@ builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSecti
 builder.Services.AddFmsEmail(builder.Configuration);
 builder.Services.AddHostedService<OutboxWorker>();
 builder.Services.AddHostedService<SlaMonitorWorker>();
+builder.Services.AddHostedService<PmWorker>();
 
 // Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
 
@@ -105,4 +106,30 @@ internal sealed class BackgroundUser : ICurrentUser
     public string? Provider => null;
     public Guid? TenantId => null;
     public Guid? UserId => null;
+}
+
+/// <summary>Creates preventive work orders when they fall due (see <see cref="PmGenerator"/>). Every few minutes is plenty: schedules are in days.</summary>
+internal sealed class PmWorker(PmGenerator generator, ILogger<PmWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var created = await generator.RunOnceAsync(stoppingToken);
+                if (created > 0) log.LogInformation("Created {Count} preventive work orders", created);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Preventive maintenance run failed");
+                await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            }
+        }
+    }
 }

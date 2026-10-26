@@ -117,3 +117,34 @@ public sealed record OfflineJobDto(
 
 /// <summary>The jobs assigned to the signed-in person that are still open, with the server's clock so the phone can correct its own.</summary>
 public sealed record OfflineJobsDto(DateTimeOffset ServerTime, IReadOnlyList<OfflineJobDto> Jobs, bool RequireCompletionSignature = false);
+
+// ---------------- preventive maintenance ----------------
+
+public sealed record PmTemplateDto(
+    Guid Id, string Name, string? NameAr, string? Instructions, WorkPriority Priority, int? EstimatedMinutes, Guid? CategoryId, Guid? ChecklistTemplateId,
+    string? ChecklistName, bool IsArchived, string RowVersion);
+
+public sealed record SavePmTemplateRequest(
+    string? Name, string? NameAr, string? Instructions, WorkPriority? Priority, int? EstimatedMinutes, Guid? CategoryId, Guid? ChecklistTemplateId, string? RowVersion);
+
+public sealed record PmScheduleDto(
+    Guid Id, string Name, Guid TemplateId, string? TemplateName, PmTargetKind TargetKind, Guid? AssetId, string? AssetName, Guid? AssetClassId, string? AssetClassName,
+    PmTimeBasis TimeBasis, PmIntervalUnit IntervalUnit, int Interval, DateOnly StartOn, int LeadDays, string? MeterName, decimal? MeterInterval, Guid? AssignToUserId,
+    string? AssignToName, bool IsArchived, int Assets, int Open, string RowVersion);
+
+public sealed record SavePmScheduleRequest(
+    string? Name, Guid? TemplateId, PmTargetKind? TargetKind, Guid? AssetId, Guid? AssetClassId, PmTimeBasis? TimeBasis, PmIntervalUnit? IntervalUnit, int? Interval,
+    DateOnly? StartOn, int? LeadDays, string? MeterName, decimal? MeterInterval, Guid? AssignToUserId, string? RowVersion);
+
+public sealed record PmPlanDto(
+    Guid Id, Guid ScheduleId, Guid AssetId, string? AssetCode, string? AssetName, DateOnly? NextDueOn, DateOnly? LastCompletedOn, Guid? OpenWorkOrderId, bool IsActive,
+    decimal? LastServiceMeterValue, decimal? CurrentMeterValue, bool MeterMissing);
+
+public enum ForecastKind { Open = 1, Projected = 2, MeterEstimate = 3 }
+
+/// <summary>One thing on the maintenance calendar: a work order already created, or one that will be.</summary>
+public sealed record ForecastItemDto(
+    DateOnly Date, ForecastKind Kind, Guid ScheduleId, string ScheduleName, string? TemplateName, Guid AssetId, string? AssetCode, string? AssetName, Guid? LocationId,
+    Guid? AssetClassId, Guid? WorkOrderId, string? WorkOrderNumber, WorkOrderStatus? Status, bool Overdue);
+
+public sealed record ForecastDto(DateOnly From, DateOnly To, DateOnly Today, IReadOnlyList<ForecastItemDto> Items, bool Truncated);

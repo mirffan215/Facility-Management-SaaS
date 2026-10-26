@@ -62,7 +62,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(1, reader.GetInt32(3));
         Assert.Equal(reader.GetInt32(5), reader.GetInt32(4)); // every facilities table is under row-level security
         Assert.Equal(reader.GetInt32(7), reader.GetInt32(6)); // every work table is under row-level security too
-        Assert.Equal(18, reader.GetInt32(7)); // work orders, history, comments, categories, settings, SLA (5), checklists (3), time, costs, voids, signatures, attachments
+        Assert.Equal(22, reader.GetInt32(7)); // work orders, history, comments, categories, settings, SLA (5), checklists (3), time, costs, voids, signatures, attachments
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
     }
 }

@@ -37,6 +37,39 @@ public sealed class FacilityLookup(FacilitiesDbContext db) : IFacilityLookup
         return rows.Select(r => new FacilityRef(r.Id, r.Code, r.Name, r.LocationId)).ToList();
     }
 
+    public async Task<IReadOnlyList<FacilityRef>> AssetsInClassAsync(Guid assetClassId, CancellationToken ct = default)
+    {
+        var rows = await db.Assets.AsNoTracking().Where(a => a.AssetClassId == assetClassId && a.Status != AssetStatus.Retired).OrderBy(a => a.Code)
+            .Select(a => new { a.Id, a.Code, a.Name, a.LocationId, a.AssetClassId }).ToListAsync(ct);
+        return rows.Select(r => new FacilityRef(r.Id, r.Code, r.Name, r.LocationId, null, r.AssetClassId)).ToList();
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> AssetClassNamesAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var wanted = ids.Distinct().ToList();
+        return wanted.Count == 0 ? new Dictionary<Guid, string>() : await db.AssetClasses.AsNoTracking().Where(c => wanted.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+    }
+
+    public async Task<MeterRef?> FindMeterAsync(Guid assetId, string name, CancellationToken ct = default)
+    {
+        var m = await db.Meters.AsNoTracking().FirstOrDefaultAsync(x => x.AssetId == assetId && !x.IsArchived && x.Name == name, ct);
+        return m is null ? null : new MeterRef(m.Id, m.AssetId, m.Name, m.Unit, m.Kind == MeterKind.Cumulative);
+    }
+
+    public async Task<MeterValue?> LatestReadingAsync(Guid meterId, CancellationToken ct = default)
+    {
+        var r = await db.MeterReadings.AsNoTracking().Where(x => x.MeterId == meterId && !db.MeterReadingVoids.Any(v => v.ReadingId == x.Id))
+            .OrderByDescending(x => x.ReadAt).ThenByDescending(x => x.RecordedAt).Select(x => new { x.Value, x.ReadAt }).FirstOrDefaultAsync(ct);
+        return r is null ? null : new MeterValue(r.Value, r.ReadAt);
+    }
+
+    public async Task<IReadOnlyList<MeterValue>> ReadingsSinceAsync(Guid meterId, DateTimeOffset since, CancellationToken ct = default)
+    {
+        var rows = await db.MeterReadings.AsNoTracking().Where(x => x.MeterId == meterId && x.ReadAt >= since && !db.MeterReadingVoids.Any(v => v.ReadingId == x.Id))
+            .OrderBy(x => x.ReadAt).Select(x => new { x.Value, x.ReadAt }).ToListAsync(ct);
+        return rows.Select(r => new MeterValue(r.Value, r.ReadAt)).ToList();
+    }
+
     public async Task<IReadOnlyDictionary<Guid, FacilityRef>> LocationsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
     {
         var wanted = ids.Distinct().ToList();
@@ -49,7 +82,7 @@ public sealed class FacilityLookup(FacilitiesDbContext db) : IFacilityLookup
     {
         var wanted = ids.Distinct().ToList();
         if (wanted.Count == 0) return new Dictionary<Guid, FacilityRef>();
-        var rows = await db.Assets.AsNoTracking().Where(a => wanted.Contains(a.Id)).Select(a => new { a.Id, a.Code, a.Name, a.LocationId }).ToListAsync(ct);
-        return rows.ToDictionary(r => r.Id, r => new FacilityRef(r.Id, r.Code, r.Name, r.LocationId));
+        var rows = await db.Assets.AsNoTracking().Where(a => wanted.Contains(a.Id)).Select(a => new { a.Id, a.Code, a.Name, a.LocationId, a.AssetClassId, a.Status }).ToListAsync(ct);
+        return rows.ToDictionary(r => r.Id, r => new FacilityRef(r.Id, r.Code, r.Name, r.LocationId, null, r.AssetClassId, r.Status != AssetStatus.Retired));
     }
 }

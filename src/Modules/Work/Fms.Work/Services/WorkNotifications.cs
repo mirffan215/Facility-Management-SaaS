@@ -17,7 +17,7 @@ public static class NotificationPlanner
     {
         IEnumerable<Guid> who = action switch
         {
-            WorkOrderAction.Created => wo.Status == WorkOrderStatus.Requested ? people.Approvers : people.Dispatchers,
+            WorkOrderAction.Created => wo.Status == WorkOrderStatus.Requested ? people.Approvers : people.Dispatchers.Concat(wo.AssignedTo is { } a ? [a] : []),
             WorkOrderAction.Approved => people.Dispatchers.Append(wo.RequestedBy),
             WorkOrderAction.Rejected => [wo.RequestedBy],
             WorkOrderAction.Assigned => Assignee(wo).Append(wo.RequestedBy),

@@ -13,7 +13,7 @@ namespace Fms.Work.Services;
 
 public sealed class WorkOrderService(
     WorkDbContext db, IAuditPort audit, ICurrentUser user, ICurrentPermissions permissions, IUserDirectory users, IFacilityLookup facilities,
-    SlaClock sla, IOutbox outbox, WorkEvidenceService evidence, TimeProvider clock)
+    SlaClock sla, IOutbox outbox, WorkEvidenceService evidence, PmEngine pm, TimeProvider clock)
 {
     private Actor? _actor;
     private WorkflowSettings? _settings;
@@ -147,12 +147,7 @@ public sealed class WorkOrderService(
             {
                 db.ChangeTracker.Clear();
                 await using var tx = await db.Database.BeginTransactionAsync(token);
-                var lockResult = await db.Database
-                    .SqlQuery<int>($"DECLARE @r int; EXEC @r = sp_getapplock @Resource = {"fms.wo-number:" + tenantKey}, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 15000; SELECT @r AS Value")
-                    .ToListAsync(token);
-                if (lockResult.Count != 1 || lockResult[0] < 0) throw new InvalidOperationException("Could not reserve a work order number.");
-
-                var next = (await db.WorkOrders.MaxAsync(w => (int?)w.Number, token) ?? 0) + 1;
+                var next = await WorkOrderNumbers.NextAsync(db, tenantKey, token);
                 var wo = new WorkOrder
                 {
                     Id = id, Number = next, Title = title, Description = Clean(r.Description), Type = type, Priority = r.Priority ?? category?.DefaultPriority ?? WorkPriority.Medium,
@@ -373,6 +368,8 @@ public sealed class WorkOrderService(
 
         if (noteIsReason && cleaned is not null && action is not WorkOrderAction.Assigned) wo.StatusReason = cleaned;
         wo.UpdatedAt = now;
+        // A preventive job that is done (or cancelled) moves its plan on, in the same transaction.
+        if (action is WorkOrderAction.Completed or WorkOrderAction.Cancelled) await pm.OnFinishedAsync(wo, action == WorkOrderAction.Completed ? PmOutcome.Completed : PmOutcome.Skipped, now, ct);
         db.WorkOrderEvents.Add(Event(wo, action, from, wo.Status, actor.UserId, now, cleaned, subject));
         outbox.Enqueue(WorkMessages.Event, new WorkOrderEventMessage(id, action, actor.UserId, cleaned));
         audit.Record("workorder." + action.ToString().ToLowerInvariant(), nameof(WorkOrder), id.ToString(),

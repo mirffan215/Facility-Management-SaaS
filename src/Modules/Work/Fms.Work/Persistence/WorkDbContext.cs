@@ -23,6 +23,10 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
     public DbSet<WorkOrderVoid> Voids => Set<WorkOrderVoid>();
     public DbSet<WorkOrderSignature> Signatures => Set<WorkOrderSignature>();
     public DbSet<WorkOrderAttachment> Attachments => Set<WorkOrderAttachment>();
+    public DbSet<PmTemplate> PmTemplates => Set<PmTemplate>();
+    public DbSet<PmSchedule> PmSchedules => Set<PmSchedule>();
+    public DbSet<PmPlan> PmPlans => Set<PmPlan>();
+    public DbSet<PmOccurrence> PmOccurrences => Set<PmOccurrence>();
     public DbSet<WorkCalendar> Calendars => Set<WorkCalendar>();
     public DbSet<WorkCalendarHoliday> CalendarHolidays => Set<WorkCalendarHoliday>();
     public DbSet<WorkCalendarSite> CalendarSites => Set<WorkCalendarSite>();
@@ -127,6 +131,48 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
             e.Property(x => x.DeleteReason).HasMaxLength(500);
             e.HasIndex(x => new { x.TenantId, x.WorkOrderId, x.DeletedAt });
             e.HasOne<WorkOrder>().WithMany().HasForeignKey(x => x.WorkOrderId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<PmTemplate>(e =>
+        {
+            e.ToTable("PmTemplates");
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.NameAr).HasMaxLength(200);
+            e.Property(x => x.Instructions).HasMaxLength(4000);
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique().HasFilter("[IsArchived] = 0");
+            e.HasOne<WorkCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ChecklistTemplate>().WithMany().HasForeignKey(x => x.ChecklistTemplateId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<PmSchedule>(e =>
+        {
+            e.ToTable("PmSchedules");
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.MeterName).HasMaxLength(200);
+            e.Property(x => x.MeterInterval).HasPrecision(18, 4);
+            e.HasIndex(x => new { x.TenantId, x.TemplateId });
+            e.HasIndex(x => new { x.TenantId, x.AssetId });
+            e.HasIndex(x => new { x.TenantId, x.AssetClassId });
+            e.HasOne<PmTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<PmPlan>(e =>
+        {
+            e.ToTable("PmPlans");
+            e.Property(x => x.LastServiceMeterValue).HasPrecision(18, 4);
+            e.HasIndex(x => new { x.TenantId, x.ScheduleId, x.AssetId }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.IsActive, x.NextDueOn });
+            e.HasIndex(x => new { x.TenantId, x.OpenWorkOrderId });
+            e.HasOne<PmSchedule>().WithMany().HasForeignKey(x => x.ScheduleId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<PmOccurrence>(e =>
+        {
+            e.ToTable("PmOccurrences");
+            e.HasIndex(x => new { x.TenantId, x.PlanId, x.DueOn, x.Trigger }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.WorkOrderId });
+            e.HasIndex(x => new { x.TenantId, x.DueOn });
+            e.HasOne<PmPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Restrict);
         });
 
         b.Entity<WorkCalendar>(e =>

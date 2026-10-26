@@ -22,13 +22,14 @@ public static class SystemRoles
             Permissions.DocumentsRead, Permissions.DocumentsManage, Permissions.CustomFieldsManage,
             Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersApprove, Permissions.WorkOrdersAssign,
             Permissions.WorkOrdersWork, Permissions.WorkOrdersVerify, Permissions.WorkOrdersManage,
+            Permissions.PmRead, Permissions.PmManage,
         ],
         [Technician] =
         [
             Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.MetersRecord, Permissions.DocumentsRead,
-            Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork,
+            Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.PmRead,
         ],
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest],
-        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead],
     };
 }

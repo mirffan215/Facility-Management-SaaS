@@ -11,7 +11,11 @@ public interface IUserDirectory
     Task<IReadOnlyList<DirectoryUser>> WithPermissionAsync(string permission, CancellationToken ct = default);
 }
 
-public sealed record FacilityRef(Guid Id, string Code, string Name, Guid? LocationId, string? Kind = null);
+public sealed record FacilityRef(Guid Id, string Code, string Name, Guid? LocationId, string? Kind = null, Guid? ClassId = null, bool Active = true);
+
+public sealed record MeterRef(Guid Id, Guid AssetId, string Name, string Unit, bool IsCumulative);
+
+public sealed record MeterValue(decimal Value, DateTimeOffset ReadAt);
 
 /// <summary>What other modules may ask the Facilities module (locations and assets are validated and named, never joined across schemas).</summary>
 public interface IFacilityLookup
@@ -30,6 +34,21 @@ public interface IFacilityLookup
 
     /// <summary>The site a location belongs to (the location itself when it is a site), or null when it does not exist.</summary>
     Task<Guid?> SiteOfAsync(Guid locationId, CancellationToken ct = default);
+
+    /// <summary>Assets of an asset class that are not retired.</summary>
+    Task<IReadOnlyList<FacilityRef>> AssetsInClassAsync(Guid assetClassId, CancellationToken ct = default);
+
+    /// <summary>Names of asset classes, by id.</summary>
+    Task<IReadOnlyDictionary<Guid, string>> AssetClassNamesAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+
+    /// <summary>The asset's active meter with this name, or null.</summary>
+    Task<MeterRef?> FindMeterAsync(Guid assetId, string name, CancellationToken ct = default);
+
+    /// <summary>The newest reading that has not been voided, or null when there is none.</summary>
+    Task<MeterValue?> LatestReadingAsync(Guid meterId, CancellationToken ct = default);
+
+    /// <summary>Readings (not voided) since a moment, oldest first. For estimating how fast a meter is running.</summary>
+    Task<IReadOnlyList<MeterValue>> ReadingsSinceAsync(Guid meterId, DateTimeOffset since, CancellationToken ct = default);
 
     Task<IReadOnlyDictionary<Guid, FacilityRef>> LocationsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<IReadOnlyDictionary<Guid, FacilityRef>> AssetsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);

@@ -23,6 +23,9 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<WorkFilesService>();
         services.AddScoped<ChecklistTemplateService>();
         services.AddScoped<OfflineJobsService>();
+        services.AddScoped<PmEngine>();
+        services.AddScoped<PmService>();
+        services.AddSingleton<PmGenerator>();
         services.AddScoped<SlaClock>();
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, WorkOrderEventHandler>();
         services.AddScoped<Fms.BuildingBlocks.Messaging.IOutboxHandler, SlaAlertHandler>();

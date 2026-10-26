@@ -31,12 +31,17 @@ public static class Permissions
     public const string WorkOrdersVerify = "workorders.verify";
     public const string WorkOrdersManage = "workorders.manage";
 
+    /// <summary>See preventive maintenance schedules, the forecast calendar and compliance figures.</summary>
+    public const string PmRead = "pm.read";
+    public const string PmManage = "pm.manage";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
         LocationsRead, LocationsManage, AssetsRead, AssetsManage, MetersRead, MetersRecord, MetersManage,
         DocumentsRead, DocumentsManage, CustomFieldsManage,
         WorkOrdersRead, WorkOrdersRequest, WorkOrdersApprove, WorkOrdersAssign, WorkOrdersWork, WorkOrdersVerify, WorkOrdersManage,
+        PmRead, PmManage,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;
