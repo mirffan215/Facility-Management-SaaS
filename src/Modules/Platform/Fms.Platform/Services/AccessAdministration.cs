@@ -21,8 +21,10 @@ public interface IPermissionService
     Task<IReadOnlySet<string>> GetCurrentAsync(CancellationToken ct = default);
 }
 
-public sealed class PermissionService(PlatformDbContext db, ICurrentUser user) : IPermissionService
+public sealed class PermissionService(PlatformDbContext db, ICurrentUser user) : IPermissionService, ICurrentPermissions
 {
+    Task<IReadOnlySet<string>> ICurrentPermissions.GetAsync(CancellationToken ct) => GetCurrentAsync(ct);
+
     private IReadOnlySet<string>? _cached;
 
     public async Task<IReadOnlySet<string>> GetCurrentAsync(CancellationToken ct = default)

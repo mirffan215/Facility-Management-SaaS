@@ -4,6 +4,7 @@ using Fms.BuildingBlocks.Deployment;
 using Fms.BuildingBlocks.Observability;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Facilities;
+using Fms.Work;
 using Fms.Platform;
 using Fms.Platform.Outbox;
 
@@ -20,6 +21,7 @@ builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(Deployme
 builder.Services.AddFmsStorage(builder.Configuration);
 builder.Services.AddFmsPlatform(connectionString);
 builder.Services.AddFmsFacilities(connectionString);
+builder.Services.AddFmsWork(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddHostedService<OutboxWorker>();
 

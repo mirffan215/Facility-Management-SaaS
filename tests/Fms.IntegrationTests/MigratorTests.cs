@@ -49,7 +49,9 @@ public sealed class MigratorTests(SqlServerFixture sql)
             EXEC sp_set_session_context N'IsPlatform', 1;
             SELECT (SELECT COUNT(*) FROM Tenants), (SELECT COUNT(*) FROM Roles), (SELECT COUNT(*) FROM UserRoles), (SELECT COUNT(*) FROM Users),
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'facilities'),
-                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'facilities' AND t.name <> N'__EFMigrationsHistory')
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'facilities' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'work'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'work' AND t.name <> N'__EFMigrationsHistory')
             """, conn);
         await using var reader = await cmd.ExecuteReaderAsync();
         await reader.ReadAsync();
@@ -59,6 +61,8 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(1, reader.GetInt32(2));
         Assert.Equal(1, reader.GetInt32(3));
         Assert.Equal(reader.GetInt32(5), reader.GetInt32(4)); // every facilities table is under row-level security
+        Assert.Equal(reader.GetInt32(7), reader.GetInt32(6)); // every work table is under row-level security too
+        Assert.Equal(5, reader.GetInt32(7)); // Categories, Settings, WorkOrders, WorkOrderEvents, WorkOrderComments
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
     }
 }

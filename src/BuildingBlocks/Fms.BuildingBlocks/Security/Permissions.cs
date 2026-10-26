@@ -22,11 +22,21 @@ public static class Permissions
     public const string DocumentsManage = "documents.manage";
     public const string CustomFieldsManage = "customfields.manage";
 
+    /// <summary>See every request and work order of the tenant. Without it a person sees only the requests they raised.</summary>
+    public const string WorkOrdersRead = "workorders.read";
+    public const string WorkOrdersRequest = "workorders.request";
+    public const string WorkOrdersApprove = "workorders.approve";
+    public const string WorkOrdersAssign = "workorders.assign";
+    public const string WorkOrdersWork = "workorders.work";
+    public const string WorkOrdersVerify = "workorders.verify";
+    public const string WorkOrdersManage = "workorders.manage";
+
     public static IReadOnlyList<string> All { get; } =
     [
         UsersRead, UsersManage, RolesRead, AuditRead,
         LocationsRead, LocationsManage, AssetsRead, AssetsManage, MetersRead, MetersRecord, MetersManage,
         DocumentsRead, DocumentsManage, CustomFieldsManage,
+        WorkOrdersRead, WorkOrdersRequest, WorkOrdersApprove, WorkOrdersAssign, WorkOrdersWork, WorkOrdersVerify, WorkOrdersManage,
     ];
 
     public static string PolicyName(string permission) => "perm:" + permission;

@@ -9,4 +9,7 @@
     <ProjectReference Include="..\..\Modules\Platform\Fms.Platform\Fms.Platform.csproj" />
     <ProjectReference Include="..\..\Modules\Facilities\Fms.Facilities\Fms.Facilities.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Work\Fms.Work\Fms.Work.csproj" />
+  </ItemGroup>
 </Project>

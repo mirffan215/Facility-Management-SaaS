@@ -20,12 +20,15 @@ public static class SystemRoles
             Permissions.LocationsRead, Permissions.LocationsManage, Permissions.AssetsRead, Permissions.AssetsManage,
             Permissions.MetersRead, Permissions.MetersRecord, Permissions.MetersManage,
             Permissions.DocumentsRead, Permissions.DocumentsManage, Permissions.CustomFieldsManage,
+            Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersApprove, Permissions.WorkOrdersAssign,
+            Permissions.WorkOrdersWork, Permissions.WorkOrdersVerify, Permissions.WorkOrdersManage,
         ],
         [Technician] =
         [
             Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.MetersRecord, Permissions.DocumentsRead,
+            Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork,
         ],
-        [Requester] = [Permissions.LocationsRead],
-        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead],
+        [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead],
     };
 }

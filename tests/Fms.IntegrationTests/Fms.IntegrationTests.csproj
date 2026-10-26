@@ -21,5 +21,6 @@
     <ProjectReference Include="..\..\src\BuildingBlocks\Fms.BuildingBlocks.Cloud\Fms.BuildingBlocks.Cloud.csproj" />
     <ProjectReference Include="..\..\src\Host\Fms.Api\Fms.Api.csproj" />
     <ProjectReference Include="..\..\src\Host\Fms.Migrator\Fms.Migrator.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Work\Fms.Work\Fms.Work.csproj" />
   </ItemGroup>
 </Project>

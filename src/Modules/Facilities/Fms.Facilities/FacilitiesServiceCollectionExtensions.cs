@@ -21,6 +21,7 @@ public static class FacilitiesServiceCollectionExtensions
         services.AddScoped<AssetClassService>();
         services.AddScoped<AssetService>();
         services.AddScoped<MeterService>();
+        services.AddScoped<Fms.BuildingBlocks.Identity.IFacilityLookup, FacilityLookup>();
         services.AddScoped<DocumentService>();
         services.AddScoped<ImportExportService>();
         services.AddSingleton<IFileScanner, NoOpFileScanner>();
