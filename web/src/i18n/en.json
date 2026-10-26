@@ -17,7 +17,8 @@
     "locations": "Locations",
     "assets": "Assets",
     "import": "Import",
-    "setup": "Setup"
+    "setup": "Setup",
+    "users": "Users"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -306,5 +307,29 @@
   "scan": {
     "title": "Scan asset label",
     "notFound": "No asset matches this label. It may have been replaced or belong to another organisation."
+  },
+  "users": {
+    "title": "Users and roles",
+    "intro": "People who have signed in, and what they are allowed to do. A new person has no role until you give them one.",
+    "person": "Person",
+    "roles": "Roles",
+    "noRoles": "No role",
+    "lastSignIn": "Last sign-in",
+    "you": "You",
+    "active": "Active",
+    "deactivated": "Deactivated",
+    "editRoles": "Edit roles",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "rolesFor": "Roles for {{name}}",
+    "deactivateTitle": "Deactivate {{name}}?",
+    "reactivateTitle": "Reactivate {{name}}?",
+    "deactivateWarning": "They are signed out of everything on their next action and cannot use the system until reactivated. Their history and roles are kept.",
+    "reactivateInfo": "They regain the access their roles give them.",
+    "rolesTitle": "What each role allows",
+    "permissionCount": "{{count}} permissions",
+    "noPermissions": "No permissions.",
+    "deactivatedAccount": "Your account has been deactivated",
+    "deactivatedHelp": "Ask your administrator to reactivate it."
   }
 }

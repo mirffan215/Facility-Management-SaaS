@@ -23,6 +23,7 @@ export function Layout() {
           {can('assets.read') ? <NavLink to="/assets">{t('nav.assets')}</NavLink> : null}
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
           {can('assets.manage') || can('customfields.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
+          {can('users.read') ? <NavLink to="/users">{t('nav.users')}</NavLink> : null}
         </nav>
         <div className="prefs">
           <label>

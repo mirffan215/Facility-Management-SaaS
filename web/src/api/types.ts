@@ -163,3 +163,20 @@ export interface ImportReport {
   failed: number;
   rows: ImportRowResult[];
 }
+
+export interface UserSummary {
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  isActive: boolean;
+  roleIds: string[];
+  provider: string | null;
+  lastSignInAt: string | null;
+}
+
+export interface RoleSummary {
+  id: string;
+  name: string;
+  isSystem: boolean;
+  permissions: string[];
+}

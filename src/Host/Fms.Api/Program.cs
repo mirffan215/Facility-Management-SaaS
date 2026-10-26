@@ -84,6 +84,12 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapGet("/users", async (AccessAdministration access, CancellationToken ct) => Results.Ok(await access.ListUsersAsync(ct)))
         .RequirePermission(Permissions.UsersRead);
 
+    v1.MapPost("/users/{userId:guid}/deactivate", async (Guid userId, AccessAdministration access, CancellationToken ct) => ActiveResult(await access.SetUserActiveAsync(userId, false, ct)))
+        .RequirePermission(Permissions.UsersManage);
+
+    v1.MapPost("/users/{userId:guid}/activate", async (Guid userId, AccessAdministration access, CancellationToken ct) => ActiveResult(await access.SetUserActiveAsync(userId, true, ct)))
+        .RequirePermission(Permissions.UsersManage);
+
     v1.MapPut("/users/{userId:guid}/roles", async (Guid userId, SetRolesRequest body, AccessAdministration access, CancellationToken ct) =>
         await access.SetUserRolesAsync(userId, body.RoleIds ?? [], ct) switch
         {
@@ -91,10 +97,19 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
             AccessResult.NotFound => Results.Problem(statusCode: 404, title: "User not found"),
             AccessResult.InvalidRole => Results.Problem(statusCode: 400, title: "Unknown role"),
             AccessResult.CannotChangeOwnRoles => Results.Problem(statusCode: 403, title: "You cannot change your own roles"),
+        AccessResult.CannotDeactivateSelf => Results.Problem(statusCode: 403, title: "You cannot deactivate your own account"),
             _ => Results.Problem(statusCode: 500),
         })
         .RequirePermission(Permissions.UsersManage);
 }
+
+static IResult ActiveResult(AccessResult result) => result switch
+{
+    AccessResult.Ok => Results.NoContent(),
+    AccessResult.NotFound => Results.Problem(statusCode: 404, title: "User not found"),
+    AccessResult.CannotDeactivateSelf => Results.Problem(statusCode: 403, title: "You cannot deactivate your own account"),
+    _ => Results.Problem(statusCode: 500),
+};
 
 app.Run();
 

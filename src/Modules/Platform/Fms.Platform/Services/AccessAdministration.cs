@@ -10,9 +10,10 @@ namespace Fms.Platform.Services;
 
 public sealed record RoleInfo(Guid Id, string Name, bool IsSystem, IReadOnlyList<string> Permissions);
 
-public sealed record UserInfo(Guid Id, string? Email, string? DisplayName, bool IsActive, IReadOnlyList<Guid> RoleIds);
+public sealed record UserInfo(
+    Guid Id, string? Email, string? DisplayName, bool IsActive, IReadOnlyList<Guid> RoleIds, string? Provider = null, DateTimeOffset? LastSignInAt = null);
 
-public enum AccessResult { Ok, NotFound, InvalidRole, CannotChangeOwnRoles }
+public enum AccessResult { Ok, NotFound, InvalidRole, CannotChangeOwnRoles, CannotDeactivateSelf }
 
 public interface IPermissionService
 {
@@ -52,7 +53,25 @@ public sealed class AccessAdministration(PlatformDbContext db, ICurrentUser curr
         var users = await db.Users.OrderBy(u => u.Email).ThenBy(u => u.Id).ToListAsync(ct);
         var links = await db.UserRoles.ToListAsync(ct);
         return users.Select(u => new UserInfo(u.Id, u.Email, u.DisplayName, u.IsActive,
-            links.Where(l => l.UserId == u.Id).Select(l => l.RoleId).ToList())).ToList();
+            links.Where(l => l.UserId == u.Id).Select(l => l.RoleId).ToList(), u.Provider, u.LastSignInAt)).ToList();
+    }
+
+    /// <summary>
+    /// Turns a person's access off or on. A deactivated user is refused on their very next request (the sign-in token stays valid, the
+    /// database says no) and keeps their history and roles. You cannot deactivate yourself.
+    /// </summary>
+    public async Task<AccessResult> SetUserActiveAsync(Guid userId, bool active, CancellationToken ct = default)
+    {
+        if (!active && current.UserId == userId) return AccessResult.CannotDeactivateSelf;
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (user is null) return AccessResult.NotFound;
+        if (user.IsActive == active) return AccessResult.Ok;
+
+        user.IsActive = active;
+        audit.Record(active ? "user.reactivated" : "user.deactivated", nameof(User), userId.ToString());
+        await db.SaveChangesAsync(ct);
+        return AccessResult.Ok;
     }
 
     /// <summary>

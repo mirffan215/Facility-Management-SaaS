@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetClass, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, Page,
+  Asset, AssetClass, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, Page, RoleSummary, UserSummary,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -63,4 +63,14 @@ export function useReadings(meterId: string | undefined, includeVoided: boolean)
 export function useDocuments(assetId: string | undefined) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['documents', assetId], queryFn: () => api.get<AssetDocument[]>(`/assets/${assetId}/documents`), enabled: !!assetId });
+}
+
+export function useUsers() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['users'], queryFn: () => api.get<UserSummary[]>('/users') });
+}
+
+export function useRoles() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['roles'], queryFn: () => api.get<RoleSummary[]>('/roles') });
 }

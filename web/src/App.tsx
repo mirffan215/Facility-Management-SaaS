@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from './auth/AuthContext';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
-import { usePermissions } from './api/hooks';
+import { useMe, usePermissions } from './api/hooks';
 import { SignIn } from './pages/SignIn';
 import { LocationsPage } from './pages/Locations';
 import { AssetsPage } from './pages/Assets';
@@ -12,10 +12,24 @@ import { AssetDetailPage } from './pages/AssetDetail';
 import { AssetCreatePage } from './pages/AssetCreate';
 import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
+import { UsersPage } from './pages/Users';
+import { ApiError } from './api/client';
 import { ScanRedirectPage } from './pages/ScanRedirect';
+
+function Deactivated() {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <h1>{t('users.deactivatedAccount')}</h1>
+      <p>{t('users.deactivatedHelp')}</p>
+    </section>
+  );
+}
 
 function Home() {
   const { can, loaded } = usePermissions();
+  const me = useMe();
+  if (me.error instanceof ApiError && me.error.isForbidden) return <Deactivated />;
   if (!loaded) return <Loading />;
   if (can('assets.read')) return <Navigate to="/assets" replace />;
   if (can('locations.read')) return <Navigate to="/locations" replace />;
@@ -64,6 +78,7 @@ export function App() {
         <Route path="assets/:id" element={<AssetDetailPage />} />
         <Route path="import" element={<ImportPage />} />
         <Route path="setup" element={<SetupPage />} />
+        <Route path="users" element={<UsersPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

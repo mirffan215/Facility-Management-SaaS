@@ -163,3 +163,50 @@ public sealed class AccessApiTests(SqlServerFixture sql) : IDisposable
         Assert.DoesNotContain(users!, u => u.Id == bUser!.UserId);
     }
 }
+
+[Collection(SqlCollection.Name)]
+public sealed class UserDeactivationTests(SqlServerFixture sql) : IDisposable
+{
+    private readonly ApiHarness _api = new(sql);
+    public void Dispose() => _api.Dispose();
+
+    [Fact]
+    public async Task An_administrator_deactivates_and_reactivates_a_person_and_it_takes_effect_on_their_next_request()
+    {
+        var admin = await _api.ClientAsync(TenantA, SystemRoles.Administrator);
+        var staff = await _api.ClientAsync(TenantA, SystemRoles.Technician);
+        var staffId = (await staff.GetFromJsonAsync<MeInfo>("/api/v1/me", ApiHarness.Json))!.UserId;
+        Assert.Equal(HttpStatusCode.OK, (await staff.GetAsync("/api/v1/assets")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/v1/users/{staffId}/deactivate", null)).StatusCode);
+        var refused = await staff.GetAsync("/api/v1/assets");
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        Assert.Contains("deactivated", await refused.Content.ReadAsStringAsync());
+        var users = await admin.GetFromJsonAsync<Fms.Platform.Services.UserInfo[]>("/api/v1/users", ApiHarness.Json);
+        Assert.False(users!.Single(u => u.Id == staffId).IsActive);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/v1/users/{staffId}/activate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await staff.GetAsync("/api/v1/assets")).StatusCode);
+
+        await using var check = sql.App(TenantA);
+        var actions = await check.AuditEvents.Where(e => e.EntityId == staffId.ToString()).OrderBy(e => e.OccurredAt).Select(e => e.Action).ToListAsync();
+        Assert.Equal(["user.deactivated", "user.reactivated"], actions);
+    }
+
+    [Fact]
+    public async Task Nobody_can_deactivate_themselves_other_tenants_users_are_untouchable_and_only_user_managers_may_try()
+    {
+        var admin = await _api.ClientAsync(TenantA, SystemRoles.Administrator);
+        var adminId = (await admin.GetFromJsonAsync<MeInfo>("/api/v1/me", ApiHarness.Json))!.UserId;
+        var otherTenant = await _api.ClientAsync(TenantB, SystemRoles.Technician);
+        var otherId = (await otherTenant.GetFromJsonAsync<MeInfo>("/api/v1/me", ApiHarness.Json))!.UserId;
+        var manager = await _api.ClientAsync(TenantA, SystemRoles.FacilityManager);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync($"/api/v1/users/{adminId}/deactivate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PostAsync($"/api/v1/users/{otherId}/deactivate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PostAsync($"/api/v1/users/{Guid.NewGuid()}/deactivate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await manager.PostAsync($"/api/v1/users/{otherId}/deactivate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await otherTenant.GetAsync("/api/v1/assets")).StatusCode); // still active
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/v1/users/{adminId}/activate", null)).StatusCode); // reactivating yourself is harmless
+    }
+}
