@@ -180,7 +180,7 @@ resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
-var providerSettings = flatten([for (p, i) in authProviders: concat(
+var providerSettingGroups = [for (p, i) in authProviders: concat(
   [
     { name: 'Authentication__Providers__${i}__Name', value: p.name }
     { name: 'Authentication__Providers__${i}__Authority', value: p.authority }
@@ -190,7 +190,8 @@ var providerSettings = flatten([for (p, i) in authProviders: concat(
   contains(p, 'scope') ? [{ name: 'Authentication__Providers__${i}__Scope', value: p.scope }] : [],
   contains(p, 'issuerPrefix') ? [{ name: 'Authentication__Providers__${i}__IssuerPrefix', value: p.issuerPrefix }] : [],
   contains(p, 'externalTenantClaim') ? [{ name: 'Authentication__Providers__${i}__ExternalTenantClaim', value: p.externalTenantClaim }] : []
-)])
+)]
+var providerSettings = flatten(providerSettingGroups)
 
 var commonSettings = concat([
   { name: 'Deployment__Mode', value: deploymentMode }
