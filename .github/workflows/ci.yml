@@ -20,8 +20,25 @@ jobs:
         run: |
           dotnet list Fms.sln package --vulnerable --include-transitive 2>&1 | tee vuln.txt
           ! grep -q "has the following vulnerable packages" vuln.txt
-      # Integration tests start SQL Server with Testcontainers; Docker is available on ubuntu-latest.
-      - run: dotnet test Fms.sln --no-build -c Release
+      # Unit and API tests need no database. The integration tests (SQL Server in Testcontainers) run in the parallel `integration` job below.
+      - run: dotnet test tests/Fms.UnitTests --no-build -c Release
+      - run: dotnet test tests/Fms.ApiTests --no-build -c Release
+
+  integration:
+    # Integration tests start SQL Server with Testcontainers; Docker is available on ubuntu-latest. The classes are dealt out
+    # round-robin to the slices by scripts/integration-shard.sh, so a new test class lands in exactly one slice.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        slice: [1, 2, 3, 4]
+    name: integration (${{ matrix.slice }} of 4)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - run: dotnet build tests/Fms.IntegrationTests -c Release
+      - run: scripts/integration-shard.sh ${{ matrix.slice }} 4 -c Release
 
   web:
     runs-on: ubuntu-latest
