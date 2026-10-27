@@ -10,6 +10,8 @@ using Fms.Integration.Services;
 using Fms.Purchasing;
 using Fms.Bookings;
 using Fms.Bookings.Services;
+using Fms.Visitors;
+using Fms.Visitors.Services;
 using Fms.Vendors;
 using Fms.Vendors.Services;
 using Fms.Work;
@@ -40,6 +42,7 @@ builder.Services.AddFmsVendors(connectionString);
 builder.Services.AddFmsPurchasing(connectionString);
 builder.Services.AddFmsIntegration(connectionString);
 builder.Services.AddFmsBookings(connectionString, builder.Configuration);
+builder.Services.AddFmsVisitors(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddFmsEmail(builder.Configuration);
 builder.Services.AddHostedService<OutboxWorker>();
@@ -48,6 +51,7 @@ builder.Services.AddHostedService<PmWorker>();
 builder.Services.AddHostedService<ContractWorker>();
 builder.Services.AddHostedService<ErpSyncWorker>();
 builder.Services.AddHostedService<BookingWorker>();
+builder.Services.AddHostedService<VisitorWorker>();
 
 // Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
 
@@ -222,6 +226,32 @@ internal sealed class BookingWorker(BookingMonitor monitor, ILogger<BookingWorke
             {
                 log.LogError(ex, "Booking run failed");
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Marks visitors who never came and removes personal details when the retention period is over. Hourly: neither is urgent.</summary>
+internal sealed class VisitorWorker(VisitMonitor monitor, ILogger<VisitorWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var changed = await monitor.RunOnceAsync(stoppingToken);
+                if (changed > 0) log.LogInformation("Visitor housekeeping changed {Count} visits", changed);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Visitor housekeeping failed");
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
     }

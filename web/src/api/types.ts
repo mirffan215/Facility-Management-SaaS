@@ -1097,3 +1097,63 @@ export interface CalendarSync {
   availableAdapters: string[];
   rowVersion: string | null;
 }
+
+// ---------------- visitors ----------------
+
+export type VisitKind = 'Guest' | 'Contractor' | 'Delivery' | 'Interview';
+export type VisitStatus = 'Expected' | 'CheckedIn' | 'CheckedOut' | 'Cancelled' | 'NoShow';
+
+export interface Visit {
+  id: string;
+  hostId: string;
+  hostName: string;
+  siteId: string;
+  siteName: string;
+  kind: VisitKind;
+  visitorName: string;
+  visitorCompany: string | null;
+  visitorEmail: string | null;
+  visitorPhone: string | null;
+  purpose: string | null;
+  expectedAt: string;
+  expectedUntil: string | null;
+  status: VisitStatus;
+  checkedInAt: string | null;
+  checkedOutAt: string | null;
+  badgeNumber: string | null;
+  inductionAt: string | null;
+  cancelReason: string | null;
+  canCheckInNow: boolean;
+  anonymised: boolean;
+  rowVersion: string;
+}
+
+export interface CreatedVisit {
+  visit: Visit;
+  passPath: string;
+  passUrl: string;
+  qrSvg: string;
+}
+
+export interface VisitPass {
+  visitorName: string;
+  siteName: string;
+  hostName: string;
+  expectedAt: string;
+  expectedUntil: string | null;
+  status: VisitStatus;
+}
+
+export interface WatchlistEntry {
+  id: string;
+  name: string;
+  reason: string;
+  addedAt: string;
+}
+
+export interface VisitorSettings {
+  requireInduction: boolean;
+  inductionText: string | null;
+  retentionDays: number;
+  rowVersion: string | null;
+}

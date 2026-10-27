@@ -60,4 +60,8 @@ Phase 5 adds, in `vendors`: `Vendor`, `VendorContact`, `Contract` 1-* `ContractC
 In `purchasing`: `PurchasingSettings`, `PurchaseRequest` 1-* line, `PurchaseOrder` 1-* line, append-only `GoodsReceipt` (also trigger-protected). In `integration`: `ErpSettings` and `ErpExportItem` (idempotency key, status, attempts, lease, reference, reconcile state).
 In the platform schema: `GuestIdentity` (provider and subject mapped to one tenant) and `GuestInvitation` (token hash only; tenant-owned, under row-level security). All new tenant tables are under row-level security.
 
+Phase 6 adds, in `spaces`: `SpaceProfile` (kind and capacity of a Space location), `FloorPlan` (image, superseded not replaced), `PlanPin` (a position as fractions of the image), `Allocation` (person or team, head count, dates; released or cancelled ones stay).
+In `bookings`: `BookableResource` (rules, time zone), `Booking` (UTC start and end, status, series), `CalendarLink` (the event's reference in the connected calendar, kept apart so syncing never changes a booking's row version), `CalendarFeedToken` (hash of a person's secret calendar address), `CalendarSyncSettings`.
+In `visitors`: `Visit` (host and site names copied in; hash of the pass code; check-in, badge, induction, watchlist override and check-out facts; anonymised after retention), `WatchlistEntry` (never deleted: removal keeps who, when and why), `VisitorSettings`. All new tables are under row-level security.
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

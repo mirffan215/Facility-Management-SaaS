@@ -11,6 +11,9 @@ public static class SystemRoles
     public const string Requester = "Requester";
     public const string Viewer = "Viewer";
 
+    /// <summary>The front desk: welcomes and sees off visitors. Needs to see places, but nothing else of the facility.</summary>
+    public const string Reception = "Reception";
+
     /// <summary>People from a vendor, invited to the vendor portal. Holds no staff permission at all.</summary>
     public const string Vendor = "Vendor";
 
@@ -33,15 +36,17 @@ public static class SystemRoles
             Permissions.IntegrationRead,
             Permissions.SpacesRead, Permissions.SpacesManage,
             Permissions.BookingsRead, Permissions.BookingsBook, Permissions.BookingsApprove, Permissions.BookingsManage,
+            Permissions.VisitorsHost, Permissions.VisitorsReception, Permissions.VisitorsSecurity,
         ],
         [Technician] =
         [
             Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.MetersRecord, Permissions.DocumentsRead,
             Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.PmRead,
             Permissions.InventoryRead, Permissions.InventoryIssue, Permissions.PurchasingRequest,
-            Permissions.BookingsRead, Permissions.BookingsBook,
+            Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost,
         ],
-        [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest, Permissions.BookingsRead, Permissions.BookingsBook],
+        [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest, Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost],
+        [Reception] = [Permissions.LocationsRead, Permissions.UsersRead, Permissions.VisitorsReception, Permissions.VisitorsHost, Permissions.BookingsRead, Permissions.BookingsBook],
         [Vendor] = [Permissions.PortalUse],
         [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead, Permissions.SpacesRead, Permissions.BookingsRead],
     };

@@ -6,7 +6,7 @@
 3. **Preventive Maintenance** (done; see [phase-3-summary](phase-3-summary.md)): templates, schedules (fixed or floating), meter triggers, forecast calendar, compliance KPIs.
 4. **Inventory** (done; see [phase-4-summary](phase-4-summary.md)): stores, stock, reservations on WOs, reorder, stock take.
 5. **Vendors & Contracts** (done; see [phase-5-summary](phase-5-summary.md)): vendors, AMC/SLA contracts, purchase requests/orders, vendor portal, accounting connection (interface and fake adapter; Dynamics 365 adapter deferred until a sandbox exists).
-6. **Spaces, Bookings, Visitors**: floor plans, allocation, booking with calendar sync, visitor flow and badges.
+6. **Spaces, Bookings, Visitors** (done; see [phase-6-summary](phase-6-summary.md)): floor plans with pins, allocation and occupancy, bookable resources with rules and approval, calendar feed and a calendar connection interface, visitor pre-registration with QR pass, front desk, watchlist and badges.
 7. **Reporting & Admin**: dashboards, KPI pack, BI feed, workflow/SLA/custom-field designers.
 8. **Packaging & Licensing**: Helm chart, on-prem bundle, license service, upgrade tooling, hardening and pen test.
 9. **Later**: IoT/energy, compliance & permits, projects, lease, AI.

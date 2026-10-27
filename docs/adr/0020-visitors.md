@@ -1,0 +1,17 @@
+# ADR-0020: Visitors (Phase 6c)
+Status: Proposed. Builds on [ADR-0018](0018-vendor-portal-and-guest-identity.md) (the same idea of a secret address instead of an account) and [ADR-0019](0019-spaces-and-bookings.md).
+
+## Decisions
+- **No visitor accounts** (the customer's decision). A host pre-registers a visitor; the visitor gets a **pass**: a link and a QR code that need no sign-in. The code is 128 random bits, **shown once** to the host and only its SHA-256 is kept; a new pass stops the old. The public pass page and QR picture give the same answer for every wrong code. The page shows only the visitor's own name, the site, the host and the time, never the purpose or contact details.
+- **The QR holds the pass address.** Reception scans it with an ordinary keyboard-style scanner or pastes it; the desk reads the code from the last path segment, so the typed code, the address and a scanned address all work.
+- **Roles:** `visitors.host` (expect and manage one's own visitors; all staff roles), `visitors.reception` (see everyone's, check in and out, see who is on site, expect for someone else) and `visitors.security` (watchlist, overrides, rules). A new system role **Reception** holds the first two plus the places it needs.
+- **Check-in** opens 12 hours before the expected time and closes when the visit's time is over (default 24 hours). It records who checked in, when, and an optional badge number; the host is told through the outbox. Check-out is reception's. "On site now" is the list a roll call starts from; nobody is checked out automatically, because a wrong "left" is worse than a forgotten one.
+- **Watchlist.** A visitor whose name matches an active entry is stopped at the desk. Names are compared after removing accents, case, spacing and punctuation and folding the Arabic letters that are written several ways (alef forms, ya and alef maqsura, ta marbuta, vowel marks, tatweel), so a spelling variant does not slip through. Matching is by name only, so it asks for a person's judgement: **only someone with `visitors.security`, giving a reason, can let the visitor in**, and the match and reason stay on the visit. Reception is told only to call security, never why. Entries are never deleted: removal keeps who, when and why.
+- **Contractor induction.** When the rules require it, a contractor cannot be checked in until the induction text has been acknowledged; the time is recorded.
+- **Privacy by design.** No identity-document numbers are collected (the data-model note about encrypting them applies if that is ever added). Names and contact details are removed from a visit after a retention period (default 365 days, 30 to 3650); the visit record, times and badge stay for statistics. Anyone shown as on site is never wiped. The host's and site's names are copied into the visit so the record stays true if they change.
+- **Visits never attended** become "did not come" once their time is over (a worker, hourly).
+
+## Consequences
+- No kiosk or self check-in, no pre-registration by email invitation to the visitor, no automatic badge printing (a print view is provided), no host approval of walk-ins, no lockdown or muster report beyond the on-site list.
+- Watchlist matching by name will have false matches and cannot catch a changed name; it is a prompt, not a control that decides.
+- Day filters use the server's UTC calendar with a wide window; a site's local day is not modelled.

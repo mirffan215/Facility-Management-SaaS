@@ -8,6 +8,7 @@ using Fms.Integration;
 using Fms.Purchasing;
 using Fms.Bookings;
 using Fms.Spaces;
+using Fms.Visitors;
 using Fms.Vendors;
 using Fms.Work;
 using Fms.Platform;
@@ -38,6 +39,7 @@ if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } conn
     builder.Services.AddFmsVendors(connectionString);
     builder.Services.AddFmsSpaces(connectionString);
     builder.Services.AddFmsBookings(connectionString, builder.Configuration);
+    builder.Services.AddFmsVisitors(connectionString);
     builder.Services.AddFmsPurchasing(connectionString);
     builder.Services.AddFmsIntegration(connectionString);
 }
@@ -45,6 +47,7 @@ if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } conn
 // Enums travel as readable strings ("Site", not 1), so the contract does not depend on enum numbering.
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<Fms.Api.BadRequestExceptionHandler>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
@@ -98,6 +101,7 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapVendors();
     v1.MapSpaces();
     v1.MapBookings();
+    v1.MapVisitors();
     v1.MapPurchasing();
     v1.MapIntegration();
     v1.MapPortal();

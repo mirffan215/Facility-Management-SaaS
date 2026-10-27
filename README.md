@@ -18,6 +18,7 @@ Status: design phase. See [docs/](docs/).
 - [Phase 3 summary](docs/phase-3-summary.md) (preventive maintenance: schedules, generation, meter triggers, forecast, compliance)
 - [Phase 4 summary](docs/phase-4-summary.md) (inventory: stores, stock ledger, parts on work orders, reorder, stock takes)
 - [Phase 5 summary](docs/phase-5-summary.md) (vendors, contracts, purchasing, accounting connection, vendor portal)
+- [Phase 6 summary](docs/phase-6-summary.md) (spaces, bookings, visitors)
 - [ADRs](docs/adr/)
 
 ## Quick start

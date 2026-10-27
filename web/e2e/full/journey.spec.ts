@@ -1367,6 +1367,101 @@ test('bookings: a room is set up, booked without a clash, cancelled, one needing
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('visitors: a visitor is expected, opens their pass without signing in, is checked in at the desk and out again, and a watchlisted name needs security', async ({ browser }) => {
+  await page.goto('/visitors');
+  await page.getByRole('button', { name: 'Expect a visitor' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expect a visitor' });
+  await dialog.getByRole('textbox', { name: 'Name *' }).fill('Layla Hassan');
+  await dialog.getByLabel('Company').fill('Acme Trading');
+  await dialog.getByRole('button', { name: 'Expect visitor' }).click();
+  await expect(dialog.getByText('Site is required').or(dialog.getByText(/choose the site/i))).toBeVisible(); // the server says what is missing, next to the field
+  await choose(dialog.getByLabel('Site'), SITE);
+  await dialog.getByRole('button', { name: 'Expect visitor' }).click();
+
+  const passDialog = page.getByRole('dialog', { name: /Pass for Layla Hassan/ });
+  await expect(passDialog.getByRole('img', { name: /QR code/ })).toBeVisible();
+  const address = await passDialog.getByLabel('Pass address').inputValue();
+  expect(address).toContain('/visit/');
+  await shot('34-visitor-pass-host');
+  await passDialog.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('row', { name: /Layla Hassan/ })).toContainText('Expected');
+
+  // The visitor opens the pass with no account: only their own details, a QR code, nothing else.
+  const guest = await (await browser.newContext()).newPage();
+  try {
+    await guest.goto(address);
+    await expect(guest.getByRole('heading', { name: 'Visitor pass' })).toBeVisible();
+    await expect(guest.getByText('Layla Hassan')).toBeVisible();
+    await expect(guest.getByRole('img', { name: /QR code/ })).toBeVisible();
+    await expect(guest.getByText('Acme Trading')).toHaveCount(0);
+    await shot('35-visitor-pass');
+    await guest.goto('/visit/AAAAAAAAAAAAAAAAAAAAAA');
+    await expect(guest.getByText('This pass is not valid')).toBeVisible();
+    for (const lang of ['en', 'ar']) {
+      await guest.goto(address);
+      await guest.locator('select').first().selectOption(lang);
+      await expect(guest.getByRole('img', { name: /QR/ })).toBeVisible();
+      await expectNoSeriousA11yIssues(`visitor pass ${lang}`, guest);
+    }
+  } finally {
+    await guest.context().close();
+  }
+
+  // Reception pastes what the scanner typed, checks the visitor in with a badge, then out.
+  await page.goto('/visitors?tab=desk');
+  await page.getByLabel('Scan or type the pass code').fill(address);
+  await page.getByRole('button', { name: 'Find visit' }).click();
+  const checkIn = page.getByRole('dialog', { name: /Check in Layla Hassan/ });
+  await checkIn.getByLabel('Badge number').fill('B-7');
+  await checkIn.getByRole('button', { name: 'Check in' }).click();
+  const badge = page.getByRole('dialog', { name: 'Visitor badge' });
+  await expect(badge.getByText('B-7')).toBeVisible();
+  await badge.getByRole('button', { name: 'Done' }).click();
+  await page.getByLabel('Show').selectOption('onsite');
+  const onSite = page.getByRole('row', { name: /Layla Hassan/ });
+  await expect(onSite).toContainText('On site');
+  await shot('36-front-desk');
+  await onSite.getByRole('button', { name: 'Check out' }).click();
+  await expect(page.getByText('Nobody is on site.')).toBeVisible();
+
+  // A watchlisted name stops the desk; security lets them in with a reason.
+  await page.goto('/visitors?tab=security');
+  await page.getByLabel('Name', { exact: true }).fill('Bad Actor');
+  await page.getByLabel('Reason', { exact: true }).fill('Trespassed in 2025');
+  await page.getByRole('button', { name: 'Add to watchlist' }).click();
+  await expect(page.getByRole('row', { name: /Bad Actor/ })).toBeVisible();
+
+  await page.goto('/visitors');
+  await page.getByRole('button', { name: 'Expect a visitor' }).click();
+  const second = page.getByRole('dialog', { name: 'Expect a visitor' });
+  await second.getByRole('textbox', { name: 'Name *' }).fill('bad  ACTOR');
+  await choose(second.getByLabel('Site'), SITE);
+  await second.getByRole('button', { name: 'Expect visitor' }).click();
+  await page.getByRole('dialog', { name: /Pass for/ }).getByRole('button', { name: 'Done' }).click();
+
+  await page.goto('/visitors?tab=desk');
+  await page.getByRole('row', { name: /bad {1,2}ACTOR/i }).getByRole('button', { name: 'Check in' }).click();
+  const blocked = page.getByRole('dialog', { name: /Check in bad/i });
+  await blocked.getByRole('button', { name: 'Check in' }).click();
+  await expect(blocked.getByRole('alert').filter({ hasText: 'call security' })).toBeVisible();
+  await expect(blocked.getByText('Trespassed')).toHaveCount(0); // reception-level text never says why
+  await blocked.getByLabel('Why may this visitor come in?').fill('Cleared by the site manager');
+  await blocked.getByRole('button', { name: 'Let in' }).click();
+  await page.getByRole('dialog', { name: 'Visitor badge' }).getByRole('button', { name: 'Done' }).click();
+  await page.getByLabel('Show').selectOption('onsite');
+  await expect(page.getByRole('row', { name: /bad {1,2}ACTOR/i })).toContainText('On site');
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['mine', 'desk', 'security']) {
+      await page.goto(`/visitors?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`visitors ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\Modules\Vendors\Fms.Vendors\Fms.Vendors.csproj" />
     <ProjectReference Include="..\..\src\Modules\Spaces\Fms.Spaces\Fms.Spaces.csproj" />
     <ProjectReference Include="..\..\src\Modules\Bookings\Fms.Bookings\Fms.Bookings.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Visitors\Fms.Visitors\Fms.Visitors.csproj" />
     <ProjectReference Include="..\..\src\Modules\Purchasing\Fms.Purchasing\Fms.Purchasing.csproj" />
     <ProjectReference Include="..\..\src\Modules\Integration\Fms.Integration\Fms.Integration.csproj" />
   </ItemGroup>

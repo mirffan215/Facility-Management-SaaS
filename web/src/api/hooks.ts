@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync, Visit, VisitorSettings, WatchlistEntry,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -370,4 +370,35 @@ export function useCalendarSync(enabled: boolean) {
 export function useCalendarFeed() {
   const { api } = useAuth();
   return useQuery({ queryKey: ['bookings', 'feed'], queryFn: () => api.get<{ exists: boolean; createdAt: string | null; lastUsedAt: string | null }>('/bookings/calendar-feed') });
+}
+
+export function useMyVisits() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['visitors', 'mine'], queryFn: () => api.get<Visit[]>('/visits/mine') });
+}
+
+export function useDeskVisits(params: Record<string, string | undefined>, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['visitors', 'desk', params], enabled, queryFn: () => api.get<Visit[]>('/visits', params), refetchInterval: 30_000 });
+}
+
+export function useOnSite(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['visitors', 'on-site'], enabled, queryFn: () => api.get<Visit[]>('/visits/on-site'), refetchInterval: 30_000 });
+}
+
+export function useWatchlist(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['visitors', 'watchlist'], enabled, queryFn: () => api.get<WatchlistEntry[]>('/visits/watchlist') });
+}
+
+export function useVisitorSettings(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['visitors', 'settings'], enabled, queryFn: () => api.get<VisitorSettings>('/visits/settings') });
+}
+
+/** The sites of the organisation, for choosing where a visitor is going. */
+export function useSites() {
+  const tree = useLocationTree();
+  return { ...tree, data: (tree.data ?? []).filter((n) => n.type === 'Site') };
 }

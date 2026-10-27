@@ -96,6 +96,15 @@ public static class Permissions
     /// <summary>Set up resources and their rules, cancel anyone's booking, and run the calendar connection.</summary>
     public const string BookingsManage = "bookings.manage";
 
+    /// <summary>Expect visitors and manage one's own: pre-register, cancel, issue a new pass.</summary>
+    public const string VisitorsHost = "visitors.host";
+
+    /// <summary>Work the front desk: see everyone's visitors, check them in and out, see who is on site, expect a visitor for someone else.</summary>
+    public const string VisitorsReception = "visitors.reception";
+
+    /// <summary>Keep the watchlist, let a watchlisted visitor in with a recorded reason, and set the visiting rules.</summary>
+    public const string VisitorsSecurity = "visitors.security";
+
     /// <summary>Use the vendor portal: see the orders, work and contracts of one's own vendor. Held by nobody but vendor users.</summary>
     public const string PortalUse = "portal.use";
 
@@ -112,6 +121,7 @@ public static class Permissions
         IntegrationRead, IntegrationManage,
         SpacesRead, SpacesManage,
         BookingsRead, BookingsBook, BookingsApprove, BookingsManage,
+        VisitorsHost, VisitorsReception, VisitorsSecurity,
         PortalUse,
     ];
 
