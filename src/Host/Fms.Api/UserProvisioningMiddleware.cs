@@ -23,6 +23,14 @@ public sealed class UserProvisioningMiddleware(RequestDelegate next)
             var email = context.User.FindFirst("email")?.Value ?? context.User.FindFirst("preferred_username")?.Value;
             var user = await provisioner.EnsureAsync(provider, subject, email, context.User.FindFirst("name")?.Value, context.RequestAborted);
 
+            if (user.LicenseLimitReached)
+            {
+                await Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "User limit reached",
+                    detail: "The license allows no more active users. Ask an administrator to deactivate someone or to raise the license.",
+                    extensions: new Dictionary<string, object?> { ["code"] = "license.user_limit" }).ExecuteAsync(context);
+                return;
+            }
+
             if (!user.IsActive)
             {
                 await Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Account deactivated").ExecuteAsync(context);

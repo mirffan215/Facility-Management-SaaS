@@ -6,5 +6,6 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <EmbeddedResource Include="Licensing\trusted-keys.json" />
   </ItemGroup>
 </Project>

@@ -14,6 +14,7 @@ import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
 import { AdminPage } from './pages/Admin';
 import { AuditPage } from './pages/Audit';
+import { LicensePage } from './pages/License';
 import { NotificationsPage } from './pages/Notifications';
 import { WorkOrdersPage } from './pages/WorkOrders';
 import { WorkOrderCreatePage } from './pages/WorkOrderCreate';
@@ -149,6 +150,7 @@ export function App() {
         <Route path="users" element={<UsersPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="audit" element={<AuditPage />} />
+        <Route path="admin/license" element={<LicensePage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

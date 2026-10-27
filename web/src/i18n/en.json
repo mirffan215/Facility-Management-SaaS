@@ -1704,6 +1704,58 @@
     "visitors": "Visitor rules",
     "visitorsHint": "Pass rules and the watchlist.",
     "audit": "Audit trail",
-    "auditHint": "Search and export the record of changes."
+    "auditHint": "Search and export the record of changes.",
+    "license": "License",
+    "licenseHint": "Modules, user limit and expiry."
+  },
+  "license": {
+    "title": "License",
+    "intro": "What this installation is licensed for.",
+    "open": "View license",
+    "readOnly": "The license does not allow changes right now. Data can still be read.",
+    "moduleClosed": "This area is not included in the license.",
+    "userLimit": "The license allows no more active users. Ask an administrator to deactivate someone or raise the license.",
+    "userLimitTitle": "User limit reached",
+    "state": {
+      "Valid": "Valid",
+      "Grace": "Expired, in grace period",
+      "Expired": "Expired",
+      "NotYetValid": "Not yet valid",
+      "Invalid": "Invalid",
+      "Missing": "Not installed",
+      "WrongInstallation": "For another installation"
+    },
+    "banner": {
+      "Grace": "The license has ended. Everything keeps working until {{date}}; renew it before then.",
+      "Expired": "The license has ended. Data can be read but not changed until it is renewed.",
+      "NotYetValid": "The license is not valid yet. Data can be read but not changed.",
+      "Invalid": "The license file is not valid. Data can be read but not changed.",
+      "Missing": "No license is installed. Data can be read but not changed.",
+      "WrongInstallation": "The license was issued for a different installation. Data can be read but not changed."
+    },
+    "edition": "Edition",
+    "customer": "Licensed to",
+    "id": "License ID",
+    "expires": "Valid until",
+    "graceEnds": "Grace period ends",
+    "users": "Active users",
+    "usersOf": "{{active}} of {{max}}",
+    "unlimited": "No limit",
+    "modules": "Areas",
+    "included": "Included",
+    "notIncluded": "Not included",
+    "module": {
+      "work": "Work orders",
+      "pm": "Preventive maintenance",
+      "inventory": "Inventory",
+      "vendors": "Vendors and contracts",
+      "purchasing": "Purchasing and accounting",
+      "spaces": "Spaces",
+      "bookings": "Bookings",
+      "visitors": "Visitors",
+      "reporting": "Reports and data feed"
+    },
+    "renewTitle": "Renewing",
+    "renewHelp": "Replace the license file on the server (or update the secret it is mounted from). It is picked up within a minute, without a restart."
   }
 }

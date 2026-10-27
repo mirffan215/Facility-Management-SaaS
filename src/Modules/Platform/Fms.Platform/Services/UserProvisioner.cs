@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Fms.Platform.Services;
 
-public sealed record SignedInUser(Guid UserId, bool IsActive);
+public sealed record SignedInUser(Guid UserId, bool IsActive, bool LicenseLimitReached = false);
 
 public interface IUserProvisioner
 {
@@ -12,7 +12,7 @@ public interface IUserProvisioner
     Task<SignedInUser> EnsureAsync(string provider, string subject, string? email, string? displayName, CancellationToken ct = default);
 }
 
-public sealed class UserProvisioner(PlatformDbContext db, TimeProvider clock) : IUserProvisioner
+public sealed class UserProvisioner(PlatformDbContext db, TimeProvider clock, Fms.BuildingBlocks.Deployment.ILicenseProvider? license = null) : IUserProvisioner
 {
     private static readonly TimeSpan LastSignInGranularity = TimeSpan.FromMinutes(5);
 
@@ -23,6 +23,12 @@ public sealed class UserProvisioner(PlatformDbContext db, TimeProvider clock) : 
 
         if (user is null)
         {
+            // A license may cap how many people can be active. The person is not created, so nothing has to be undone when a license is raised.
+            if (license?.Current.MaxUsers is { } max && await db.Users.CountAsync(u => u.IsActive, ct) >= max)
+            {
+                return new SignedInUser(Guid.Empty, false, LicenseLimitReached: true);
+            }
+
             user = new User { Provider = provider, Subject = subject, Email = Trim(email, 320), DisplayName = Trim(displayName, 200), CreatedAt = now, LastSignInAt = now };
             db.Users.Add(user);
             try

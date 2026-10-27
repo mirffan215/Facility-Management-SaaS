@@ -13,6 +13,7 @@ export const ADMIN_ENTRIES: Entry[] = [
   { key: 'accounting', to: '/integrations', any: ['integration.read'] },
   { key: 'visitors', to: '/visitors', any: ['visitors.security'] },
   { key: 'audit', to: '/audit', any: ['audit.read'] },
+  { key: 'license', to: '/admin/license', any: ['license.read'] },
 ];
 
 /** One place to find every administration area; each card shows only if the person may open it. */

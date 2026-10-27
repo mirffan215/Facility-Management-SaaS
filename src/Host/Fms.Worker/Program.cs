@@ -32,7 +32,7 @@ builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
 // Background jobs act for no one: services that ask who is signed in see nobody (and so cannot be misused as someone).
 builder.Services.AddSingleton<ICurrentUser, BackgroundUser>();
-builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o));
+builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o), l => builder.Configuration.GetSection(Fms.BuildingBlocks.Licensing.LicenseOptions.SectionName).Bind(l));
 builder.Services.AddFmsStorage(builder.Configuration);
 builder.Services.AddFmsPlatform(connectionString);
 builder.Services.AddFmsFacilities(connectionString);

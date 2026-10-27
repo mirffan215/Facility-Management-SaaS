@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>fms-license</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BuildingBlocks\Fms.BuildingBlocks\Fms.BuildingBlocks.csproj" />
+  </ItemGroup>
+</Project>

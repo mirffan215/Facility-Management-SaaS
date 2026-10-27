@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Fms.BuildingBlocks.Deployment;
@@ -49,10 +50,28 @@ public sealed class DeploymentOptionsValidator : IValidateOptions<DeploymentOpti
     }
 }
 
-/// <summary>What this installation or plan is entitled to. SaaS derives it from the plan; on-prem from a license file.</summary>
+/// <summary>What this installation or plan is entitled to. SaaS derives it from the plan; on-prem from a signed license file.</summary>
 public sealed record LicenseInfo(bool IsLicensed, string Edition, IReadOnlySet<string> Modules, DateTimeOffset? ExpiresAt)
 {
-    public bool Allows(string module) => IsLicensed && Modules.Contains(module);
+    public Licensing.LicenseState State { get; init; } = IsLicensed ? Licensing.LicenseState.Valid : Licensing.LicenseState.Missing;
+
+    public string? Customer { get; init; }
+
+    public string? LicenseId { get; init; }
+
+    /// <summary>Most active users, or null for no limit.</summary>
+    public int? MaxUsers { get; init; }
+
+    /// <summary>End of the grace period after expiry; null when there is no expiry.</summary>
+    public DateTimeOffset? GraceEndsAt { get; init; }
+
+    /// <summary>A short, safe explanation for people (never the file contents).</summary>
+    public string? Detail { get; init; }
+
+    public bool Allows(string module) => IsLicensed && (Modules.Contains("*") || Modules.Contains(module));
+
+    /// <summary>Without a valid license the installation keeps its data readable (so it can be exported) but accepts no changes.</summary>
+    public bool AllowsChanges => IsLicensed;
 }
 
 public interface ILicenseProvider
@@ -60,31 +79,30 @@ public interface ILicenseProvider
     LicenseInfo Current { get; }
 }
 
-/// <summary>SaaS Phase 0: every module is enabled. Plan-based entitlements arrive with Administration.</summary>
+/// <summary>SaaS: every module is enabled. Per-tenant plan entitlements are not built yet.</summary>
 public sealed class SaasLicenseProvider : ILicenseProvider
 {
     public LicenseInfo Current { get; } = new(true, "SaaS", new HashSet<string> { "*" }, null);
 }
 
-/// <summary>
-/// On-prem placeholder: reports unlicensed until signed license-file validation is built (roadmap phase 8). Nothing
-/// is gated on it yet, so it must not be relied on as a control.
-/// </summary>
+/// <summary>On-prem with no license source at all. Read-only.</summary>
 public sealed class UnconfiguredOnPremLicenseProvider : ILicenseProvider
 {
-    public LicenseInfo Current { get; } = new(false, "Unlicensed", new HashSet<string>(), null);
+    public LicenseInfo Current { get; } = new(false, "Unlicensed", new HashSet<string>(), null) { State = Licensing.LicenseState.Missing, Detail = "No license has been installed." };
 }
 
 public static class DeploymentServiceCollectionExtensions
 {
-    public static IServiceCollection AddFmsDeployment(this IServiceCollection services, Action<DeploymentOptions> configure)
+    public static IServiceCollection AddFmsDeployment(this IServiceCollection services, Action<DeploymentOptions> configure, Action<Licensing.LicenseOptions>? configureLicense = null)
     {
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddOptions<Licensing.LicenseOptions>().Configure(o => configureLicense?.Invoke(o));
         services.AddSingleton<IValidateOptions<DeploymentOptions>, DeploymentOptionsValidator>();
         services.AddOptions<DeploymentOptions>().Configure(configure).ValidateOnStart();
 
         services.AddSingleton<ILicenseProvider>(sp =>
             sp.GetRequiredService<IOptions<DeploymentOptions>>().Value.Mode == DeploymentMode.OnPrem
-                ? new UnconfiguredOnPremLicenseProvider()
+                ? ActivatorUtilities.CreateInstance<Licensing.OnPremLicenseProvider>(sp)
                 : new SaasLicenseProvider());
 
         return services;

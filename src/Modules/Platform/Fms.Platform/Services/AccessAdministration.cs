@@ -13,7 +13,7 @@ public sealed record RoleInfo(Guid Id, string Name, bool IsSystem, IReadOnlyList
 public sealed record UserInfo(
     Guid Id, string? Email, string? DisplayName, bool IsActive, IReadOnlyList<Guid> RoleIds, string? Provider = null, DateTimeOffset? LastSignInAt = null);
 
-public enum AccessResult { Ok, NotFound, InvalidRole, CannotChangeOwnRoles, CannotDeactivateSelf }
+public enum AccessResult { Ok, NotFound, InvalidRole, CannotChangeOwnRoles, CannotDeactivateSelf, UserLimitReached }
 
 public interface IPermissionService
 {
@@ -40,7 +40,7 @@ public sealed class PermissionService(PlatformDbContext db, ICurrentUser user) :
     }
 }
 
-public sealed class AccessAdministration(PlatformDbContext db, ICurrentUser current, IAuditPort audit, TimeProvider clock)
+public sealed class AccessAdministration(PlatformDbContext db, ICurrentUser current, IAuditPort audit, TimeProvider clock, Fms.BuildingBlocks.Deployment.ILicenseProvider? license = null)
 {
     public async Task<IReadOnlyList<RoleInfo>> ListRolesAsync(CancellationToken ct = default)
     {
@@ -69,6 +69,8 @@ public sealed class AccessAdministration(PlatformDbContext db, ICurrentUser curr
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null) return AccessResult.NotFound;
         if (user.IsActive == active) return AccessResult.Ok;
+
+        if (active && license?.Current.MaxUsers is { } max && await db.Users.CountAsync(u => u.IsActive, ct) >= max) return AccessResult.UserLimitReached;
 
         user.IsActive = active;
         audit.Record(active ? "user.reactivated" : "user.deactivated", nameof(User), userId.ToString());

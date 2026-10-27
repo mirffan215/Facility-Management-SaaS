@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
   AuditEntry,
+  LicenseStatus,
+  SystemInfo,
   Workflow,
   WorkflowVersion,
   Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync, Visit, VisitorSettings, WatchlistEntry, Dashboard, FeedDataset, FeedToken,
@@ -439,4 +441,14 @@ export function useAudit(params: Record<string, string | number | undefined>) {
 export function useAuditActions(params: Record<string, string | undefined>) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['audit', 'actions', params], queryFn: () => api.get<string[]>('/audit/actions', params) });
+}
+
+export function useSystemInfo() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['system-info'], queryFn: () => api.get<SystemInfo>('/system/info'), staleTime: 5 * 60_000 });
+}
+
+export function useLicense() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['license'], queryFn: () => api.get<LicenseStatus>('/license') });
 }

@@ -24,6 +24,17 @@ for i in $(seq 1 60); do
 done
 
 dotnet build Fms.sln -c Debug -v q >/dev/null
+# Licenses for the run, signed with the development key: the browser test swaps these to see the installation go read-only and recover.
+LICENSE_DIR="$LOGS/license"; rm -rf "$LICENSE_DIR"; mkdir -p "$LICENSE_DIR"
+LIC="dotnet tools/Fms.LicenseTool/bin/Debug/net10.0/fms-license.dll"
+KEY=tools/license/dev-2026.private.b64
+YESTERDAY=$(date -u -d 'yesterday' +%F 2>/dev/null || date -u -v-1d +%F)
+$LIC sign --key $KEY --key-id dev-2026 --customer "E2E Estates" --edition Professional --modules '*' --expires 2099-12-31 --max-users 50 --tenant $TENANT --out "$LICENSE_DIR/valid.license" >/dev/null
+$LIC sign --key $KEY --key-id dev-2026 --customer "E2E Estates" --edition Professional --modules '*' --expires "$YESTERDAY" --not-before 2020-01-01 --grace-days 30 --tenant $TENANT --out "$LICENSE_DIR/grace.license" >/dev/null
+$LIC sign --key $KEY --key-id dev-2026 --customer "E2E Estates" --edition Professional --modules '*' --expires 2021-01-01 --not-before 2020-01-01 --grace-days 0 --tenant $TENANT --out "$LICENSE_DIR/expired.license" >/dev/null
+cp "$LICENSE_DIR/valid.license" "$LICENSE_DIR/fms.license"
+export E2E_LICENSE_DIR="$LICENSE_DIR"
+
 ConnectionStrings__Migrator="Server=localhost,$SQL_PORT;Database=Fms;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True" \
   Deployment__Mode=OnPrem Deployment__SingleTenantId=$TENANT Deployment__LocalStoragePath="$STORAGE" Deployment__TenantName=E2E \
   FMS_APP_LOGIN=fms_app FMS_APP_LOGIN_PASSWORD="$APP_PASSWORD" FMS_INITIAL_ADMIN=fake:e2e-admin \
@@ -36,7 +47,7 @@ ConnectionStrings__Default="Server=localhost,$SQL_PORT;Database=Fms;User Id=fms_
 Deployment__Mode=OnPrem Deployment__SingleTenantId=$TENANT Deployment__LocalStoragePath="$STORAGE" Storage__Provider=Local \
 Authentication__AllowInsecureAuthority=true Authentication__Providers__0__Name=fake Authentication__Providers__0__Authority=http://localhost:9099 \
 Authentication__Providers__0__Audience=api://fms Authentication__Providers__0__ClientId=fms-web Authentication__Providers__0__Scope="openid profile email offline_access" \
-Facilities__PublicBaseUrl=http://localhost:5173 Erp__AllowFakeAdapter=true Calendar__AllowFakeAdapter=true \
+License__Path="$LICENSE_DIR/fms.license" Facilities__PublicBaseUrl=http://localhost:5173 Erp__AllowFakeAdapter=true Calendar__AllowFakeAdapter=true \
   dotnet src/Host/Fms.Api/bin/Debug/net10.0/Fms.Api.dll > "$LOGS/api.log" 2>&1 & PIDS+=($!)
 
 # The worker delivers notifications (outbox) and watches SLA clocks.

@@ -111,6 +111,9 @@ public static class Permissions
     /// <summary>Manage the BI feed: make and revoke access tokens for outside tools.</summary>
     public const string ReportsManage = "reports.manage";
 
+    /// <summary>See the installation's license: modules, user limit, expiry.</summary>
+    public const string LicenseRead = "license.read";
+
     /// <summary>Use the vendor portal: see the orders, work and contracts of one's own vendor. Held by nobody but vendor users.</summary>
     public const string PortalUse = "portal.use";
 
@@ -129,6 +132,7 @@ public static class Permissions
         BookingsRead, BookingsBook, BookingsApprove, BookingsManage,
         VisitorsHost, VisitorsReception, VisitorsSecurity,
         ReportsRead, ReportsManage,
+        LicenseRead,
         PortalUse,
     ];
 

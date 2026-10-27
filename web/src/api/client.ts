@@ -4,6 +4,8 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly title: string,
     public readonly fieldErrors: Record<string, string[]> = {},
+    /** A machine-readable reason the server gave (for example `license.read_only`), when there is one. */
+    public readonly code?: string,
   ) {
     super(title);
     this.name = 'ApiError';
@@ -49,14 +51,16 @@ export function toQuery(params?: Query): string {
 export async function toApiError(response: Response): Promise<ApiError> {
   let title = response.statusText || `HTTP ${response.status}`;
   let fieldErrors: Record<string, string[]> = {};
+  let code: string | undefined;
   try {
-    const body = (await response.json()) as { title?: string; errors?: Record<string, string[]> };
+    const body = (await response.json()) as { title?: string; errors?: Record<string, string[]>; code?: string };
+    if (typeof body.code === 'string') code = body.code;
     if (body.title) title = body.title;
     if (body.errors) fieldErrors = body.errors;
   } catch {
     // Not JSON (e.g. a proxy error page): keep the status text.
   }
-  return new ApiError(response.status, title, fieldErrors);
+  return new ApiError(response.status, title, fieldErrors, code);
 }
 
 export function createApi(options: ApiOptions) {

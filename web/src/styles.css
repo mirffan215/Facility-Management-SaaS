@@ -164,3 +164,6 @@ tr.voided td:last-child, tr.voided td .badge { text-decoration: none; }
 .bar-track { display: block; block-size: 0.7rem; background: var(--border); border-radius: 999px; overflow: hidden; }
 .bar-fill { display: block; block-size: 100%; background: var(--accent); }
 .bar-value { font-variant-numeric: tabular-nums; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }

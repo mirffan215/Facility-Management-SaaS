@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
-import { useMe, usePermissions, usePortalOnly, useUnreadCount } from '../api/hooks';
+import { useMe, usePermissions, usePortalOnly, useSystemInfo, useUnreadCount } from '../api/hooks';
 import { languages } from '../i18n';
 import { usePrefs } from '../lib/prefs';
 import { SyncStatus } from '../offline/SyncStatus';
@@ -12,11 +12,13 @@ export function Layout() {
   const { t, i18n } = useTranslation();
   const { displayName, signOut, offlineSession } = useAuth();
   const offline = useOffline();
-  const { calendar, setCalendar } = usePrefs();
+  const { calendar, setCalendar, date } = usePrefs();
   const { can } = usePermissions();
   const me = useMe();
   const portalOnly = usePortalOnly();
   const unread = useUnreadCount().data?.count ?? 0;
+  const system = useSystemInfo().data;
+  const licenseProblem = system && system.deploymentMode === 'OnPrem' && system.licenseState !== 'Valid' ? system : null;
 
   return (
     <>
@@ -43,7 +45,7 @@ export function Layout() {
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
           {can('assets.manage') || can('customfields.manage') || can('workorders.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
           {can('users.read') ? <NavLink to="/users">{t('nav.users')}</NavLink> : null}
-          {can('audit.read') || can('reports.manage') || can('users.read') || can('workorders.manage') ? <NavLink to="/admin">{t('nav.admin')}</NavLink> : null}
+          {can('audit.read') || can('license.read') || can('reports.manage') || can('users.read') || can('workorders.manage') ? <NavLink to="/admin">{t('nav.admin')}</NavLink> : null}
           {!offlineSession ? <NavLink to="/notifications">
             {t('notify.title')}
             {unread > 0 ? (
@@ -84,12 +86,27 @@ export function Layout() {
           </button>
         </div>
       </header>
+      {licenseProblem ? (
+        <div className={licenseProblem.licensed ? 'banner' : 'banner error'} role={licenseProblem.licensed ? 'status' : 'alert'}>
+          {t(`license.banner.${licenseProblem.licenseState}`, { date: date(licenseProblem.licenseGraceEndsAt ?? licenseProblem.licenseExpiresAt) })}{' '}
+          {can('license.read') ? <NavLink to="/admin/license">{t('license.open')}</NavLink> : null}
+        </div>
+      ) : null}
       <SyncStatus />
       <main id="main" tabIndex={-1}>
         {me.error instanceof ApiError && me.error.isForbidden ? (
           <section>
-            <h1>{t('users.deactivatedAccount')}</h1>
-            <p>{t('users.deactivatedHelp')}</p>
+            {me.error.code === 'license.user_limit' ? (
+              <>
+                <h1>{t('license.userLimitTitle')}</h1>
+                <p>{t('license.userLimit')}</p>
+              </>
+            ) : (
+              <>
+                <h1>{t('users.deactivatedAccount')}</h1>
+                <p>{t('users.deactivatedHelp')}</p>
+              </>
+            )}
           </section>
         ) : (
           <Outlet />

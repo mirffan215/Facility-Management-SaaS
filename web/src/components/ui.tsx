@@ -46,6 +46,9 @@ export function errorText(error: unknown, t: (key: string) => string): string {
       case 0:
         return t('errors.network');
       case 403:
+        if (error.code === 'license.read_only') return t('license.readOnly');
+        if (error.code === 'license.module_not_licensed') return t('license.moduleClosed');
+        if (error.code === 'license.user_limit') return t('license.userLimit');
         return t('errors.forbidden');
       case 404:
         return t('errors.notFound');

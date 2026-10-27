@@ -24,7 +24,7 @@ public sealed class SystemInfoTests
         await using var factory = Factory(("Deployment:Mode", "SaaS"));
         var info = await factory.CreateClient().GetFromJsonAsync<SystemInfo>("/api/v1/system/info");
 
-        Assert.Equal(new SystemInfo("SaaS", "SaaS", true, false), info);
+        Assert.Equal(new SystemInfo("SaaS", "SaaS", true, false, "Valid", null, null), info);
     }
 
     [Fact]
@@ -51,6 +51,8 @@ public sealed class SystemInfoTests
 
         Assert.False(info!.TenantResolved);
         Assert.Equal("OnPrem", info.DeploymentMode);
+        Assert.False(info.Licensed); // no license installed
+        Assert.Equal("Missing", info.LicenseState);
     }
 
     [Fact]

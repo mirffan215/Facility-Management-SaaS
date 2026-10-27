@@ -95,6 +95,23 @@ public sealed class ApiHarness : IDisposable
         return client;
     }
 
+    /// <summary>Someone who has a valid sign-in for <paramref name="tenant"/> but has never used the system, so the first request provisions them.</summary>
+    public async Task<HttpClient> FirstTimeClientAsync(Guid tenant)
+    {
+        var external = await ExternalTenantAsync(tenant);
+        var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = $"{Prefix}{external}/v2.0",
+            Audience = Audience,
+            Claims = new Dictionary<string, object> { ["sub"] = "n-" + Guid.NewGuid().ToString("N"), ["tid"] = external },
+            Expires = DateTime.UtcNow.AddMinutes(30),
+            SigningCredentials = new SigningCredentials(new RsaSecurityKey(_key) { KeyId = "k1" }, SecurityAlgorithms.RsaSha256),
+        });
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
+
     /// <summary>
     /// A signed-in person whose identity directory is mapped to no tenant (a vendor's employee with their own company account). They get a tenant only by accepting an invitation.
     /// The same client keeps working after that, because the tenant is worked out from the token on every request.

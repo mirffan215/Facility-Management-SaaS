@@ -1591,6 +1591,52 @@ test('administration and audit: the hub links to what the administrator may open
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('license: the license page shows what is licensed; an expired license makes the installation read-only and a renewal restores it', async () => {
+  const dir = process.env.E2E_LICENSE_DIR!;
+  const live = `${dir}/fms.license`;
+  const swap = async (name: string, state: string) => {
+    fs.copyFileSync(`${dir}/${name}.license`, live);
+    fs.utimesSync(live, new Date(), new Date(Date.now() + 1000)); // a changed time stamp is how the server notices a new file
+    await expect.poll(async () => ((await (await page.request.get('/api/v1/system/info')).json()) as { licenseState: string }).licenseState, { timeout: 40_000, intervals: [1000] }).toBe(state);
+  };
+
+  await page.goto('/admin');
+  await page.getByRole('link', { name: 'License' }).click();
+  await expect(page.getByRole('heading', { name: 'License' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Valid' })).toBeVisible();
+  await expect(page.getByText('E2E Estates')).toBeVisible();
+  await expect(page.getByText('0 of 50').or(page.getByText(/\d+ of 50/))).toBeVisible();
+  await shot('41-license');
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/admin/license');
+    await expect(page.getByRole('status').first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`license ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+
+  try {
+    await swap('grace', 'Grace');
+    await page.goto('/setup');
+    await expect(page.getByRole('status').filter({ hasText: 'The license has ended. Everything keeps working until' })).toBeVisible();
+
+    await swap('expired', 'Expired');
+    await page.goto('/setup');
+    await expect(page.getByRole('alert').filter({ hasText: 'Data can be read but not changed' })).toBeVisible();
+    await page.getByLabel('Asset number').fill(`LIC-${SUFFIX}`);
+    await page.getByLabel('Name', { exact: true }).fill('Should be refused');
+    await page.getByRole('button', { name: 'Save' }).first().click();
+    await expect(page.getByRole('alert').filter({ hasText: 'The license does not allow changes right now' })).toBeVisible();
+    await page.goto('/locations'); // reading still works
+    await expect(page.getByRole('heading', { name: 'Locations' })).toBeVisible();
+    await shot('42-license-expired');
+  } finally {
+    await swap('valid', 'Valid');
+  }
+  await page.goto('/setup');
+  await expect(page.getByRole('alert').filter({ hasText: 'Data can be read but not changed' })).toHaveCount(0);
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

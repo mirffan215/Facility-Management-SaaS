@@ -1246,3 +1246,29 @@ export interface AuditEntry {
   summary: string | null;
   correlationId: string | null;
 }
+
+export type LicenseStateName = 'Valid' | 'Grace' | 'Expired' | 'NotYetValid' | 'Invalid' | 'Missing' | 'WrongInstallation';
+
+export interface SystemInfo {
+  deploymentMode: string;
+  edition: string;
+  licensed: boolean;
+  tenantResolved: boolean;
+  licenseState: LicenseStateName;
+  licenseExpiresAt: string | null;
+  licenseGraceEndsAt: string | null;
+}
+
+export interface LicenseStatus {
+  state: LicenseStateName;
+  edition: string;
+  customer: string | null;
+  licenseId: string | null;
+  modules: string[];
+  allModules: string[];
+  maxUsers: number | null;
+  activeUsers: number | null;
+  expiresAt: string | null;
+  graceEndsAt: string | null;
+  detail: string | null;
+}
