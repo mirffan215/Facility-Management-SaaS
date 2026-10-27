@@ -62,9 +62,9 @@ if [ "${WEB_TIER:-nginx}" = "vite" ]; then
   (cd web && exec node node_modules/vite/bin/vite.js preview --port 5173 --strictPort) > "$LOGS/web.log" 2>&1 & PIDS+=($!)
 else
   docker rm -f fms-e2e-web >/dev/null 2>&1 || true
-  docker run -d --name fms-e2e-web --add-host=host.docker.internal:host-gateway -p 5173:80 \
+  docker run -d --name fms-e2e-web --add-host=host.docker.internal:host-gateway -p 5173:8080 \
     -e API_UPSTREAM=http://host.docker.internal:5080 -e CSP_CONNECT_SRC=http://localhost:9099 -e NGINX_ENVSUBST_FILTER='API_UPSTREAM|CSP_CONNECT_SRC' \
-    -v "$ROOT/web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro" -v "$ROOT/web/dist:/usr/share/nginx/html:ro" nginx:alpine >/dev/null
+    -v "$ROOT/web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro" -v "$ROOT/web/dist:/usr/share/nginx/html:ro" nginxinc/nginx-unprivileged:alpine >/dev/null
 fi
 
 for url in http://localhost:9099/__health http://localhost:5080/health/ready http://localhost:5173/; do

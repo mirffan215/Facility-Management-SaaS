@@ -1692,6 +1692,12 @@ test('the strict content-security policy was never violated and the security hea
   const headers = (await page.request.get('/')).headers();
   expect(headers['x-content-type-options']).toBe('nosniff');
   expect(headers['x-frame-options']).toBe('DENY');
+  // The API's own copies of these must not stack on the web tier's (two identical values can be treated as invalid by a browser).
+  const apiHeaders = (await page.request.get('/api/v1/system/info')).headers();
+  expect(apiHeaders['x-frame-options']).toBe('DENY');
+  expect(apiHeaders['referrer-policy']).toBe('no-referrer');
+  expect(apiHeaders['cache-control']).toBe('no-store');
+  expect(apiHeaders['x-content-type-options']).toBe('nosniff');
   expect(headers['content-security-policy']).toContain("script-src 'self'");
   // A deep link reloads into the app (the web server falls back to index.html for app routes).
   const response = await page.goto('/assets');

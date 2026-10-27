@@ -24,6 +24,11 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddFmsObservability("fms-api");
+builder.WebHost.ConfigureKestrel((context, k) =>
+{
+    k.AddServerHeader = false;
+    k.Limits.MaxRequestBodySize = context.Configuration.GetSection(Fms.Api.SecurityOptions.SectionName).Get<Fms.Api.SecurityOptions>()?.MaxRequestBodyBytes ?? new Fms.Api.SecurityOptions().MaxRequestBodyBytes;
+});
 
 builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o), l => builder.Configuration.GetSection(Fms.BuildingBlocks.Licensing.LicenseOptions.SectionName).Bind(l));
 builder.Services.AddScoped<TenantContext>();
@@ -51,15 +56,15 @@ builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Ad
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<Fms.Api.BadRequestExceptionHandler>();
 builder.Services.AddHealthChecks();
+builder.Services.AddFmsHardening(builder.Configuration);
 
 var app = builder.Build();
 
-// Responses are data, never pages: browsers must not guess a content type (e.g. treat an uploaded file as HTML).
-app.Use(async (context, next) =>
-{
-    context.Response.Headers.XContentTypeOptions = "nosniff";
-    await next(context);
-});
+// Behind a proxy the real client address and scheme come from forwarded headers, believed only from configured networks.
+app.UseForwardedHeaders();
+if (!app.Environment.IsDevelopment() && app.Configuration.GetValue("Security:Hsts", true)) app.UseHsts();
+// Responses are data, never pages: strict headers, nothing cached, browsers must not guess a content type.
+app.UseFmsSecurityHeaders();
 
 app.UseExceptionHandler();
 // Use THIS host's logger (not the process-wide static one) so hosts sharing a process never receive each other's request logs.
@@ -67,6 +72,7 @@ app.UseSerilogRequestLogging(o => o.Logger = app.Services.GetRequiredService<Ser
 app.UseStatusCodePages();
 app.UseMiddleware<LicenseEnforcementMiddleware>();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseMiddleware<UserProvisioningMiddleware>();
 app.UseAuthorization();

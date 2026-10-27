@@ -5,7 +5,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:alpine
+# Runs as the unprivileged nginx user on port 8080 (no root, no privileged port), so the container can run with a read-only root file system.
 # The official image renders /etc/nginx/templates/*.template with the container's environment on start.
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html

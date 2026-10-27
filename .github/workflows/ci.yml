@@ -83,3 +83,15 @@ jobs:
       - run: docker build -f Dockerfile.migrator -t fms-migrator .
       - run: docker build -f Dockerfile.worker -t fms-worker .
       - run: docker build -t fms-web web
+      # Scan what we ship. Fixed critical and high findings in the images (base layers and libraries) fail the build; unfixed ones are reported only.
+      - name: Scan images
+        run: |
+          mkdir -p scan
+          for image in fms-api fms-migrator fms-worker fms-web; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/scan:/out" aquasec/trivy:0.58.1 image \
+              --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --no-progress --format table "$image" | tee "scan/$image.txt"
+          done
+      - name: Check no secrets were committed
+        run: docker run --rm -v "$PWD:/repo" aquasec/trivy:0.58.1 fs --scanners secret --exit-code 1 --no-progress --skip-dirs /repo/web/node_modules /repo
+      - name: Release keys are production keys (informational on branches)
+        run: scripts/check-release-keys.sh || echo "::notice::Development license key still trusted; this must be replaced before a release (the release workflow enforces it)."

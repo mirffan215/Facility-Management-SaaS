@@ -32,6 +32,11 @@ services:
       Deployment__Mode: OnPrem
       Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
       Deployment__LocalStoragePath: /data/files
+      License__Path: /etc/fms/license/fms.license
+      # The web container (and your load balancer) sit on private networks; their forwarded client address is believed. Narrow these to your own networks if you can.
+      Security__TrustedProxyCidrs__0: 10.0.0.0/8
+      Security__TrustedProxyCidrs__1: 172.16.0.0/12
+      Security__TrustedProxyCidrs__2: 192.168.0.0/16
       # Configure at least one identity provider, e.g.:
       # Authentication__Providers__0__Name: corp
       # Authentication__Providers__0__Authority: https://idp.example.com
@@ -39,7 +44,7 @@ services:
       # Authentication__Providers__0__ClientId: <the web app's client id at the provider, public client with PKCE>
       # Authentication__Providers__0__Scope: openid profile email api://fms/access_as_user
       # Facilities__PublicBaseUrl: https://fms.example.com   # what QR labels encode; the address people reach the web app at
-    volumes: ["files:/data/files"]
+    volumes: ["files:/data/files", "./license:/etc/fms/license:ro"]
     ports: ["8080:8080"]
   worker:
     build: { context: ., dockerfile: Dockerfile.worker }
@@ -65,7 +70,7 @@ services:
     environment:
       API_UPSTREAM: http://api:8080
       CSP_CONNECT_SRC: ${FMS_CSP_CONNECT_SRC:-https:}
-    ports: ["5173:80"]
+    ports: ["5173:8080"]
 volumes:
   sqldata:
   files:
