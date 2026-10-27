@@ -30,6 +30,8 @@ public static class InventoryServiceCollectionExtensions
         services.AddScoped<IOutboxHandler, GoodsReceivedHandler>();
         services.AddScoped<IInventoryCatalog, InventoryCatalog>();
         services.AddHealthChecks().AddDbContextCheck<InventoryDbContext>("inventory-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(InventoryDatasets.All(sp.GetRequiredService<Persistence.InventoryDbContext>()).ToList()));
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, InventoryReportProvider>();
         return services;
     }
 }

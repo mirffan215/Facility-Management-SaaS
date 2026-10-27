@@ -33,6 +33,7 @@ public static class VendorsServiceCollectionExtensions
         services.AddScoped<IOutboxHandler, ContractAlertHandler>();
         services.AddScoped<IOutboxHandler, VendorSyncedHandler>();
         services.AddHealthChecks().AddDbContextCheck<VendorsDbContext>("vendors-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, VendorsReportProvider>();
         return services;
     }
 }

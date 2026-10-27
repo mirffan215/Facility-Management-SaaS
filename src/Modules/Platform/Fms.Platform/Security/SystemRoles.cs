@@ -37,6 +37,7 @@ public static class SystemRoles
             Permissions.SpacesRead, Permissions.SpacesManage,
             Permissions.BookingsRead, Permissions.BookingsBook, Permissions.BookingsApprove, Permissions.BookingsManage,
             Permissions.VisitorsHost, Permissions.VisitorsReception, Permissions.VisitorsSecurity,
+            Permissions.ReportsRead,
         ],
         [Technician] =
         [
@@ -48,6 +49,6 @@ public static class SystemRoles
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest, Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost],
         [Reception] = [Permissions.LocationsRead, Permissions.UsersRead, Permissions.VisitorsReception, Permissions.VisitorsHost, Permissions.BookingsRead, Permissions.BookingsBook],
         [Vendor] = [Permissions.PortalUse],
-        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead, Permissions.SpacesRead, Permissions.BookingsRead],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead, Permissions.SpacesRead, Permissions.BookingsRead, Permissions.ReportsRead],
     };
 }

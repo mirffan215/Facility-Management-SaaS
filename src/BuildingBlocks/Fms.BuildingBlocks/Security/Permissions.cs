@@ -105,6 +105,12 @@ public static class Permissions
     /// <summary>Keep the watchlist, let a watchlisted visitor in with a recorded reason, and set the visiting rules.</summary>
     public const string VisitorsSecurity = "visitors.security";
 
+    /// <summary>See dashboards and the KPI pack (each group still needs its own module's read permission) and export them.</summary>
+    public const string ReportsRead = "reports.read";
+
+    /// <summary>Manage the BI feed: make and revoke access tokens for outside tools.</summary>
+    public const string ReportsManage = "reports.manage";
+
     /// <summary>Use the vendor portal: see the orders, work and contracts of one's own vendor. Held by nobody but vendor users.</summary>
     public const string PortalUse = "portal.use";
 
@@ -122,6 +128,7 @@ public static class Permissions
         SpacesRead, SpacesManage,
         BookingsRead, BookingsBook, BookingsApprove, BookingsManage,
         VisitorsHost, VisitorsReception, VisitorsSecurity,
+        ReportsRead, ReportsManage,
         PortalUse,
     ];
 

@@ -24,6 +24,8 @@ public static class PurchasingServiceCollectionExtensions
         services.AddScoped<IOutboxHandler, PurchasingEventHandler>();
         services.AddScoped<IOutboxHandler, OrderSyncedHandler>();
         services.AddHealthChecks().AddDbContextCheck<PurchasingDbContext>("purchasing-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(PurchasingDatasets.All(sp.GetRequiredService<Persistence.PurchasingDbContext>()).ToList()));
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, PurchasingReportProvider>();
         return services;
     }
 }

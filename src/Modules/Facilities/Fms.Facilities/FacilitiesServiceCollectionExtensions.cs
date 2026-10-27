@@ -31,6 +31,8 @@ public static class FacilitiesServiceCollectionExtensions
         services.AddOptions<FacilitiesOptions>().BindConfiguration(FacilitiesOptions.SectionName).ValidateOnStart();
         services.AddSingleton<AssetLabelService>();
         services.AddHealthChecks().AddDbContextCheck<FacilitiesDbContext>("facilities-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(FacilitiesDatasets.All(sp.GetRequiredService<Persistence.FacilitiesDbContext>()).ToList()));
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, FacilitiesReportProvider>();
         return services;
     }
 }

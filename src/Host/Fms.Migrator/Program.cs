@@ -6,6 +6,7 @@ using Fms.Inventory.Persistence;
 using Fms.Integration.Persistence;
 using Fms.Purchasing.Persistence;
 using Fms.Bookings.Persistence;
+using Fms.Reporting.Persistence;
 using Fms.Visitors.Persistence;
 using Fms.Spaces.Persistence;
 using Fms.Vendors.Persistence;
@@ -68,6 +69,11 @@ await using var visitorsDb = new VisitorsDbContext(
     new DbContextOptionsBuilder<VisitorsDbContext>().UseSqlServer(migratorConnection, VisitorsDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 await visitorsDb.Database.MigrateAsync();
+
+await using var reportingDb = new ReportingDbContext(
+    new DbContextOptionsBuilder<ReportingDbContext>().UseSqlServer(migratorConnection, ReportingDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+await reportingDb.Database.MigrateAsync();
 
 await using var purchasingDb = new PurchasingDbContext(
     new DbContextOptionsBuilder<PurchasingDbContext>().UseSqlServer(migratorConnection, PurchasingDbContextOptions.Sql)

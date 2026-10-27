@@ -25,6 +25,8 @@ public static class VisitorsServiceCollectionExtensions
         services.AddScoped<VisitHousekeeping>();
         services.AddSingleton<VisitMonitor>();
         services.AddHealthChecks().AddDbContextCheck<VisitorsDbContext>("visitors-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(VisitorsDatasets.All(sp.GetRequiredService<Persistence.VisitorsDbContext>()).ToList()));
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, VisitorsReportProvider>();
         return services;
     }
 }

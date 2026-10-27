@@ -31,6 +31,8 @@ public static class BookingsServiceCollectionExtensions
         services.AddScoped<NoShows>();
         services.AddSingleton<BookingMonitor>();
         services.AddHealthChecks().AddDbContextCheck<BookingsDbContext>("bookings-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(BookingsDatasets.All(sp.GetRequiredService<Persistence.BookingsDbContext>()).ToList()));
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, BookingsReportProvider>();
         return services;
     }
 }

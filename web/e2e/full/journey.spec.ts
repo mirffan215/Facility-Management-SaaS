@@ -1462,6 +1462,74 @@ test('visitors: a visitor is expected, opens their pass without signing in, is c
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('reports: the KPI pack shows figures for a period and a site, exports them, and is readable in both languages', async () => {
+  await page.goto('/reports');
+  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
+  const work = page.getByRole('region', { name: 'Work orders' });
+  await expect(work).toBeVisible();
+  const raised = work.locator('div').filter({ has: page.getByText('Requests raised', { exact: true }) }).first();
+  await expect(raised.getByRole('definition')).not.toHaveText('0'); // the earlier steps raised work
+  await expect(page.getByRole('region', { name: 'Visitors' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Requests raised per week' })).toBeVisible();
+
+  // A site with nothing in it shows zeros, and a dash where there is nothing to measure.
+  await choose(page.getByLabel('Site'), SITE);
+  await expect(page.getByText(/not kept by site/).first()).toBeVisible();
+  await shot('37-reports');
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export to spreadsheet' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^kpi-\d{8}-\d{8}\.csv$/);
+  const text = fs.readFileSync((await download.path())!, 'utf8');
+  expect(text).toContain('work,kpi,work.created');
+
+  // A bad period is refused by the server with a message, not a crash.
+  await page.getByLabel('From').fill('2000-01-01');
+  await expect(page.getByRole('alert').first()).toBeVisible();
+  await page.getByLabel('From').fill(new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10));
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/reports');
+    await expect(page.locator('.tiles').first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`reports ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('data feed: an administrator makes an access token, Power BI style basic access reads the data, and revoking stops it', async () => {
+  await page.goto('/reports?tab=feed');
+  await page.getByLabel('Name', { exact: true }).fill('Power BI test');
+  await page.getByRole('button', { name: 'Make token' }).click();
+  const secret = await page.getByLabel('Secret', { exact: true }).inputValue();
+  expect(secret).toMatch(/^fmsf_/);
+  await shot('38-data-feed');
+
+  const basic = { Authorization: 'Basic ' + Buffer.from(`powerbi:${secret}`).toString('base64') };
+  const read = await page.request.get('/api/v1/odata/WorkOrders?$count=true&$top=1', { headers: basic });
+  expect(read.status()).toBe(200);
+  const body = (await read.json()) as { '@odata.count': number; value: Record<string, unknown>[] };
+  expect(body['@odata.count']).toBeGreaterThan(0);
+  expect(body.value[0]).not.toHaveProperty('Title'); // nothing typed by people
+  expect((await page.request.get('/api/v1/odata/Visits?$top=1', { headers: basic })).status()).toBe(200);
+  expect((await page.request.get('/api/v1/odata/WorkOrders', { headers: { Authorization: 'Basic ' + Buffer.from('x:fmsf_wrong').toString('base64') } })).status()).toBe(401);
+
+  await page.reload(); // the secret is shown once
+  await expect(page.getByLabel('Secret', { exact: true })).toHaveCount(0);
+  const row = page.getByRole('row', { name: /Power BI test/ });
+  await expect(row).toContainText('Active');
+  await row.getByRole('button', { name: 'Revoke' }).click();
+  await expect(row).toContainText('Revoked');
+  expect((await page.request.get('/api/v1/odata/WorkOrders?$top=1', { headers: basic })).status()).toBe(401);
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/reports?tab=feed');
+    await expect(page.getByRole('tabpanel')).toBeVisible();
+    await expectNoSeriousA11yIssues(`data feed ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

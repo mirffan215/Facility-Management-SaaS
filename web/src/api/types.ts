@@ -1157,3 +1157,53 @@ export interface VisitorSettings {
   retentionDays: number;
   rowVersion: string | null;
 }
+
+// ---------------- reports ----------------
+
+export interface Kpi {
+  key: string;
+  group: string;
+  value: number | null;
+  unit: 'count' | 'percent' | 'hours' | 'minutes' | 'money' | 'area';
+  detail: string | null;
+}
+
+export interface ReportSeries {
+  key: string;
+  group: string;
+  unit: Kpi['unit'];
+  points: { label: string; value: number }[];
+}
+
+export interface Dashboard {
+  from: string;
+  to: string;
+  siteId: string | null;
+  siteName: string | null;
+  generatedAt: string;
+  groups: { group: string; kpis: Kpi[]; series: ReportSeries[]; failed: boolean }[];
+}
+
+export interface FeedToken {
+  id: string;
+  name: string;
+  prefix: string;
+  scope: string;
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  state: 'Active' | 'Expired' | 'Revoked';
+}
+
+export interface CreatedFeedToken {
+  token: FeedToken;
+  secret: string;
+  feedPath: string;
+}
+
+export interface FeedDataset {
+  name: string;
+  columns: { name: string; type: string }[];
+  timeColumn: string | null;
+}

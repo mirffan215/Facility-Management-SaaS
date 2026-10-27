@@ -24,6 +24,7 @@ import { InventoryPage } from './pages/Inventory';
 import { VendorsPage } from './pages/Vendors';
 import { PurchasingPage } from './pages/Purchasing';
 import { IntegrationsPage } from './pages/Integrations';
+import { ReportsPage } from './pages/Reports';
 import { VisitorsPage } from './pages/Visitors';
 import { VisitPassPage } from './pages/VisitPass';
 import { BookingsPage } from './pages/Bookings';
@@ -136,6 +137,7 @@ export function App() {
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="purchasing" element={<PurchasingPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="visitors" element={<VisitorsPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="spaces" element={<SpacesPage />} />

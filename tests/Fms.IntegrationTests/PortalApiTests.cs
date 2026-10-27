@@ -170,7 +170,7 @@ public sealed class PortalApiTests(SqlServerFixture sql) : IDisposable
         var rig = await NewRigAsync();
         var user = await PortalUserAsync(rig, await VendorAsync(rig, "Any Vendor"));
 
-        string[] allowed = ["/api/v1/portal/", "/api/v1/me", "/api/v1/notifications", "/api/v1/system/info", "/api/v1/auth/providers", "/api/v1/calendar/", "/api/v1/visits/pass/", "/health"];
+        string[] allowed = ["/api/v1/portal/", "/api/v1/me", "/api/v1/notifications", "/api/v1/system/info", "/api/v1/auth/providers", "/api/v1/calendar/", "/api/v1/visits/pass/", "/api/v1/odata", "/health"];
         var source = _api.Factory.Services.GetRequiredService<EndpointDataSource>();
         var leaks = new List<string>();
         var checkedRoutes = 0;

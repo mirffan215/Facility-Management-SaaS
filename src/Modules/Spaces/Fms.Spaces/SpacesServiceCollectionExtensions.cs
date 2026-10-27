@@ -23,6 +23,7 @@ public static class SpacesServiceCollectionExtensions
         services.AddScoped<PlanService>();
         services.AddScoped<AllocationService>();
         services.AddHealthChecks().AddDbContextCheck<SpacesDbContext>("spaces-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, SpacesReportProvider>();
         return services;
     }
 }

@@ -36,6 +36,8 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<WorkSetupService>();
         services.AddScoped<SlaSetupService>();
         services.AddHealthChecks().AddDbContextCheck<WorkDbContext>("work-db", tags: ["ready"]);
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(WorkDatasets.All(sp.GetRequiredService<Persistence.WorkDbContext>()).ToList()));
+        services.AddScoped<Fms.BuildingBlocks.Reporting.IReportProvider, WorkReportProvider>();
         return services;
     }
 }

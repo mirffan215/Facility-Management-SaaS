@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync, Visit, VisitorSettings, WatchlistEntry,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync, Visit, VisitorSettings, WatchlistEntry, Dashboard, FeedDataset, FeedToken,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -401,4 +401,19 @@ export function useVisitorSettings(enabled: boolean) {
 export function useSites() {
   const tree = useLocationTree();
   return { ...tree, data: (tree.data ?? []).filter((n) => n.type === 'Site') };
+}
+
+export function useDashboard(params: Record<string, string | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['reports', 'dashboard', params], queryFn: () => api.get<Dashboard>('/reports/dashboard', params) });
+}
+
+export function useFeedTokens() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['reports', 'feed', 'tokens'], queryFn: () => api.get<FeedToken[]>('/reports/feed/tokens') });
+}
+
+export function useFeedDatasets() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['reports', 'feed', 'datasets'], queryFn: () => api.get<FeedDataset[]>('/reports/feed/datasets') });
 }
