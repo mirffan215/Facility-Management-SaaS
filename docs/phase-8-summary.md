@@ -11,7 +11,7 @@ Design records: [ADR-0023](adr/0023-licensing.md) (licensing), [ADR-0024](adr/00
 | 8d | Upgrades | Migrator `--check` mode (what would change) that refuses a database newer than the running version (exit 4); `upgrade.sh` (version order, disk, check, verified backup, stop, migrate, start, readiness, version smoke test) and `rollback.sh` (restore the backup, return to the old version); Azure SQL contained-user path for the application login; version in `/api/v1/system/info`. |
 
 ## Tests
-Suites green at the end of the phase: 523 unit, 41 API, 339 integration, 74 web, 39 browser steps (all passed locally; see "Not verified" for what only CI can check).
+Suites green at the end of the phase: 523 unit, 41 API, 339 integration, 74 web, 39 browser steps, all also green in CI.
 
 - Unit: license signature, tampering, wrong or unknown key, garbage input; date states and grace cap; installation binding; module mapping for every route family; renewal picked up without restart; configuration text.
 - API: security headers on success, refusal and not-found; 429 with `Retry-After`; health exempt; secret-route budget; spoofed forwarded address ignored from an untrusted caller and honoured from a trusted network; limiter can be disabled; malformed network stops startup.
@@ -19,11 +19,14 @@ Suites green at the end of the phase: 523 unit, 41 API, 339 integration, 74 web,
 - Browser: license page, an expired license swapped in on the server turns the whole app read-only with the right messages (and a renewal restores it), accessibility scans in English and Arabic, and the API and web tier send each security header once.
 - Scripts: `scripts/test-onprem-scripts.sh` covers version comparison, `.env` handling and the refusals of install, upgrade and rollback (run in CI); `scripts/make-onprem-bundle.sh` was run locally (online bundle, checksum, and its refusal of the development key under `--release`).
 
-## Not verified here (only CI or a real deployment can)
-- **Helm chart and Bicep template were written without Helm or the Bicep compiler available in the development environment.** CI lints and renders the chart, checks it against Kubernetes schemas and compiles the Bicep on every change; the first CI run may need fixes. Neither has been deployed to a cluster or to Azure.
-- **Compose bundle:** the compose file and `install.sh`, `upgrade.sh`, `rollback.sh` were not run against a live stack here (Docker Hub rate-limited the pulls), only their logic and refusals. The unprivileged nginx image was replaced by `nginx:alpine` locally; CI uses the real one.
+## What CI has and has not verified
+Verified by CI on the final commit (all jobs green): Helm lint and render, the rendered manifests against the Kubernetes 1.30 schemas, pod lock-down checks, Bicep compilation, the on-premise script tests, the bundle build, image scan (no fixed critical or high findings), secret scan, and the browser suite through the real unprivileged nginx image.
+
+Not verified (only a real deployment or a first release can):
+- **The chart and the Bicep template have never been deployed** to a cluster or to Azure. They render and compile; that is all that is known.
+- **The compose bundle's `install.sh`, `upgrade.sh` and `rollback.sh` were not run against a live stack** (Docker Hub rate-limited the pulls); their logic and refusals are tested, the full run is not. Rehearse an upgrade and rollback on a copy first.
 - **Azure SQL** contained-user path for the application login is unexercised.
-- **Release workflow, image scanning, CodeQL and signing** have never run; they run on the first tag or push.
+- **The release workflow** (signing, SBOM, chart push, bundles) and **CodeQL** have not run yet; they run on the first tag and on the next pull request or push to the default branch. Dependabot is now enabled and will open update pull requests.
 
 ## Decisions for the owner
 1. **Production signing key.** Generate it offline with `fms-license keygen`, decide who holds and backs it up, put only the public key in `trusted-keys.json`. Until then the development key (whose private half is in the repository on purpose) is trusted and a release is refused.
