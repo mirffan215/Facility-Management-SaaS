@@ -95,3 +95,32 @@ jobs:
         run: docker run --rm -v "$PWD:/repo" aquasec/trivy:0.58.1 fs --scanners secret --exit-code 1 --no-progress --skip-dirs /repo/web/node_modules /repo
       - name: Release keys are production keys (informational on branches)
         run: scripts/check-release-keys.sh || echo "::notice::Development license key still trusted; this must be replaced before a release (the release workflow enforces it)."
+
+  packaging:
+    # The chart, the Azure template and the on-premise scripts are checked on every change, so a release is never the first time they run.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Helm lint and render
+        run: |
+          helm lint deploy/helm/fms -f deploy/helm/fms/ci-values.yaml
+          helm template fms deploy/helm/fms -f deploy/helm/fms/ci-values.yaml > rendered.yaml
+          helm template fms deploy/helm/fms --set deployment.mode=SaaS --set migrator.enabled=false --set 'auth.providers[0].name=e,auth.providers[0].authority=https://l.example.com,auth.providers[0].audience=api://fms' > rendered-saas.yaml
+      - name: Check rendered manifests against the Kubernetes schemas
+        run: |
+          docker run --rm -v "$PWD:/w" ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -kubernetes-version 1.30.0 /w/rendered.yaml /w/rendered-saas.yaml
+      - name: Rendered pods are locked down
+        run: |
+          grep -c "readOnlyRootFilesystem: true" rendered.yaml
+          ! grep -q "privileged: true" rendered.yaml
+          ! grep -q "runAsUser: 0" rendered.yaml
+      - name: Bicep compiles
+        run: az bicep build --file deploy/azure/main.bicep --stdout > /dev/null
+      - name: On-premise scripts
+        run: |
+          scripts/test-onprem-scripts.sh
+          for f in deploy/onprem/*.sh scripts/*.sh; do bash -n "$f"; done
+          docker compose -f deploy/onprem/docker-compose.yml --env-file deploy/onprem/.env.example config -q || true
+      - name: Bundle builds
+        run: scripts/make-onprem-bundle.sh 0.0.0-ci && tar tzf dist/fms-onprem-0.0.0-ci.tar.gz | grep -q upgrade.sh

@@ -1,0 +1,21 @@
+# Values used by CI to render the chart with realistic inputs.
+deployment:
+  mode: OnPrem
+  tenantId: 11111111-2222-3333-4444-555555555555
+  publicBaseUrl: https://fms.example.com
+auth:
+  providers:
+    - { name: corp, authority: "https://login.example.com", audience: "api://fms", clientId: abc, scope: "openid profile email" }
+  initialAdmin: "corp:1234"
+ingress:
+  enabled: true
+  className: nginx
+  host: fms.example.com
+  tls: { enabled: true, secretName: fms-tls }
+email:
+  provider: Smtp
+  host: smtp.example.com
+  from: noreply@example.com
+  existingSecret: fms-smtp
+networkPolicy:
+  enabled: true

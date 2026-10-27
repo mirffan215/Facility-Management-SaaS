@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fms.fullname" . }}-config
+  labels: {{- include "fms.labels" . | nindent 4 }}
+data:
+  ASPNETCORE_URLS: "http://+:8080"
+  DOTNET_ENVIRONMENT: "Production"
+  ASPNETCORE_ENVIRONMENT: "Production"
+  License__Path: "/etc/fms/license/fms.license"
+  Facilities__PublicBaseUrl: {{ .Values.deployment.publicBaseUrl | quote }}
+  Security__RateLimit__Enabled: {{ .Values.security.rateLimit.enabled | quote }}
+  {{- range $i, $cidr := .Values.security.trustedProxyCidrs }}
+  Security__TrustedProxyCidrs__{{ $i }}: {{ $cidr | quote }}
+  {{- end }}
+  {{- range $i, $p := .Values.auth.providers }}
+  Authentication__Providers__{{ $i }}__Name: {{ required "auth.providers[].name is required" $p.name | quote }}
+  Authentication__Providers__{{ $i }}__Authority: {{ required "auth.providers[].authority is required" $p.authority | quote }}
+  Authentication__Providers__{{ $i }}__Audience: {{ required "auth.providers[].audience is required" $p.audience | quote }}
+  {{- if $p.clientId }}
+  Authentication__Providers__{{ $i }}__ClientId: {{ $p.clientId | quote }}
+  {{- end }}
+  {{- if $p.scope }}
+  Authentication__Providers__{{ $i }}__Scope: {{ $p.scope | quote }}
+  {{- end }}
+  {{- end }}
+  Email__Provider: {{ .Values.email.provider | quote }}
+  Email__Host: {{ .Values.email.host | quote }}
+  Email__Port: {{ .Values.email.port | quote }}
+  Email__From: {{ .Values.email.from | quote }}

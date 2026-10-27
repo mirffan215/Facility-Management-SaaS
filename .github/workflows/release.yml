@@ -1,0 +1,101 @@
+name: Release
+# Push a tag like v1.2.3. Builds and signs the images, the Helm chart and the on-premise bundle, and attaches them to a GitHub release.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write      # keyless image signing
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      owner: ${{ steps.v.outputs.owner }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - name: A release must not trust the development license key
+        run: scripts/check-release-keys.sh
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - run: dotnet build Fms.sln -c Release -p:Version=${{ steps.v.outputs.version }}
+      - run: dotnet test tests/Fms.UnitTests --no-build -c Release
+      - run: dotnet test tests/Fms.ApiTests --no-build -c Release
+      - run: scripts/test-onprem-scripts.sh
+
+  images:
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { name: api, file: Dockerfile.api, context: . }
+          - { name: worker, file: Dockerfile.worker, context: . }
+          - { name: migrator, file: Dockerfile.migrator, context: . }
+          - { name: web, file: web/Dockerfile, context: web }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: "${{ env.REGISTRY }}", username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          build-args: VERSION=${{ needs.verify.outputs.version }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ needs.verify.outputs.owner }}/fms-${{ matrix.name }}:${{ needs.verify.outputs.version }}
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign
+        run: cosign sign --yes "${{ env.REGISTRY }}/${{ needs.verify.outputs.owner }}/fms-${{ matrix.name }}@${{ steps.build.outputs.digest }}"
+
+  package:
+    needs: [verify, images]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: docker/login-action@v3
+        with: { registry: "${{ env.REGISTRY }}", username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Helm chart
+        run: |
+          helm package deploy/helm/fms --version "${{ needs.verify.outputs.version }}" --app-version "${{ needs.verify.outputs.version }}" -d dist
+          helm push "dist/fms-${{ needs.verify.outputs.version }}.tgz" "oci://${{ env.REGISTRY }}/${{ needs.verify.outputs.owner }}/charts"
+      - name: On-premise bundles (online, and offline with images)
+        env:
+          FMS_REGISTRY: ${{ env.REGISTRY }}/${{ needs.verify.outputs.owner }}
+        run: |
+          V="${{ needs.verify.outputs.version }}"
+          scripts/make-onprem-bundle.sh "$V" --release
+          mv "dist/fms-onprem-$V.tar.gz" "dist/fms-onprem-$V-online.tar.gz"
+          mv "dist/fms-onprem-$V.tar.gz.sha256" "dist/fms-onprem-$V-online.tar.gz.sha256"
+          for n in api worker migrator web; do docker pull "$FMS_REGISTRY/fms-$n:$V"; done
+          scripts/make-onprem-bundle.sh "$V" --with-images --release
+          mv "dist/fms-onprem-$V.tar.gz" "dist/fms-onprem-$V-offline.tar.gz"
+          mv "dist/fms-onprem-$V.tar.gz.sha256" "dist/fms-onprem-$V-offline.tar.gz.sha256"
+      - name: Software bill of materials
+        uses: anchore/sbom-action@v0
+        with: { format: cyclonedx-json, output-file: "dist/fms-${{ needs.verify.outputs.version }}.sbom.cdx.json", upload-artifact: false }
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/fms-onprem-*.tar.gz
+            dist/fms-onprem-*.sha256
+            dist/fms-*.tgz
+            dist/*.sbom.cdx.json

@@ -1,7 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG VERSION=0.0.0-local
 WORKDIR /src
 COPY . .
-RUN dotnet publish src/Host/Fms.Migrator/Fms.Migrator.csproj -c Release -o /app /p:UseAppHost=false
+RUN dotnet publish src/Host/Fms.Migrator/Fms.Migrator.csproj -c Release -o /app /p:UseAppHost=false /p:Version=${VERSION}
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app

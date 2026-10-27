@@ -8,7 +8,7 @@
 5. **Vendors & Contracts** (done; see [phase-5-summary](phase-5-summary.md)): vendors, AMC/SLA contracts, purchase requests/orders, vendor portal, accounting connection (interface and fake adapter; Dynamics 365 adapter deferred until a sandbox exists).
 6. **Spaces, Bookings, Visitors** (done; see [phase-6-summary](phase-6-summary.md)): floor plans with pins, allocation and occupancy, bookable resources with rules and approval, calendar feed and a calendar connection interface, visitor pre-registration with QR pass, front desk, watchlist and badges.
 7. **Reporting & Admin** (done; see [phase-7-summary](phase-7-summary.md)): fixed KPI pack with filters and CSV, read-only OData feed with revocable tokens, workflow designer (rules inside fixed safety limits, versioned), audit viewer with export, Administration hub. SLA and custom-field setup already existed from earlier phases.
-8. **Packaging & Licensing**: Helm chart, on-prem bundle, license service, upgrade tooling, hardening and pen test.
+8. **Packaging & Licensing** (done, with stated limits; see [phase-8-summary](phase-8-summary.md)): signed offline license with module, user and expiry enforcement, hardening and security self-assessment (no external pen test yet), Helm chart, Docker Compose on-prem bundle, Azure Bicep, release pipeline, upgrade and rollback tooling.
 9. **Later**: IoT/energy, compliance & permits, projects, lease, AI.
 
 Each phase ships with tests and updated docs. Do not start the next phase until told.

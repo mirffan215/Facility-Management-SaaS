@@ -1,0 +1,85 @@
+# Facility Management System, on-premise (Docker Compose). Run through ./install.sh and ./upgrade.sh rather than by hand.
+# One organisation, local file storage, your SQL Server (or the bundled one for evaluation). TLS is terminated by your own load balancer or reverse proxy in front of "web".
+x-hardening: &hardening
+  read_only: true
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=256m"]
+  restart: unless-stopped
+
+services:
+  sql:
+    # Evaluation and small sites. Production installs normally point the connection strings at their own SQL Server 2022+ and remove this service
+    # (then also remove "sql" from depends_on of migrator).
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["bundled-sql"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env}
+    volumes: ["sqldata:/var/opt/mssql", "sqlbackup:/var/opt/mssql/backup"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 12
+  migrator:
+    image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-migrator:${FMS_VERSION:?set FMS_VERSION in .env}
+    <<: *hardening
+    restart: "no"
+    environment:
+      ConnectionStrings__Migrator: ${FMS_MIGRATOR_CONNECTION:-Server=sql;Database=Fms;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True}
+      Deployment__Mode: OnPrem
+      Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
+      Deployment__TenantName: ${FMS_TENANT_NAME:-Default}
+      FMS_APP_LOGIN: fms_app
+      FMS_APP_LOGIN_PASSWORD: ${FMS_APP_LOGIN_PASSWORD:?copy .env.example to .env}
+      FMS_INITIAL_ADMIN: ${FMS_INITIAL_ADMIN:-}
+    profiles: ["migrate"]
+  api:
+    image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-api:${FMS_VERSION:?set FMS_VERSION in .env}
+    <<: *hardening
+    environment:
+      ConnectionStrings__Default: ${FMS_APP_CONNECTION:-Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True}
+      Deployment__Mode: OnPrem
+      Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
+      Deployment__LocalStoragePath: /data/files
+      License__Path: /etc/fms/license/fms.license
+      Security__TrustedProxyCidrs__0: 10.0.0.0/8
+      Security__TrustedProxyCidrs__1: 172.16.0.0/12
+      Security__TrustedProxyCidrs__2: 192.168.0.0/16
+      Facilities__PublicBaseUrl: ${FMS_PUBLIC_URL:?set FMS_PUBLIC_URL in .env (the address people open, e.g. https://fms.example.com)}
+      Authentication__Providers__0__Name: ${FMS_AUTH_NAME:?set the FMS_AUTH_* values in .env}
+      Authentication__Providers__0__Authority: ${FMS_AUTH_AUTHORITY:?set the FMS_AUTH_* values in .env}
+      Authentication__Providers__0__Audience: ${FMS_AUTH_AUDIENCE:?set the FMS_AUTH_* values in .env}
+      Authentication__Providers__0__ClientId: ${FMS_AUTH_CLIENT_ID:?set the FMS_AUTH_* values in .env}
+      Authentication__Providers__0__Scope: ${FMS_AUTH_SCOPE:-openid profile email}
+    volumes: ["files:/data/files", "./license:/etc/fms/license:ro"]
+  worker:
+    image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-worker:${FMS_VERSION:?set FMS_VERSION in .env}
+    <<: *hardening
+    environment:
+      ConnectionStrings__Default: ${FMS_APP_CONNECTION:-Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True}
+      Deployment__Mode: OnPrem
+      Deployment__SingleTenantId: ${FMS_TENANT_ID:?copy .env.example to .env}
+      Deployment__LocalStoragePath: /data/files
+      Email__Provider: ${FMS_EMAIL_PROVIDER:-None}
+      Email__Host: ${FMS_EMAIL_HOST:-}
+      Email__Port: ${FMS_EMAIL_PORT:-587}
+      Email__User: ${FMS_EMAIL_USER:-}
+      Email__Password: ${FMS_EMAIL_PASSWORD:-}
+      Email__From: ${FMS_EMAIL_FROM:-}
+    volumes: ["files:/data/files"]
+  web:
+    image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-web:${FMS_VERSION:?set FMS_VERSION in .env}
+    <<: *hardening
+    # nginx needs a few writable places (its pid file, cache and the rendered configuration).
+    tmpfs: ["/tmp:size=64m", "/var/cache/nginx:size=128m", "/etc/nginx/conf.d:size=8m"]
+    depends_on: [api]
+    environment:
+      API_UPSTREAM: http://api:8080
+      CSP_CONNECT_SRC: ${FMS_CSP_CONNECT_SRC:-https:}
+    ports: ["${FMS_HTTP_PORT:-8080}:8080"]
+volumes:
+  sqldata:
+  sqlbackup:
+  files:

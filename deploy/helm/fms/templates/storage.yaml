@@ -1,0 +1,15 @@
+{{- if and (eq .Values.storage.provider "Local") (not .Values.storage.local.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "fms.fullname" . }}-files
+  labels: {{- include "fms.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteMany"]   # the API and the worker both write files; use a storage class that supports it, or an object store
+  {{- if .Values.storage.local.storageClassName }}
+  storageClassName: {{ .Values.storage.local.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.local.size }}
+{{- end }}

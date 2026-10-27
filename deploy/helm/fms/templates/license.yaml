@@ -1,0 +1,10 @@
+{{- if .Values.license.create }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.license.existingSecret }}
+  labels: {{- include "fms.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  fms.license: {{ required "license.text is required when license.create is true" .Values.license.text | quote }}
+{{- end }}

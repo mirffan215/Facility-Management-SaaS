@@ -1,0 +1,92 @@
+# Facility Management System. Everything secret is read from Kubernetes Secrets you create; nothing secret is stored in these values.
+
+image:
+  registry: ghcr.io/mirffan215
+  tag: ""            # defaults to the chart's appVersion
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+deployment:
+  mode: OnPrem                  # OnPrem (one organisation, tenantId below) or SaaS
+  tenantId: ""                  # OnPrem only: the one organisation's id (a GUID you choose once and never change)
+  tenantName: Default
+  publicBaseUrl: ""             # what QR labels encode, e.g. https://fms.example.com (the address people open the web app at)
+
+database:
+  # A Secret with two keys: `app` (connection string for the least-privileged login the API and worker use) and
+  # `migrator` (connection string for an owner login, used only by the upgrade job).
+  existingSecret: fms-database
+  appLoginPasswordSecret: ""    # optional: Secret with key `password` for the app login the migrator creates; empty if the login already exists
+
+auth:
+  # One entry per identity provider. clientId is the web app's public client (PKCE) at the provider.
+  providers: []
+  #  - { name: corp, authority: https://login.example.com, audience: api://fms, clientId: abc, scope: "openid profile email api://fms/access_as_user" }
+  initialAdmin: ""              # <provider>:<subject> of the first administrator, made by the upgrade job
+
+license:
+  existingSecret: fms-license   # Secret with key `fms.license` (see docs/licensing.md); read-only without a valid license
+  create: false                 # set true only for a throwaway test: creates the secret from license.text
+  text: ""
+
+storage:
+  provider: Local               # Local (a volume) or the object store settings below
+  local:
+    size: 20Gi
+    storageClassName: ""
+    existingClaim: ""
+  extraEnv: []                  # for an S3-compatible or Azure Blob store: list of {name, value} or {name, valueFrom}
+
+email:
+  provider: None                # None or Smtp
+  host: ""
+  port: 587
+  from: ""
+  existingSecret: ""            # Secret with keys `user` and `password`
+
+security:
+  trustedProxyCidrs: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]   # networks whose X-Forwarded-For is believed (your ingress controller)
+  rateLimit:
+    enabled: true
+  cspConnectSrc: "https:"       # tighten to your identity provider's origin, e.g. https://login.example.com
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  annotations: {}
+  tls:
+    enabled: true
+    secretName: ""
+
+api:
+  replicas: 2
+  resources: { requests: { cpu: 250m, memory: 384Mi }, limits: { memory: 1Gi } }
+
+worker:
+  replicas: 1                   # the outbox and SLA clocks are safe to run in several copies, but one is enough for most sites
+  resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { memory: 768Mi } }
+
+web:
+  replicas: 2
+  resources: { requests: { cpu: 50m, memory: 64Mi }, limits: { memory: 256Mi } }
+
+migrator:
+  enabled: true                 # runs before every install and upgrade
+  backoffLimit: 1
+  activeDeadlineSeconds: 1800
+
+podDisruptionBudget:
+  enabled: true
+
+networkPolicy:
+  enabled: false                # when true: only the ingress controller reaches web, only web reaches api; set labels below to match your cluster
+  ingressNamespaceLabel: { kubernetes.io/metadata.name: ingress-nginx }
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+serviceAccount:
+  create: true
+  annotations: {}      # for example workload identity on Azure

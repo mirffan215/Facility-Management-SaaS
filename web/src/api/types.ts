@@ -1257,6 +1257,7 @@ export interface SystemInfo {
   licenseState: LicenseStateName;
   licenseExpiresAt: string | null;
   licenseGraceEndsAt: string | null;
+  version: string;
 }
 
 export interface LicenseStatus {

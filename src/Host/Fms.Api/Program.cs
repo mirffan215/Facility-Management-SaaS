@@ -90,7 +90,8 @@ v1.MapGet("/system/info", (IOptions<DeploymentOptions> deployment, ILicenseProvi
         tenant.TenantId is not null,
         license.Current.State.ToString(),
         license.Current.ExpiresAt,
-        license.Current.GraceEndsAt))).AllowAnonymous();
+        license.Current.GraceEndsAt,
+        System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(Program).Assembly)?.InformationalVersion ?? "unknown"))).AllowAnonymous();
 
 // The installation's entitlements, for administrators. (The state alone is public, in /system/info.)
 v1.MapGet("/license", async (ILicenseProvider licenses, IServiceProvider services, CancellationToken ct) =>
@@ -184,7 +185,7 @@ namespace Fms.Api
 {
     public sealed record LicenseStatus(string State, string Edition, string? Customer, string? LicenseId, IReadOnlyList<string> Modules, IReadOnlyList<string> AllModules, int? MaxUsers, int? ActiveUsers, DateTimeOffset? ExpiresAt, DateTimeOffset? GraceEndsAt, string? Detail);
 
-    public sealed record SystemInfo(string DeploymentMode, string Edition, bool Licensed, bool TenantResolved, string LicenseState, DateTimeOffset? LicenseExpiresAt, DateTimeOffset? LicenseGraceEndsAt);
+    public sealed record SystemInfo(string DeploymentMode, string Edition, bool Licensed, bool TenantResolved, string LicenseState, DateTimeOffset? LicenseExpiresAt, DateTimeOffset? LicenseGraceEndsAt, string Version);
 
     public sealed record AuthProviderInfo(string Name, string Authority, string? ClientId, string? Scope = null);
 

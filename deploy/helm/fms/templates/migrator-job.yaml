@@ -1,0 +1,59 @@
+{{- if .Values.migrator.enabled }}
+# Applies database migrations (and keeps system roles current) before every install and upgrade. The new version's pods start only after it succeeds.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "fms.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels: {{- include "fms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrator
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrator.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrator.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels: {{- include "fms.selector" (dict "root" . "component" "migrator") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext: {{- include "fms.podSecurity" . | nindent 8 }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrator
+          image: {{ include "fms.image" (dict "root" . "name" "migrator") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- include "fms.containerSecurity" . | nindent 12 }}
+          env:
+            - name: Deployment__Mode
+              value: {{ .Values.deployment.mode | quote }}
+            {{- if eq .Values.deployment.mode "OnPrem" }}
+            - name: Deployment__SingleTenantId
+              value: {{ required "deployment.tenantId is required for OnPrem" .Values.deployment.tenantId | quote }}
+            - name: Deployment__TenantName
+              value: {{ .Values.deployment.tenantName | quote }}
+            {{- end }}
+            - name: ConnectionStrings__Migrator
+              valueFrom: { secretKeyRef: { name: {{ .Values.database.existingSecret }}, key: migrator } }
+            - name: FMS_APP_LOGIN
+              value: fms_app
+            {{- if .Values.database.appLoginPasswordSecret }}
+            - name: FMS_APP_LOGIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.database.appLoginPasswordSecret }}, key: password } }
+            {{- end }}
+            {{- if .Values.auth.initialAdmin }}
+            - name: FMS_INITIAL_ADMIN
+              value: {{ .Values.auth.initialAdmin | quote }}
+            {{- end }}
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 64Mi } }
+{{- end }}

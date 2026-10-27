@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fms.fullname" . }}-web
+  labels: {{- include "fms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels: {{- include "fms.selector" (dict "root" . "component" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "fms.selector" (dict "root" . "component" "web") | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "fms.serviceAccount" . }}
+      automountServiceAccountToken: false
+      securityContext: {{- include "fms.podSecurity" . | nindent 8 }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: {{ include "fms.image" (dict "root" . "name" "web") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- include "fms.containerSecurity" . | nindent 12 }}
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: API_UPSTREAM, value: "http://{{ include "fms.fullname" . }}-api:8080" }
+            - { name: CSP_CONNECT_SRC, value: {{ .Values.security.cspConnectSrc | quote }} }
+            - { name: NGINX_ENVSUBST_FILTER, value: "API_UPSTREAM|CSP_CONNECT_SRC" }
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 20
+          resources: {{- toYaml .Values.web.resources | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: cache, mountPath: /var/cache/nginx }
+            - { name: conf, mountPath: /etc/nginx/conf.d }
+      volumes:
+        - { name: tmp, emptyDir: { sizeLimit: 64Mi } }
+        - { name: cache, emptyDir: { sizeLimit: 128Mi } }
+        - { name: conf, emptyDir: { sizeLimit: 8Mi } }
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "fms.fullname" . }}-web
+  labels: {{- include "fms.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "fms.selector" (dict "root" . "component" "web") | nindent 4 }}
+  ports:
+    - { name: http, port: 80, targetPort: http }

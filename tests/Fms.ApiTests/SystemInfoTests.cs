@@ -24,7 +24,8 @@ public sealed class SystemInfoTests
         await using var factory = Factory(("Deployment:Mode", "SaaS"));
         var info = await factory.CreateClient().GetFromJsonAsync<SystemInfo>("/api/v1/system/info");
 
-        Assert.Equal(new SystemInfo("SaaS", "SaaS", true, false, "Valid", null, null), info);
+        Assert.Equal(new SystemInfo("SaaS", "SaaS", true, false, "Valid", null, null, info!.Version), info);
+        Assert.Matches(@"^\d+\.\d+\.\d+", info.Version);
     }
 
     [Fact]

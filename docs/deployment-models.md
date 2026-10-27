@@ -3,14 +3,14 @@
 | Aspect | SaaS | On-premise |
 |---|---|---|
 | Tenancy | Multi-tenant (shared DB or dedicated DB per tenant) | Single tenant |
-| Packaging | Managed on Azure (portable), IaC via Bicep/Terraform | Docker images, Helm chart, docker-compose |
+| Packaging | Managed on Azure (portable), Bicep template | Docker images, Helm chart, Compose bundle (online and offline); see [deployment](deployment.md) |
 | Database | Azure SQL | Customer SQL Server (2022+) |
 | Identity | Entra ID, Google, OIDC | Customer OIDC/AD FS/Entra; local accounts fallback |
 | Storage | Blob / S3 | Local volume, MinIO or S3-compatible |
 | Messaging | Service Bus | RabbitMQ or SQL-backed queue |
 | Secrets | Key Vault | Environment secrets / Vault / Kubernetes secrets |
-| Licensing | Plans and entitlements, usage metering | Signed license file (modules, users, expiry) |
-| Updates | Continuous, zero-downtime | Versioned releases, migrator job, upgrade guide, rollback backup |
+| Licensing | Everything enabled today; plan entitlements and metering not built | Signed license file checked offline (modules, user limit, expiry with grace, read-only afterwards); see [licensing](licensing.md) |
+| Updates | Release by tag; a short outage for the migration (zero-downtime not designed) | Versioned releases, migrator job, `upgrade.sh` with backup, rollback by restoring it; see [upgrading](upgrading.md) |
 | Telemetry | Central OpenTelemetry | Local OTLP endpoint; opt-in anonymous usage |
 | Data residency | Region selection per tenant | Customer controlled |
 

@@ -31,59 +31,90 @@ using var platformScope = tenantContext.BeginPlatformScope();
 await using var db = new PlatformDbContext(new DbContextOptionsBuilder<PlatformDbContext>().UseSqlServer(migratorConnection)
     .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 
-Console.WriteLine("Applying migrations...");
-await db.Database.MigrateAsync();
-
-// Module databases migrate after the platform (they extend its row-level-security policy) and keep their own history tables.
+// Every module keeps its own migration history. The platform goes first (the others extend its row-level-security policy).
+var contexts = new List<(string Name, DbContext Context)> { ("Platform", db) };
 await using var facilitiesDb = new FacilitiesDbContext(
     new DbContextOptionsBuilder<FacilitiesDbContext>().UseSqlServer(migratorConnection, FacilitiesDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await facilitiesDb.Database.MigrateAsync();
-
+contexts.Add(("Facilities", facilitiesDb));
 await using var workDb = new WorkDbContext(
     new DbContextOptionsBuilder<WorkDbContext>().UseSqlServer(migratorConnection, WorkDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await workDb.Database.MigrateAsync();
-
+contexts.Add(("Work", workDb));
 await using var inventoryDb = new InventoryDbContext(
     new DbContextOptionsBuilder<InventoryDbContext>().UseSqlServer(migratorConnection, InventoryDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await inventoryDb.Database.MigrateAsync();
-
+contexts.Add(("Inventory", inventoryDb));
 await using var vendorsDb = new VendorsDbContext(
     new DbContextOptionsBuilder<VendorsDbContext>().UseSqlServer(migratorConnection, VendorsDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await vendorsDb.Database.MigrateAsync();
-
+contexts.Add(("Vendors", vendorsDb));
 await using var spacesDb = new SpacesDbContext(
     new DbContextOptionsBuilder<SpacesDbContext>().UseSqlServer(migratorConnection, SpacesDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await spacesDb.Database.MigrateAsync();
-
+contexts.Add(("Spaces", spacesDb));
 await using var bookingsDb = new BookingsDbContext(
     new DbContextOptionsBuilder<BookingsDbContext>().UseSqlServer(migratorConnection, BookingsDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await bookingsDb.Database.MigrateAsync();
-
+contexts.Add(("Bookings", bookingsDb));
 await using var visitorsDb = new VisitorsDbContext(
     new DbContextOptionsBuilder<VisitorsDbContext>().UseSqlServer(migratorConnection, VisitorsDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await visitorsDb.Database.MigrateAsync();
-
+contexts.Add(("Visitors", visitorsDb));
 await using var reportingDb = new ReportingDbContext(
     new DbContextOptionsBuilder<ReportingDbContext>().UseSqlServer(migratorConnection, ReportingDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await reportingDb.Database.MigrateAsync();
-
+contexts.Add(("Reporting", reportingDb));
 await using var purchasingDb = new PurchasingDbContext(
     new DbContextOptionsBuilder<PurchasingDbContext>().UseSqlServer(migratorConnection, PurchasingDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await purchasingDb.Database.MigrateAsync();
-
+contexts.Add(("Purchasing", purchasingDb));
 await using var integrationDb = new IntegrationDbContext(
     new DbContextOptionsBuilder<IntegrationDbContext>().UseSqlServer(migratorConnection, IntegrationDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
-await integrationDb.Database.MigrateAsync();
+contexts.Add(("Integration", integrationDb));
+
+// A database that has seen migrations this build does not know belongs to a newer release. Running an older release against it would
+// corrupt data silently, so refuse (both for --check and for a real run). Restoring the pre-upgrade backup is the way back.
+var newerThanThisBuild = new List<string>();
+var pending = new List<string>();
+foreach (var (name, context) in contexts)
+{
+    var known = context.Database.GetMigrations().ToHashSet();
+    var applied = await DatabaseExists(context) ? (await context.Database.GetAppliedMigrationsAsync()).ToList() : [];
+    newerThanThisBuild.AddRange(applied.Where(m => !known.Contains(m)).Select(m => $"{name}: {m}"));
+    pending.AddRange(known.Except(applied).Select(m => $"{name}: {m}"));
+}
+
+if (config["check"] is not null || args.Contains("--check"))
+{
+    Console.WriteLine($"Migrations pending: {pending.Count}");
+    foreach (var m in pending) Console.WriteLine($"  + {m}");
+    if (newerThanThisBuild.Count > 0)
+    {
+        Console.Error.WriteLine("This database is NEWER than this version (it has migrations this version does not know):");
+        foreach (var m in newerThanThisBuild) Console.Error.WriteLine($"  ! {m}");
+        return 4;
+    }
+
+    return 0;
+}
+
+if (newerThanThisBuild.Count > 0)
+{
+    Console.Error.WriteLine("Refusing to run: the database is newer than this version. Restore the pre-upgrade backup or install the newer version.");
+    foreach (var m in newerThanThisBuild) Console.Error.WriteLine($"  ! {m}");
+    return 4;
+}
+
+Console.WriteLine("Applying migrations...");
+foreach (var (name, context) in contexts)
+{
+    await context.Database.MigrateAsync();
+}
+
+static async Task<bool> DatabaseExists(DbContext context) => await context.Database.CanConnectAsync();
+
 
 var deployment = config.GetSection(DeploymentOptions.SectionName).Get<DeploymentOptions>() ?? new DeploymentOptions();
 if (deployment.Mode == DeploymentMode.OnPrem)
@@ -128,6 +159,7 @@ if (!string.IsNullOrEmpty(appLogin) && !string.IsNullOrEmpty(appPassword))
 }
 
 Console.WriteLine("Done.");
+return 0;
 
 internal static class AppLogin
 {
@@ -144,13 +176,24 @@ internal static class AppLogin
 
         // Passwords cannot be parameterised in CREATE LOGIN; quote defensively.
         var quoted = password.Replace("'", "''", StringComparison.Ordinal);
-        var sql = $"""
-            IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'{login}') CREATE LOGIN [{login}] WITH PASSWORD = N'{quoted}', CHECK_POLICY = OFF;
-            ELSE ALTER LOGIN [{login}] WITH PASSWORD = N'{quoted}';
-            IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{login}') CREATE USER [{login}] FOR LOGIN [{login}];
-            ALTER ROLE db_datareader ADD MEMBER [{login}];
-            ALTER ROLE db_datawriter ADD MEMBER [{login}];
-            """;
+
+        // Azure SQL Database has no server-level logins in a user database: the application gets a contained database user instead.
+        await using var edition = new SqlCommand("SELECT CAST(SERVERPROPERTY('EngineEdition') AS int)", conn);
+        var azureSqlDatabase = (int)(await edition.ExecuteScalarAsync())! == 5;
+        var sql = azureSqlDatabase
+            ? $"""
+                IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{login}') CREATE USER [{login}] WITH PASSWORD = N'{quoted}';
+                ELSE ALTER USER [{login}] WITH PASSWORD = N'{quoted}';
+                ALTER ROLE db_datareader ADD MEMBER [{login}];
+                ALTER ROLE db_datawriter ADD MEMBER [{login}];
+                """
+            : $"""
+                IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'{login}') CREATE LOGIN [{login}] WITH PASSWORD = N'{quoted}', CHECK_POLICY = OFF;
+                ELSE ALTER LOGIN [{login}] WITH PASSWORD = N'{quoted}';
+                IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{login}') CREATE USER [{login}] FOR LOGIN [{login}];
+                ALTER ROLE db_datareader ADD MEMBER [{login}];
+                ALTER ROLE db_datawriter ADD MEMBER [{login}];
+                """;
         await using var cmd = new SqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync();
     }

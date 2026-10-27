@@ -9,7 +9,7 @@ namespace Fms.IntegrationTests;
 [Collection(SqlCollection.Name)]
 public sealed class MigratorTests(SqlServerFixture sql)
 {
-    private (int ExitCode, string Output) RunMigrator(string database, Guid tenant, string admin)
+    private (int ExitCode, string Output) RunMigrator(string database, Guid tenant, string admin, string extraArgs = "")
     {
         // Run it from its own build output, where its full dependency set lives (the project reference builds it first).
         var baseDir = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar));
@@ -17,7 +17,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "Fms.sln"))) root = root.Parent;
         var dll = Path.Combine(root!.FullName, "src", "Host", "Fms.Migrator", "bin", baseDir.Parent!.Name, baseDir.Name, "Fms.Migrator.dll");
         var builder = new SqlConnectionStringBuilder(sql.OwnerConnectionString) { InitialCatalog = database };
-        var info = new ProcessStartInfo("dotnet", $"\"{dll}\"") { RedirectStandardOutput = true, RedirectStandardError = true };
+        var info = new ProcessStartInfo("dotnet", $"\"{dll}\" {extraArgs}") { RedirectStandardOutput = true, RedirectStandardError = true };
         info.Environment["ConnectionStrings__Migrator"] = builder.ConnectionString;
         info.Environment["Deployment__Mode"] = "OnPrem";
         info.Environment["Deployment__SingleTenantId"] = tenant.ToString();
@@ -96,5 +96,55 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(reader.GetInt32(23), reader.GetInt32(22)); // and every reporting table
         Assert.Equal(1, reader.GetInt32(23)); // feed tokens
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
+    }
+
+    [Fact]
+    public async Task Check_mode_reports_what_would_run_changes_nothing_and_reports_nothing_once_up_to_date()
+    {
+        var database = "FmsChk" + Guid.NewGuid().ToString("N")[..8];
+        var tenant = Guid.NewGuid();
+
+        var before = RunMigrator(database, tenant, "corp:alice", "--check");
+        Assert.True(before.ExitCode == 0, before.Output);
+        Assert.Matches(@"Migrations pending: [1-9]\d*", before.Output);
+        Assert.Contains("Work: ", before.Output);
+
+        // Nothing was created by looking.
+        await using (var master = new SqlConnection(sql.OwnerConnectionString))
+        {
+            await master.OpenAsync();
+            await using var exists = new SqlCommand("SELECT COUNT(*) FROM sys.databases WHERE name = @n", master);
+            exists.Parameters.AddWithValue("@n", database);
+            Assert.Equal(0, (int)(await exists.ExecuteScalarAsync())!);
+        }
+
+        Assert.True(RunMigrator(database, tenant, "corp:alice").ExitCode == 0);
+        var after = RunMigrator(database, tenant, "corp:alice", "--check");
+        Assert.True(after.ExitCode == 0, after.Output);
+        Assert.Contains("Migrations pending: 0", after.Output);
+    }
+
+    [Fact]
+    public async Task A_database_from_a_newer_release_is_refused_so_an_old_version_cannot_damage_it()
+    {
+        var database = "FmsNew" + Guid.NewGuid().ToString("N")[..8];
+        var tenant = Guid.NewGuid();
+        Assert.True(RunMigrator(database, tenant, "corp:alice").ExitCode == 0);
+
+        await using (var conn = new SqlConnection(new SqlConnectionStringBuilder(sql.OwnerConnectionString) { InitialCatalog = database }.ConnectionString))
+        {
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand("INSERT INTO work.__EFMigrationsHistory (MigrationId, ProductVersion) VALUES (N'20990101000000_FromTheFuture', N'99.0.0')", conn);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        var check = RunMigrator(database, tenant, "corp:alice", "--check");
+        Assert.Equal(4, check.ExitCode);
+        Assert.Contains("NEWER than this version", check.Output);
+        Assert.Contains("20990101000000_FromTheFuture", check.Output);
+
+        var run = RunMigrator(database, tenant, "corp:alice");
+        Assert.Equal(4, run.ExitCode);
+        Assert.Contains("Refusing to run", run.Output);
     }
 }

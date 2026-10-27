@@ -1,7 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG VERSION=0.0.0-local
 WORKDIR /src
 COPY . .
-RUN dotnet publish src/Host/Fms.Worker/Fms.Worker.csproj -c Release -o /app /p:UseAppHost=false
+RUN dotnet publish src/Host/Fms.Worker/Fms.Worker.csproj -c Release -o /app /p:UseAppHost=false /p:Version=${VERSION}
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
