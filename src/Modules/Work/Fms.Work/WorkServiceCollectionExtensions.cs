@@ -34,6 +34,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<WorkOrderService>();
         services.AddScoped<PortalWorkService>();
         services.AddScoped<WorkSetupService>();
+        services.AddScoped<WorkflowDesigner>();
         services.AddScoped<SlaSetupService>();
         services.AddHealthChecks().AddDbContextCheck<WorkDbContext>("work-db", tags: ["ready"]);
         services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(WorkDatasets.All(sp.GetRequiredService<Persistence.WorkDbContext>()).ToList()));

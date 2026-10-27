@@ -108,6 +108,15 @@ public sealed class WorkEvidenceService(
         var settings = await db.Settings.AsNoTracking().FirstOrDefaultAsync(ct);
         if (settings is { RequireCompletionSignature: true } && !await db.Signatures.AnyAsync(s => s.WorkOrderId == workOrderId && s.Role == SignatureRole.Technician, ct))
             return "The technician's signature is required before the work can be completed.";
+
+        if (settings is { RequireTimeOnCompletion: true })
+        {
+            var voided = db.Voids.Where(v => v.EntryType == LedgerEntryType.Time).Select(v => v.EntryId);
+            if (!await db.TimeEntries.AnyAsync(t => t.WorkOrderId == workOrderId && !voided.Contains(t.Id), ct)) return "Time worked must be recorded before the work can be completed.";
+        }
+
+        if (settings is { RequirePhotoOnCompletion: true } && !await db.Attachments.AnyAsync(a => a.WorkOrderId == workOrderId && a.Kind == AttachmentKind.After && a.DeletedAt == null, ct))
+            return "An \"after\" photo is required before the work can be completed.";
         return null;
     }
 

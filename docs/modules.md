@@ -12,8 +12,8 @@
 | Space Management | Floor plans, occupancy and allocation, move management, space chargeback |
 | Bookings | Rooms, desks, parking, resources, calendar sync (M365/Google), check-in, rules and approvals |
 | Visitors | Pre-registration, host notification, badge/QR, check-in/out, watchlist, contractor induction |
-| Reporting | Operational dashboards, KPI (MTTR, MTBF, PM compliance, SLA, cost per sqm), scheduled exports, BI/OData feed |
-| Administration | Roles, workflows, SLA, custom fields, templates, localization, licensing, audit viewer, integrations |
+| Reporting | Fixed KPI pack per area with period and site filters, CSV export, read-only OData BI feed with revocable tokens (Phase 7). Not yet: MTBF, scheduled exports, report builder |
+| Administration | Roles, workflow designer (versioned rules inside fixed safety limits), SLA, custom fields, audit viewer with export, Administration hub, integrations (Phase 7). Not yet: template editor, licensing (Phase 8) |
 
 Later modules: Energy & Utilities (IoT), Inspections & Compliance (HSE, permits-to-work), Projects/CAPEX,
 Lease & Property, Cleaning & Soft Services, Security Rounds, BIM/Digital Twin, AI (predictive maintenance, triage).

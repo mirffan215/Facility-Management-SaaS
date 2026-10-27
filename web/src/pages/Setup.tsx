@@ -9,9 +9,10 @@ import { useAuth } from '../auth/AuthContext';
 import { Badge, Can, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
 import { SlaSection } from './SlaSetup';
+import { WorkflowSection } from './WorkflowDesigner';
 import { ChecklistsSection } from './ChecklistSetup';
 
-const SECTIONS = ['classes', 'fields', 'work', 'sla', 'checklists'] as const;
+const SECTIONS = ['classes', 'fields', 'work', 'workflow', 'sla', 'checklists'] as const;
 
 export function SetupPage() {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ export function SetupPage() {
           </button>
         ))}
       </div>
-      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : section === 'work' ? <WorkSection /> : section === 'sla' ? <SlaSection /> : <ChecklistsSection />}</div>
+      <div role="tabpanel">{section === 'classes' ? <ClassesSection /> : section === 'fields' ? <FieldsSection /> : section === 'work' ? <WorkSection /> : section === 'workflow' ? <WorkflowSection /> : section === 'sla' ? <SlaSection /> : <ChecklistsSection />}</div>
     </section>
   );
 }

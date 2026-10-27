@@ -1530,6 +1530,67 @@ test('data feed: an administrator makes an access token, Power BI style basic ac
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('workflow designer: an administrator changes the rules with a reason, sees the fixed rules, and can restore an earlier version', async () => {
+  await page.goto('/setup?section=workflow');
+  await expect(page.getByRole('heading', { name: 'Work order workflow' })).toBeVisible();
+  await expect(page.getByText('Nobody can approve their own request.')).toBeVisible();
+  await shot('39-workflow-designer');
+
+  const photo = page.getByLabel('Require a photo');
+  const before = await photo.isChecked();
+  await photo.setChecked(!before);
+  await expect(page.getByRole('button', { name: 'Publish new version' })).toBeDisabled(); // a reason is required
+  await page.getByLabel(/Why this change/).fill('Photos help the audit');
+  await page.getByRole('button', { name: 'Publish new version' }).click();
+  const history = page.getByRole('table', { name: 'Version history' });
+  await expect(history.getByRole('row', { name: /Photos help the audit/ })).toContainText('Live');
+
+  await photo.setChecked(before); // a second version, so the first can be restored
+  await page.getByLabel(/Why this change/).fill('Not needed after all');
+  await page.getByRole('button', { name: 'Publish new version' }).click();
+  await expect(history.getByRole('row', { name: /Not needed after all/ })).toContainText('Live');
+
+  await history.getByRole('button', { name: /Restore version/ }).last().click();
+  await page.getByRole('dialog').getByLabel(/Why this change/).fill('Going back');
+  await page.getByRole('dialog').getByRole('button', { name: 'Restore' }).click();
+  await expect(history.getByRole('row', { name: /Restored version/ })).toContainText('Live');
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/setup?section=workflow');
+    await expect(page.getByRole('table').first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`workflow designer ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('administration and audit: the hub links to what the administrator may open, and the audit trail shows the workflow change and exports', async () => {
+  await page.goto('/admin');
+  await expect(page.getByRole('heading', { name: 'Administration' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Audit trail' })).toBeVisible();
+  await page.getByRole('link', { name: 'Audit trail' }).click();
+  await expect(page.getByRole('heading', { name: 'Audit trail' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Audit trail' })).toBeVisible();
+  await shot('40-audit-trail');
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^audit-.*\.csv$/);
+
+  await page.getByLabel('Type of record').fill('zzz-nothing');
+  await expect(page.getByText('No matches.')).toBeVisible();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/audit');
+    await expect(page.getByRole('table').first()).toBeVisible();
+    await expectNoSeriousA11yIssues(`audit ${lang}`);
+    await page.goto('/admin');
+    await expectNoSeriousA11yIssues(`admin ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

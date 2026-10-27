@@ -7,7 +7,7 @@
 4. **Inventory** (done; see [phase-4-summary](phase-4-summary.md)): stores, stock, reservations on WOs, reorder, stock take.
 5. **Vendors & Contracts** (done; see [phase-5-summary](phase-5-summary.md)): vendors, AMC/SLA contracts, purchase requests/orders, vendor portal, accounting connection (interface and fake adapter; Dynamics 365 adapter deferred until a sandbox exists).
 6. **Spaces, Bookings, Visitors** (done; see [phase-6-summary](phase-6-summary.md)): floor plans with pins, allocation and occupancy, bookable resources with rules and approval, calendar feed and a calendar connection interface, visitor pre-registration with QR pass, front desk, watchlist and badges.
-7. **Reporting & Admin**: dashboards, KPI pack, BI feed, workflow/SLA/custom-field designers.
+7. **Reporting & Admin** (done; see [phase-7-summary](phase-7-summary.md)): fixed KPI pack with filters and CSV, read-only OData feed with revocable tokens, workflow designer (rules inside fixed safety limits, versioned), audit viewer with export, Administration hub. SLA and custom-field setup already existed from earlier phases.
 8. **Packaging & Licensing**: Helm chart, on-prem bundle, license service, upgrade tooling, hardening and pen test.
 9. **Later**: IoT/energy, compliance & permits, projects, lease, AI.
 

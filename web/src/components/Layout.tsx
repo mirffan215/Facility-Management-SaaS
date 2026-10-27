@@ -43,6 +43,7 @@ export function Layout() {
           {can('locations.manage') || can('assets.manage') ? <NavLink to="/import">{t('nav.import')}</NavLink> : null}
           {can('assets.manage') || can('customfields.manage') || can('workorders.manage') ? <NavLink to="/setup">{t('nav.setup')}</NavLink> : null}
           {can('users.read') ? <NavLink to="/users">{t('nav.users')}</NavLink> : null}
+          {can('audit.read') || can('reports.manage') || can('users.read') || can('workorders.manage') ? <NavLink to="/admin">{t('nav.admin')}</NavLink> : null}
           {!offlineSession ? <NavLink to="/notifications">
             {t('notify.title')}
             {unread > 0 ? (

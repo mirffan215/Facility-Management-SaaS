@@ -21,7 +21,7 @@ public sealed class WorkOrderService(
     private async Task<Actor> ActorAsync(CancellationToken ct) => _actor ??= new Actor(user.UserId, await permissions.GetAsync(ct));
 
     public async Task<WorkflowSettings> SettingsAsync(CancellationToken ct = default) =>
-        _settings ??= await db.Settings.AsNoTracking().Select(s => new WorkflowSettings(s.RequireApproval, s.RequireVerification)).FirstOrDefaultAsync(ct) ?? new WorkflowSettings();
+        _settings ??= await db.Settings.AsNoTracking().Select(s => new WorkflowSettings(s.RequireApproval, s.RequireVerification, s.WaivedApprovalPriorities, s.VerificationPriorities, s.RequireCompletionSignature, s.RequireTimeOnCompletion, s.RequirePhotoOnCompletion)).FirstOrDefaultAsync(ct) ?? new WorkflowSettings();
 
     /// <summary>Everyone with workorders.read sees every work order; everyone else sees only what they raised themselves.</summary>
     private async Task<IQueryable<WorkOrder>> VisibleAsync(bool tracking, CancellationToken ct)
@@ -134,7 +134,8 @@ public sealed class WorkOrderService(
 
         var settings = await SettingsAsync(ct);
         var now = clock.GetUtcNow();
-        var status = WorkOrderRules.InitialStatus(type, settings);
+        var priority = r.Priority ?? category?.DefaultPriority ?? WorkPriority.Medium;
+        var status = WorkOrderRules.InitialStatus(type, settings, priority);
         var tenantKey = user.TenantId?.ToString() ?? "none";
 
         // Numbers are handed out one at a time per tenant (an application lock held for the transaction), so parallel requests queue briefly
@@ -150,7 +151,7 @@ public sealed class WorkOrderService(
                 var next = await WorkOrderNumbers.NextAsync(db, tenantKey, token);
                 var wo = new WorkOrder
                 {
-                    Id = id, Number = next, Title = title, Description = Clean(r.Description), Type = type, Priority = r.Priority ?? category?.DefaultPriority ?? WorkPriority.Medium,
+                    Id = id, Number = next, Title = title, Description = Clean(r.Description), Type = type, Priority = priority,
                     Status = status, LocationId = locationId!.Value, AssetId = r.AssetId, CategoryId = r.CategoryId, RequestedBy = me, RequestedAt = now, DueAt = r.DueAt, UpdatedAt = now,
                 };
                 if (status == WorkOrderStatus.Approved) await sla.StartAsync(wo, now, token);

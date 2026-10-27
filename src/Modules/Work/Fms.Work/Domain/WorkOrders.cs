@@ -141,6 +141,18 @@ public sealed class WorkSettings : ITenantOwned
     /// <summary>When on, work cannot be completed until the technician has signed.</summary>
     public bool RequireCompletionSignature { get; set; }
 
+    /// <summary>Priorities whose requests start approved (no waiting for approval), one bit per <see cref="WorkPriority"/> value. Emergencies never wait anyway.</summary>
+    public int WaivedApprovalPriorities { get; set; }
+
+    /// <summary>Priorities that need verification before closing, one bit per priority value. Zero means every priority (the default). Only used when verification is on.</summary>
+    public int VerificationPriorities { get; set; }
+
+    /// <summary>When on, work cannot be completed until some time has been recorded on it.</summary>
+    public bool RequireTimeOnCompletion { get; set; }
+
+    /// <summary>When on, work cannot be completed until an "after" photo has been added.</summary>
+    public bool RequirePhotoOnCompletion { get; set; }
+
     /// <summary>ISO 4217 code that costs are shown in. A tenant works in one currency here.</summary>
     public string CurrencyCode { get; set; } = "SAR";
 
@@ -151,7 +163,42 @@ public sealed class WorkSettings : ITenantOwned
     public byte[] RowVersion { get; set; } = [];
 }
 
-public sealed record WorkflowSettings(bool RequireApproval = true, bool RequireVerification = true);
+/// <summary>The rules the lifecycle follows for one organisation. The fixed safety rules (no self-approval, a different person verifies, evidence before completion) are not settings and live in <see cref="WorkOrderRules"/>.</summary>
+public sealed record WorkflowSettings(
+    bool RequireApproval = true, bool RequireVerification = true, int WaivedApprovalPriorities = 0, int VerificationPriorities = 0, bool RequireCompletionSignature = false,
+    bool RequireTimeOnCompletion = false, bool RequirePhotoOnCompletion = false)
+{
+    /// <summary>Whether a request of this priority waits for approval. Emergencies never do; a waived priority starts approved.</summary>
+    public bool NeedsApproval(WorkOrderType type, WorkPriority priority) =>
+        type != WorkOrderType.Emergency && RequireApproval && !PriorityMask.Has(WaivedApprovalPriorities, priority);
+
+    /// <summary>Whether finished work of this priority must be verified by someone else before it can be closed.</summary>
+    public bool NeedsVerification(WorkPriority priority) => RequireVerification && (VerificationPriorities == 0 || PriorityMask.Has(VerificationPriorities, priority));
+}
+
+/// <summary>A set of priorities packed into one number (bit n for the priority with value n), so it is stored as one column.</summary>
+public static class PriorityMask
+{
+    public const int All = (1 << (int)WorkPriority.Low) | (1 << (int)WorkPriority.Medium) | (1 << (int)WorkPriority.High) | (1 << (int)WorkPriority.Urgent);
+
+    public static bool Has(int mask, WorkPriority p) => (mask & (1 << (int)p)) != 0;
+
+    public static int Of(IEnumerable<WorkPriority>? priorities) => (priorities ?? []).Where(Enum.IsDefined).Aggregate(0, (m, p) => m | (1 << (int)p));
+
+    public static IReadOnlyList<WorkPriority> ToList(int mask) => Enum.GetValues<WorkPriority>().Where(p => Has(mask, p)).ToList();
+}
+
+/// <summary>One published version of the workflow rules. Append-only, also enforced by the database: the history of how the rules changed cannot be edited.</summary>
+public sealed class WorkflowVersion : ITenantOwned, IAppendOnly
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public int Version { get; set; }
+    public string RulesJson { get; set; } = "{}";
+    public string Note { get; set; } = "";
+    public Guid? ChangedBy { get; set; }
+    public DateTimeOffset ChangedAt { get; set; }
+}
 
 /// <summary>Who is acting on a work order, for deciding what they may do.</summary>
 public sealed record Actor(Guid? UserId, IReadOnlySet<string> Permissions)
@@ -172,8 +219,8 @@ public static class WorkOrderRules
     public static bool IsOpen(WorkOrderStatus s) => s is not (WorkOrderStatus.Closed or WorkOrderStatus.Cancelled);
 
     /// <summary>Where a new request starts. Emergencies are never held up by approval.</summary>
-    public static WorkOrderStatus InitialStatus(WorkOrderType type, WorkflowSettings settings) =>
-        type == WorkOrderType.Emergency || !settings.RequireApproval ? WorkOrderStatus.Approved : WorkOrderStatus.Requested;
+    public static WorkOrderStatus InitialStatus(WorkOrderType type, WorkflowSettings settings, WorkPriority priority = WorkPriority.Medium) =>
+        settings.NeedsApproval(type, priority) ? WorkOrderStatus.Requested : WorkOrderStatus.Approved;
 
     public static string DisplayNumber(int number) => "WO-" + number.ToString("000000");
 
@@ -204,7 +251,7 @@ public static class WorkOrderRules
             WorkOrderAction.Completed => s == WorkOrderStatus.InProgress && doesTheWork,
             // Segregation of duties: whoever did the work cannot be the one who checks it.
             WorkOrderAction.Verified => s == WorkOrderStatus.Completed && actor.Has(Permissions.WorkOrdersVerify) && me != wo.AssignedTo && me != wo.CompletedBy,
-            WorkOrderAction.Closed => (s == WorkOrderStatus.Verified || (s == WorkOrderStatus.Completed && !settings.RequireVerification))
+            WorkOrderAction.Closed => (s == WorkOrderStatus.Verified || (s == WorkOrderStatus.Completed && !settings.NeedsVerification(wo.Priority)))
                                        && (manage || actor.Has(Permissions.WorkOrdersVerify)),
             WorkOrderAction.Reopened => s is WorkOrderStatus.Completed or WorkOrderStatus.Verified or WorkOrderStatus.Closed && manage,
             WorkOrderAction.Cancelled => s is WorkOrderStatus.Requested or WorkOrderStatus.Approved or WorkOrderStatus.Assigned or WorkOrderStatus.InProgress or WorkOrderStatus.OnHold

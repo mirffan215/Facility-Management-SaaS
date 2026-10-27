@@ -1207,3 +1207,42 @@ export interface FeedDataset {
   columns: { name: string; type: string }[];
   timeColumn: string | null;
 }
+
+export interface WorkflowRules {
+  requireApproval: boolean;
+  requireVerification: boolean;
+  requireCompletionSignature: boolean;
+  waivedApprovalPriorities: WorkPriority[];
+  verificationPriorities: WorkPriority[];
+  requireTimeOnCompletion: boolean;
+  requirePhotoOnCompletion: boolean;
+}
+
+export interface Workflow {
+  version: number;
+  rules: WorkflowRules;
+  fixedRules: string[];
+  publishedAt: string | null;
+  note: string | null;
+}
+
+export interface WorkflowVersion {
+  version: number;
+  rules: WorkflowRules;
+  note: string;
+  changedBy: string | null;
+  changedByName: string | null;
+  changedAt: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  occurredAt: string;
+  actorId: string | null;
+  actorName: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  summary: string | null;
+  correlationId: string | null;
+}

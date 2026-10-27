@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
+  AuditEntry,
+  Workflow,
+  WorkflowVersion,
   Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync, Visit, VisitorSettings, WatchlistEntry, Dashboard, FeedDataset, FeedToken,
 } from './types';
 
@@ -416,4 +419,24 @@ export function useFeedTokens() {
 export function useFeedDatasets() {
   const { api } = useAuth();
   return useQuery({ queryKey: ['reports', 'feed', 'datasets'], queryFn: () => api.get<FeedDataset[]>('/reports/feed/datasets') });
+}
+
+export function useWorkflow() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['workflow'], queryFn: () => api.get<Workflow>('/work-orders/workflow') });
+}
+
+export function useWorkflowHistory(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['workflow', 'history'], enabled, queryFn: () => api.get<WorkflowVersion[]>('/work-orders/workflow/history') });
+}
+
+export function useAudit(params: Record<string, string | number | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['audit', params], queryFn: () => api.get<Page<AuditEntry>>('/audit', params) });
+}
+
+export function useAuditActions(params: Record<string, string | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['audit', 'actions', params], queryFn: () => api.get<string[]>('/audit/actions', params) });
 }

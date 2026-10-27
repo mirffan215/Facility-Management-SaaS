@@ -30,7 +30,8 @@
     "spaces": "Spaces",
     "bookings": "Bookings",
     "visitors": "Visitors",
-    "reports": "Reports"
+    "reports": "Reports",
+    "admin": "Administration"
   },
   "auth": {
     "prompt": "Sign in to continue.",
@@ -319,7 +320,8 @@
     "noFields": "No custom fields yet.",
     "work": "Work orders",
     "sla": "Service levels",
-    "checklists": "Checklists"
+    "checklists": "Checklists",
+    "workflow": "Workflow"
   },
   "scan": {
     "title": "Scan asset label",
@@ -1626,5 +1628,82 @@
       "Expired": "Expired",
       "Revoked": "Revoked"
     }
+  },
+  "workflow": {
+    "title": "Work order workflow",
+    "intro": "Choose which optional steps and evidence your organisation uses. Every change is a new version with who, when and why, and the earlier rules stay readable.",
+    "defaults": "No changes published yet; the standard rules apply.",
+    "current": "Version {{version}}, published {{when}}.",
+    "approval": "Approval",
+    "requireApproval": "Work orders need approval before work starts",
+    "requireApprovalHint": "Turn off to let everything start straight away.",
+    "waived": "Skip approval for",
+    "verification": "Verification",
+    "requireVerification": "Completed work is checked by someone other than the worker",
+    "requireVerificationHint": "The checker can never be the person who did the work.",
+    "verifiedPriorities": "Only check work of priority",
+    "evidence": "Evidence on completion",
+    "signature": "Require a signature",
+    "time": "Require time spent",
+    "photo": "Require a photo",
+    "note": "Why this change",
+    "noteHint": "Shown in the history and the audit trail.",
+    "publish": "Publish new version",
+    "fixedTitle": "Always enforced",
+    "fixedHint": "These protect the integrity of the record and cannot be switched off.",
+    "fixed": {
+      "noSelfApproval": "Nobody can approve their own request.",
+      "verifierIsNotTheWorker": "Whoever verifies work is never the person who did it.",
+      "checklistBeforeCompletion": "Required checklist items must be done before completion.",
+      "closureCodeAndNotes": "Closing needs a closure code and notes.",
+      "emergenciesSkipApproval": "Emergencies start immediately, without waiting for approval.",
+      "closedIsLocked": "A closed work order cannot be changed.",
+      "reasonsForHoldRejectReopenCancel": "Hold, reject, reopen and cancel always need a reason.",
+      "everyChangeAudited": "Every change is recorded in the audit trail."
+    },
+    "history": "Version history",
+    "noHistory": "No versions yet.",
+    "version": "Version",
+    "when": "When",
+    "who": "By",
+    "live": "Live",
+    "system": "System",
+    "restoreVersion": "Restore version {{version}}",
+    "restoreTitle": "Restore version {{version}}?"
+  },
+  "audit": {
+    "title": "Audit trail",
+    "intro": "A record of who did what and when. It can be searched and exported but never edited.",
+    "filters": "Audit filters",
+    "action": "Action",
+    "entityType": "Type of record",
+    "entityId": "Record ID",
+    "export": "Export CSV",
+    "when": "When",
+    "who": "Who",
+    "entity": "Record",
+    "summary": "Summary",
+    "system": "System"
+  },
+  "admin": {
+    "title": "Administration",
+    "intro": "Everything you can manage for your organisation.",
+    "none": "You do not have access to any administration area.",
+    "users": "People and roles",
+    "usersHint": "Invite people and decide what they can do.",
+    "setup": "Setup",
+    "setupHint": "Asset classes, custom fields, categories and checklists.",
+    "workflow": "Work order workflow",
+    "workflowHint": "Approval, verification and evidence rules.",
+    "sla": "Service levels",
+    "slaHint": "Working calendars and response targets.",
+    "feed": "Data feed",
+    "feedHint": "Read-only access for BI tools, with revocable tokens.",
+    "accounting": "Accounting",
+    "accountingHint": "Connection to your accounting system.",
+    "visitors": "Visitor rules",
+    "visitorsHint": "Pass rules and the watchlist.",
+    "audit": "Audit trail",
+    "auditHint": "Search and export the record of changes."
   }
 }

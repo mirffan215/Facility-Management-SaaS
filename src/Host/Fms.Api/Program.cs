@@ -110,6 +110,21 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapPortal();
     v1.MapNotifications();
 
+    // The audit trail: search and export for people with audit.read. Nothing here can change it.
+    v1.MapGet("/audit", async (AuditViewer s, DateOnly? from, DateOnly? to, Guid? actorId, string? action, string? entityType, string? entityId, int? page, int? pageSize, CancellationToken ct) =>
+        (await s.SearchAsync(new AuditQuery(from, to, actorId, action, entityType, entityId, page, pageSize), ct)).ToHttp()).RequirePermission(Permissions.AuditRead);
+    v1.MapGet("/audit/actions", async (AuditViewer s, DateOnly? from, DateOnly? to, CancellationToken ct) => Results.Ok(await s.ActionsAsync(from, to, ct))).RequirePermission(Permissions.AuditRead);
+    v1.MapGet("/audit/export.csv", async (AuditViewer s, HttpContext http, DateOnly? from, DateOnly? to, Guid? actorId, string? action, string? entityType, string? entityId, CancellationToken ct) =>
+        {
+            var result = await s.ExportAsync(new AuditQuery(from, to, actorId, action, entityType, entityId, null, null), ct);
+            if (!result.IsOk) return result.ToHttp();
+            http.Response.Headers.CacheControl = "private, no-store";
+            http.Response.Headers["X-Export-Rows"] = result.Value.Rows.ToString();
+            http.Response.Headers["X-Export-Truncated"] = result.Value.Truncated ? "true" : "false";
+            return Results.File(System.Text.Encoding.UTF8.GetBytes(result.Value.Csv), "text/csv; charset=utf-8", $"audit-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
+        })
+        .RequirePermission(Permissions.AuditRead);
+
     v1.MapGet("/roles", async (AccessAdministration access, CancellationToken ct) => Results.Ok(await access.ListRolesAsync(ct)))
         .RequirePermission(Permissions.RolesRead);
 

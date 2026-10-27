@@ -1245,6 +1245,12 @@ namespace Fms.Work.Persistence.Migrations
                     b.Property<bool>("RequireCompletionSignature")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("RequirePhotoOnCompletion")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequireTimeOnCompletion")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("RequireVerification")
                         .HasColumnType("bit");
 
@@ -1257,12 +1263,55 @@ namespace Fms.Work.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("VerificationPriorities")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WaivedApprovalPriorities")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId")
                         .IsUnique();
 
                     b.ToTable("Settings", "work");
+                });
+
+            modelBuilder.Entity("Fms.Work.Domain.WorkflowVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ChangedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)");
+
+                    b.Property<string>("RulesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("WorkflowVersions", "work");
                 });
 
             modelBuilder.Entity("Fms.Work.Domain.ChecklistTemplateItem", b =>

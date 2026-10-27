@@ -12,6 +12,8 @@ import { AssetDetailPage } from './pages/AssetDetail';
 import { AssetCreatePage } from './pages/AssetCreate';
 import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
+import { AdminPage } from './pages/Admin';
+import { AuditPage } from './pages/Audit';
 import { NotificationsPage } from './pages/Notifications';
 import { WorkOrdersPage } from './pages/WorkOrders';
 import { WorkOrderCreatePage } from './pages/WorkOrderCreate';
@@ -145,6 +147,8 @@ export function App() {
         <Route path="portal" element={<PortalPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="admin" element={<AdminPage />} />
+        <Route path="audit" element={<AuditPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

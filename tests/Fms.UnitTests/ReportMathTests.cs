@@ -100,3 +100,24 @@ public sealed class ReportCsvTests
         Assert.Null(Result(failed));
     }
 }
+
+public sealed class AuditCsvTests
+{
+    [Theory]
+    [InlineData("=HYPERLINK(\"http://x\")", "\"'=HYPERLINK(\"\"http://x\"\")\"")]
+    [InlineData("+1", "'+1")]
+    [InlineData("@x", "'@x")]
+    [InlineData("a,b", "\"a,b\"")]
+    [InlineData("line\nbreak", "\"line\nbreak\"")]
+    [InlineData("plain", "plain")]
+    public void Cells_cannot_start_a_formula_and_are_quoted_when_needed(string text, string expected) => Assert.Equal(expected, Fms.Platform.Services.AuditViewer.Cell(text));
+
+    [Fact]
+    public void The_export_has_one_row_per_event_with_the_actor_by_name()
+    {
+        var csv = Fms.Platform.Services.AuditViewer.ToCsv([new Fms.Platform.Services.AuditEntryDto(Guid.Empty, new DateTimeOffset(2027, 3, 2, 9, 30, 0, TimeSpan.Zero), null, "Amal", "vendor.created", "Vendor", "v1", "{\"code\":\"V1\"}", null)]);
+        var lines = csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal("﻿OccurredAt,Actor,ActorId,Action,EntityType,EntityId,Summary,CorrelationId", lines[0]);
+        Assert.Equal("2027-03-02T09:30:00Z,Amal,,vendor.created,Vendor,v1,\"{\"\"code\"\":\"\"V1\"\"}\",", lines[1]);
+    }
+}

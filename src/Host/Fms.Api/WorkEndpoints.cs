@@ -63,6 +63,12 @@ public static class WorkEndpoints
         g.MapPut("/settings", async (SaveWorkSettingsRequest r, WorkSetupService s, CancellationToken ct) => (await s.SaveSettingsAsync(r, ct)).ToHttp())
             .RequirePermission(Permissions.WorkOrdersManage);
 
+        // The workflow designer: rules inside fixed safety limits, versioned and audited. Anyone who raises or sees work may read the rules; changing them needs workorders.manage.
+        g.MapGet("/workflow", async (WorkflowDesigner s, CancellationToken ct) => Results.Ok(await s.GetAsync(ct))).RequireAnyPermission(Everyone);
+        g.MapGet("/workflow/history", async (WorkflowDesigner s, CancellationToken ct) => Results.Ok(await s.HistoryAsync(ct))).RequirePermission(Permissions.WorkOrdersManage);
+        g.MapPost("/workflow/publish", async (PublishWorkflowRequest r, WorkflowDesigner s, CancellationToken ct) => (await s.PublishAsync(r, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersManage);
+        g.MapPost("/workflow/restore", async (RestoreWorkflowRequest r, WorkflowDesigner s, CancellationToken ct) => (await s.RestoreAsync(r, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersManage);
+
         var sla = g.MapGroup("/sla");
         sla.MapGet("/calendars", async (SlaSetupService s, bool? includeArchived, CancellationToken ct) => Results.Ok(await s.CalendarsAsync(includeArchived ?? false, ct)))
             .RequirePermission(Permissions.WorkOrdersManage);

@@ -64,4 +64,6 @@ Phase 6 adds, in `spaces`: `SpaceProfile` (kind and capacity of a Space location
 In `bookings`: `BookableResource` (rules, time zone), `Booking` (UTC start and end, status, series), `CalendarLink` (the event's reference in the connected calendar, kept apart so syncing never changes a booking's row version), `CalendarFeedToken` (hash of a person's secret calendar address), `CalendarSyncSettings`.
 In `visitors`: `Visit` (host and site names copied in; hash of the pass code; check-in, badge, induction, watchlist override and check-out facts; anonymised after retention), `WatchlistEntry` (never deleted: removal keeps who, when and why), `VisitorSettings`. All new tables are under row-level security.
 
+Phase 7 adds, in `reporting`: `FeedToken` (name, hash of the secret, prefix for recognition, created/last-used/revoked facts; under row-level security). In `work`: `WorkflowVersion` (numbered rules as JSON, note, who, when; append-only with an INSTEAD OF trigger) and new columns on `WorkSettings` (bitmasks of priorities that skip approval or need verification, completion signature/time/photo requirements). Reports and the audit viewer read existing data and add no other tables.
+
 The documented `Draft`, `Reopened` states are not used: a request starts `Requested` (or `Approved`), and reopening returns work to `Assigned`/`Approved` (ADR-0010).

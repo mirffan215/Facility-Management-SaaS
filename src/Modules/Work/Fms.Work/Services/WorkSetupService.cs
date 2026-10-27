@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Fms.Work.Services;
 
 /// <summary>Request categories and the lifecycle switches. Reading is open to anyone who can raise or see requests; changing needs workorders.manage.</summary>
-public sealed class WorkSetupService(WorkDbContext db, IAuditPort audit)
+public sealed class WorkSetupService(WorkDbContext db, IAuditPort audit, Fms.BuildingBlocks.Identity.ICurrentUser user, TimeProvider clock)
 {
     public async Task<IReadOnlyList<CategoryDto>> CategoriesAsync(bool includeArchived, CancellationToken ct = default)
     {
@@ -83,11 +83,14 @@ public sealed class WorkSetupService(WorkDbContext db, IAuditPort audit)
         if (errors.Any) { db.ChangeTracker.Clear(); return errors.ToResult<WorkSettingsDto>(); }
 
         var before = new { s.RequireApproval, s.RequireVerification, s.RequireCompletionSignature, s.CurrencyCode, s.LabourRatePerHour };
+        var flagsBefore = (s.RequireApproval, s.RequireVerification, s.RequireCompletionSignature);
         s.RequireApproval = r.RequireApproval;
         s.RequireVerification = r.RequireVerification;
         if (r.RequireCompletionSignature is { } sig) s.RequireCompletionSignature = sig;
         if (currency is not null) s.CurrencyCode = currency;
         if (r.LabourRatePerHour is { } newRate) s.LabourRatePerHour = Math.Round(newRate, 2);
+        if (db.Entry(s).State != EntityState.Added && flagsBefore != (s.RequireApproval, s.RequireVerification, s.RequireCompletionSignature))
+            WorkflowDesigner.Snapshot(db, s, user.UserId, clock.GetUtcNow(), await db.WorkflowVersions.MaxAsync(v => (int?)v.Version, ct) ?? 0, "Changed on the settings screen");
         audit.Record("worksettings.changed", nameof(WorkSettings), s.Id.ToString(),
             JsonSerializer.Serialize(new { from = before, to = new { s.RequireApproval, s.RequireVerification, s.RequireCompletionSignature, s.CurrencyCode, s.LabourRatePerHour } }));
         try

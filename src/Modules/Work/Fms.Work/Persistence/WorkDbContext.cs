@@ -15,6 +15,7 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
     public DbSet<WorkOrderComment> WorkOrderComments => Set<WorkOrderComment>();
     public DbSet<WorkCategory> Categories => Set<WorkCategory>();
     public DbSet<WorkSettings> Settings => Set<WorkSettings>();
+    public DbSet<WorkflowVersion> WorkflowVersions => Set<WorkflowVersion>();
     public DbSet<ChecklistTemplate> ChecklistTemplates => Set<ChecklistTemplate>();
     public DbSet<ChecklistTemplateItem> ChecklistTemplateItems => Set<ChecklistTemplateItem>();
     public DbSet<WorkOrderChecklistItem> ChecklistItems => Set<WorkOrderChecklistItem>();
@@ -51,6 +52,14 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
         {
             e.ToTable("Settings");
             e.HasIndex(x => x.TenantId).IsUnique();
+        });
+
+        b.Entity<WorkflowVersion>(e =>
+        {
+            e.ToTable("WorkflowVersions");
+            e.Property(x => x.RulesJson).IsRequired();
+            e.Property(x => x.Note).HasMaxLength(600).IsRequired();
+            e.HasIndex(x => new { x.TenantId, x.Version }).IsUnique();
         });
 
         b.Entity<WorkSettings>().Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
