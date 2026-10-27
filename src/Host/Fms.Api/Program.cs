@@ -6,6 +6,8 @@ using Fms.Facilities;
 using Fms.Inventory;
 using Fms.Integration;
 using Fms.Purchasing;
+using Fms.Bookings;
+using Fms.Spaces;
 using Fms.Vendors;
 using Fms.Work;
 using Fms.Platform;
@@ -34,6 +36,8 @@ if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } conn
     builder.Services.AddFmsWork(connectionString);
     builder.Services.AddFmsInventory(connectionString);
     builder.Services.AddFmsVendors(connectionString);
+    builder.Services.AddFmsSpaces(connectionString);
+    builder.Services.AddFmsBookings(connectionString, builder.Configuration);
     builder.Services.AddFmsPurchasing(connectionString);
     builder.Services.AddFmsIntegration(connectionString);
 }
@@ -92,6 +96,8 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapPm();
     v1.MapInventory();
     v1.MapVendors();
+    v1.MapSpaces();
+    v1.MapBookings();
     v1.MapPurchasing();
     v1.MapIntegration();
     v1.MapPortal();

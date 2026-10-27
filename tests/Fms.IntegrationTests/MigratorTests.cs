@@ -59,7 +59,11 @@ public sealed class MigratorTests(SqlServerFixture sql)
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'purchasing'),
                    (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'purchasing' AND t.name <> N'__EFMigrationsHistory'),
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'integration'),
-                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'integration' AND t.name <> N'__EFMigrationsHistory')
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'integration' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'spaces'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'spaces' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'bookings'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'bookings' AND t.name <> N'__EFMigrationsHistory')
             """, conn);
         await using var reader = await cmd.ExecuteReaderAsync();
         await reader.ReadAsync();
@@ -79,6 +83,10 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(6, reader.GetInt32(13)); // settings, requests, request lines, orders, order lines, goods receipts
         Assert.Equal(reader.GetInt32(15), reader.GetInt32(14)); // and every integration table
         Assert.Equal(2, reader.GetInt32(15)); // settings, export items
+        Assert.Equal(reader.GetInt32(17), reader.GetInt32(16)); // and every spaces table
+        Assert.Equal(4, reader.GetInt32(17)); // profiles, plans, pins, allocations
+        Assert.Equal(reader.GetInt32(19), reader.GetInt32(18)); // and every bookings table
+        Assert.Equal(5, reader.GetInt32(19)); // resources, bookings, calendar links, feed tokens, calendar settings
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
     }
 }

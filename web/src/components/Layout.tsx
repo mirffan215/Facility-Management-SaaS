@@ -33,6 +33,8 @@ export function Layout() {
           {can('workorders.read') || can('workorders.request') ? <NavLink to="/work-orders">{t('nav.workOrders')}</NavLink> : null}
           {can('inventory.read') ? <NavLink to="/inventory">{t('nav.inventory')}</NavLink> : null}
           {can('purchasing.read') || can('purchasing.request') ? <NavLink to="/purchasing">{t('nav.purchasing')}</NavLink> : null}
+          {can('bookings.read') ? <NavLink to="/bookings">{t('nav.bookings')}</NavLink> : null}
+          {can('spaces.read') ? <NavLink to="/spaces">{t('nav.spaces')}</NavLink> : null}
           {can('integration.read') ? <NavLink to="/integrations">{t('nav.integrations')}</NavLink> : null}
           {can('vendors.read') ? <NavLink to="/vendors">{t('nav.vendors')}</NavLink> : null}
           {can('pm.read') ? <NavLink to="/pm">{t('nav.pm')}</NavLink> : null}

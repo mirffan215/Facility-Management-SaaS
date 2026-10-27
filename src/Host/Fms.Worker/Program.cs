@@ -8,6 +8,8 @@ using Fms.Inventory;
 using Fms.Integration;
 using Fms.Integration.Services;
 using Fms.Purchasing;
+using Fms.Bookings;
+using Fms.Bookings.Services;
 using Fms.Vendors;
 using Fms.Vendors.Services;
 using Fms.Work;
@@ -37,6 +39,7 @@ builder.Services.AddFmsInventory(connectionString);
 builder.Services.AddFmsVendors(connectionString);
 builder.Services.AddFmsPurchasing(connectionString);
 builder.Services.AddFmsIntegration(connectionString);
+builder.Services.AddFmsBookings(connectionString, builder.Configuration);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddFmsEmail(builder.Configuration);
 builder.Services.AddHostedService<OutboxWorker>();
@@ -44,6 +47,7 @@ builder.Services.AddHostedService<SlaMonitorWorker>();
 builder.Services.AddHostedService<PmWorker>();
 builder.Services.AddHostedService<ContractWorker>();
 builder.Services.AddHostedService<ErpSyncWorker>();
+builder.Services.AddHostedService<BookingWorker>();
 
 // Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
 
@@ -192,6 +196,32 @@ internal sealed class ErpSyncWorker(ErpSyncRunner runner, ILogger<ErpSyncWorker>
             {
                 log.LogError(ex, "ERP sync run failed");
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Frees bookings that needed a check-in and did not get one. Every minute: a room should not stay blocked long after its grace period.</summary>
+internal sealed class BookingWorker(BookingMonitor monitor, ILogger<BookingWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var freed = await monitor.RunOnceAsync(stoppingToken);
+                if (freed > 0) log.LogInformation("Released {Count} bookings that were not checked in", freed);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Booking run failed");
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
     }

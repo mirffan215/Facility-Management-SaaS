@@ -5,6 +5,8 @@ using Fms.Facilities.Persistence;
 using Fms.Inventory.Persistence;
 using Fms.Integration.Persistence;
 using Fms.Purchasing.Persistence;
+using Fms.Bookings.Persistence;
+using Fms.Spaces.Persistence;
 using Fms.Vendors.Persistence;
 using Fms.Work.Persistence;
 using Fms.Platform.Domain;
@@ -50,6 +52,16 @@ await using var vendorsDb = new VendorsDbContext(
     new DbContextOptionsBuilder<VendorsDbContext>().UseSqlServer(migratorConnection, VendorsDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 await vendorsDb.Database.MigrateAsync();
+
+await using var spacesDb = new SpacesDbContext(
+    new DbContextOptionsBuilder<SpacesDbContext>().UseSqlServer(migratorConnection, SpacesDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+await spacesDb.Database.MigrateAsync();
+
+await using var bookingsDb = new BookingsDbContext(
+    new DbContextOptionsBuilder<BookingsDbContext>().UseSqlServer(migratorConnection, BookingsDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+await bookingsDb.Database.MigrateAsync();
 
 await using var purchasingDb = new PurchasingDbContext(
     new DbContextOptionsBuilder<PurchasingDbContext>().UseSqlServer(migratorConnection, PurchasingDbContextOptions.Sql)

@@ -78,6 +78,24 @@ public static class Permissions
     /// <summary>Turn the accounting connection on or off, retry what failed and run a reconciliation.</summary>
     public const string IntegrationManage = "integration.manage";
 
+    /// <summary>See floor plans, space profiles, allocations and occupancy.</summary>
+    public const string SpacesRead = "spaces.read";
+
+    /// <summary>Set space capacity, upload and pin floor plans, allocate and release space.</summary>
+    public const string SpacesManage = "spaces.manage";
+
+    /// <summary>See bookable resources and when they are free; see one's own bookings.</summary>
+    public const string BookingsRead = "bookings.read";
+
+    /// <summary>Book resources, and cancel and check in to one's own bookings.</summary>
+    public const string BookingsBook = "bookings.book";
+
+    /// <summary>Approve or reject bookings of resources that need approval (never one's own), and see everyone's bookings.</summary>
+    public const string BookingsApprove = "bookings.approve";
+
+    /// <summary>Set up resources and their rules, cancel anyone's booking, and run the calendar connection.</summary>
+    public const string BookingsManage = "bookings.manage";
+
     /// <summary>Use the vendor portal: see the orders, work and contracts of one's own vendor. Held by nobody but vendor users.</summary>
     public const string PortalUse = "portal.use";
 
@@ -92,6 +110,8 @@ public static class Permissions
         VendorsRead, VendorsManage,
         PurchasingRead, PurchasingRequest, PurchasingApprove1, PurchasingApprove2, PurchasingApprove3, PurchasingOrder, PurchasingReceive, PurchasingManage,
         IntegrationRead, IntegrationManage,
+        SpacesRead, SpacesManage,
+        BookingsRead, BookingsBook, BookingsApprove, BookingsManage,
         PortalUse,
     ];
 

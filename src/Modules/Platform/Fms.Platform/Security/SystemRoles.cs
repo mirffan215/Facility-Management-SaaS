@@ -31,15 +31,18 @@ public static class SystemRoles
             Permissions.PurchasingRead, Permissions.PurchasingRequest, Permissions.PurchasingApprove1, Permissions.PurchasingApprove2,
             Permissions.PurchasingOrder, Permissions.PurchasingReceive, Permissions.PurchasingManage,
             Permissions.IntegrationRead,
+            Permissions.SpacesRead, Permissions.SpacesManage,
+            Permissions.BookingsRead, Permissions.BookingsBook, Permissions.BookingsApprove, Permissions.BookingsManage,
         ],
         [Technician] =
         [
             Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.MetersRecord, Permissions.DocumentsRead,
             Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.PmRead,
             Permissions.InventoryRead, Permissions.InventoryIssue, Permissions.PurchasingRequest,
+            Permissions.BookingsRead, Permissions.BookingsBook,
         ],
-        [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest],
+        [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest, Permissions.BookingsRead, Permissions.BookingsBook],
         [Vendor] = [Permissions.PortalUse],
-        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead, Permissions.SpacesRead, Permissions.BookingsRead],
     };
 }

@@ -50,6 +50,9 @@ public interface IFacilityLookup
     /// <summary>Readings (not voided) since a moment, oldest first. For estimating how fast a meter is running.</summary>
     Task<IReadOnlyList<MeterValue>> ReadingsSinceAsync(Guid meterId, DateTimeOffset since, CancellationToken ct = default);
 
+    /// <summary>The location and everything beneath it that is not archived, parents first. <see cref="FacilityRef.Kind"/> is Site, Building, Floor or Space. Empty when it does not exist.</summary>
+    Task<IReadOnlyList<FacilityRef>> LocationsUnderAsync(Guid locationId, CancellationToken ct = default);
+
     Task<IReadOnlyDictionary<Guid, FacilityRef>> LocationsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<IReadOnlyDictionary<Guid, FacilityRef>> AssetsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
 }

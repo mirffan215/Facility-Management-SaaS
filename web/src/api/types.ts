@@ -955,3 +955,145 @@ export interface PortalAccess {
   users: { userId: string; name: string | null; email: string | null; isActive: boolean; linkedAt: string }[];
   invitations: PortalInvitation[];
 }
+
+// ---------------- spaces ----------------
+
+export type SpaceKind = 'Office' | 'Meeting' | 'Desk' | 'Parking' | 'Storage' | 'Common' | 'Other';
+export type PinKind = 'Space' | 'Asset';
+export type OccupantKind = 'Person' | 'Team';
+export type AllocationState = 'Upcoming' | 'Current' | 'Ended' | 'Cancelled';
+
+export interface SpaceInfo {
+  locationId: string;
+  code: string;
+  name: string;
+  kind: SpaceKind | null;
+  capacity: number;
+  notes: string | null;
+  allocatedToday: number;
+  rowVersion: string | null;
+}
+
+export interface FloorPlan {
+  id: string;
+  floorId: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+}
+
+export interface PlanPin {
+  id: string;
+  kind: PinKind;
+  targetId: string;
+  code: string;
+  name: string;
+  x: number;
+  y: number;
+}
+
+export interface FloorView {
+  floorId: string;
+  floorCode: string;
+  floorName: string;
+  plan: FloorPlan | null;
+  pins: PlanPin[];
+  spaces: SpaceInfo[];
+}
+
+export interface Allocation {
+  id: string;
+  spaceId: string;
+  spaceCode: string;
+  spaceName: string;
+  kind: OccupantKind;
+  userId: string | null;
+  userName: string | null;
+  teamName: string | null;
+  headcount: number;
+  startOn: string;
+  endOn: string | null;
+  state: AllocationState;
+  note: string | null;
+  endReason: string | null;
+  rowVersion: string;
+}
+
+export interface Occupancy {
+  locationId: string;
+  on: string;
+  capacity: number;
+  allocated: number;
+  utilisationPercent: number | null;
+  spacesWithoutCapacity: number;
+  rows: { spaceId: string; code: string; name: string; kind: SpaceKind | null; capacity: number; allocated: number; utilisationPercent: number | null }[];
+}
+
+// ---------------- bookings ----------------
+
+export type ResourceKind = 'Room' | 'Desk' | 'Parking' | 'Equipment' | 'Other';
+export type BookingStatus = 'Pending' | 'Confirmed' | 'CheckedIn' | 'Rejected' | 'Cancelled' | 'NoShow';
+export type DayName = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+
+export interface BookableResource {
+  id: string;
+  kind: ResourceKind;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  spaceId: string | null;
+  spaceName: string | null;
+  capacity: number;
+  timeZone: string;
+  opensAt: string;
+  closesAt: string;
+  days: DayName[];
+  minMinutes: number;
+  maxMinutes: number;
+  maxAdvanceDays: number;
+  bufferMinutes: number;
+  requiresApproval: boolean;
+  checkInRequired: boolean;
+  checkInGraceMinutes: number;
+  notes: string | null;
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export interface Booking {
+  id: string;
+  resourceId: string;
+  resourceCode: string;
+  resourceName: string;
+  resourceKind: ResourceKind;
+  organizerId: string;
+  organizerName: string | null;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  attendees: number;
+  status: BookingStatus;
+  seriesId: string | null;
+  notes: string | null;
+  decisionNote: string | null;
+  cancelReason: string | null;
+  checkedInAt: string | null;
+  canCheckInNow: boolean;
+  mine: boolean;
+  rowVersion: string;
+}
+
+export interface Availability {
+  resourceId: string;
+  from: string;
+  to: string;
+  busy: { startsAt: string; endsAt: string; pending: boolean; mine: boolean }[];
+}
+
+export interface CalendarSync {
+  enabled: boolean;
+  adapter: string;
+  availableAdapters: string[];
+  rowVersion: string | null;
+}

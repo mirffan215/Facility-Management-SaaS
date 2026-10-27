@@ -110,6 +110,10 @@ export function createApi(options: ApiOptions) {
       const response = await json('PUT', path, body);
       return (response.status === 204 ? undefined : await response.json()) as T;
     },
+    async delete<T>(path: string): Promise<T> {
+      const response = await request(path, { method: 'DELETE' });
+      return (response.status === 204 ? undefined : await response.json()) as T;
+    },
     async upload<T>(path: string, form: FormData, params?: Query): Promise<T> {
       return (await request(path + toQuery(params), { method: 'POST', body: form })).json() as Promise<T>;
     },

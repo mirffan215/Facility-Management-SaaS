@@ -24,6 +24,8 @@ import { InventoryPage } from './pages/Inventory';
 import { VendorsPage } from './pages/Vendors';
 import { PurchasingPage } from './pages/Purchasing';
 import { IntegrationsPage } from './pages/Integrations';
+import { BookingsPage } from './pages/Bookings';
+import { SpacesPage } from './pages/Spaces';
 import { PortalPage } from './pages/Portal';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { ScanRedirectPage } from './pages/ScanRedirect';
@@ -131,6 +133,8 @@ export function App() {
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="purchasing" element={<PurchasingPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
+        <Route path="spaces" element={<SpacesPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
         <Route path="portal" element={<PortalPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

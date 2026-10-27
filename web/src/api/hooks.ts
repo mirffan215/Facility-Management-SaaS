@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
-  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts,
+  Asset, AssetChoice, ChecklistItem, ChecklistTemplate, CostLine, CostSummary, TimeEntry, WorkAttachment, WorkSignature, AssetClass, Assignee, AssetDocument, CustomFieldDefinition, CustomFieldTarget, Location, LocationNode, Me, Meter, MeterReading, NotificationItem, Page, RoleSummary, SlaPolicy, WorkCalendar, UserSummary, WorkCategory, WorkOrder, WorkOrderDetail, WorkSettings, Compliance, ErpItem, ErpSettings, ErpSummary, PurchaseOrder, PurchaseRequest, PurchasingSettings, Contract, ContractDocument, Forecast, Item, Vendor, VendorAssignment, VendorContact, Movement, PmSchedule, PmTemplate, PmTemplatePart, StockLevel, StockTake, Store, WorkParts, Allocation, FloorView, Occupancy, Availability, BookableResource, Booking, CalendarSync,
 } from './types';
 
 /** Typed read hooks. Keys include everything the request depends on so a change refetches. */
@@ -321,4 +321,53 @@ export function useErpSummary() {
 export function useErpItems(params: Record<string, string | number | boolean | undefined>) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['integration', 'items', params], queryFn: () => api.get<Page<ErpItem>>('/integration/erp/items', params), refetchInterval: 15_000 });
+}
+
+export function useFloorView(floorId: string | undefined) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['spaces', 'floor', floorId], enabled: !!floorId, queryFn: () => api.get<FloorView>(`/spaces/floors/${floorId}`) });
+}
+
+export function useOccupancy(locationId: string | undefined, on: string) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['spaces', 'occupancy', locationId, on], enabled: !!locationId, queryFn: () => api.get<Occupancy>(`/spaces/occupancy/${locationId}`, { on: on || undefined }) });
+}
+
+export function useAllocations(params: Record<string, string | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['spaces', 'allocations', params], queryFn: () => api.get<Allocation[]>('/allocations', params) });
+}
+
+export function useResources(params: Record<string, string | boolean | undefined> = {}) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['bookings', 'resources', params], queryFn: () => api.get<BookableResource[]>('/resources', params) });
+}
+
+export function useAvailability(resourceId: string | undefined, from: string, to: string) {
+  const { api } = useAuth();
+  return useQuery({
+    queryKey: ['bookings', 'availability', resourceId, from, to],
+    enabled: !!resourceId,
+    queryFn: () => api.get<Availability>('/bookings/availability', { resourceId, from, to }),
+  });
+}
+
+export function useMyBookings() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['bookings', 'mine'], queryFn: () => api.get<Booking[]>('/bookings/mine') });
+}
+
+export function usePendingBookings(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['bookings', 'pending'], enabled, queryFn: () => api.get<Booking[]>('/bookings', { pendingOnly: true }) });
+}
+
+export function useCalendarSync(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['bookings', 'calendar-sync'], enabled, queryFn: () => api.get<CalendarSync>('/bookings/calendar-sync') });
+}
+
+export function useCalendarFeed() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['bookings', 'feed'], queryFn: () => api.get<{ exists: boolean; createdAt: string | null; lastUsedAt: string | null }>('/bookings/calendar-feed') });
 }

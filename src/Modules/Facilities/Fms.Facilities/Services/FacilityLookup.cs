@@ -70,6 +70,16 @@ public sealed class FacilityLookup(FacilitiesDbContext db) : IFacilityLookup
         return rows.Select(r => new MeterValue(r.Value, r.ReadAt)).ToList();
     }
 
+    public async Task<IReadOnlyList<FacilityRef>> LocationsUnderAsync(Guid locationId, CancellationToken ct = default)
+    {
+        var root = await db.Locations.AsNoTracking().Where(l => l.Id == locationId).Select(l => new { l.Path, l.Id }).FirstOrDefaultAsync(ct);
+        if (root is null) return [];
+        var prefix = root.Path; // a path includes the location's own id, so the prefix covers it and everything below
+        var rows = await db.Locations.AsNoTracking().Where(l => !l.IsArchived && l.Path.StartsWith(prefix))
+            .OrderBy(l => l.Path.Length).ThenBy(l => l.Code).Select(l => new { l.Id, l.Code, l.Name, l.Type }).ToListAsync(ct);
+        return rows.Select(r => new FacilityRef(r.Id, r.Code, r.Name, null, r.Type.ToString())).ToList();
+    }
+
     public async Task<IReadOnlyDictionary<Guid, FacilityRef>> LocationsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
     {
         var wanted = ids.Distinct().ToList();

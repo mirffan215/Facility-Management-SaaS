@@ -143,3 +143,8 @@ tr.voided td:last-child, tr.voided td .badge { text-decoration: none; }
 .bar { display: inline-flex; inline-size: 8rem; block-size: 0.6rem; vertical-align: middle; border-radius: 999px; overflow: hidden; background: var(--border); margin-inline-start: 0.5rem; }
 .bar .seg { display: block; block-size: 100%; }
 .bar .ok { background: var(--ok); } .bar .warn { background: var(--warn); } .bar .bad { background: var(--bad); } .bar .neutral { background: var(--muted); } .bar .upcoming { background: var(--accent); opacity: 0.35; }
+.plan-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); gap: var(--gap); align-items: start; }
+@media (max-width: 52rem) { .plan-layout { grid-template-columns: 1fr; } }
+.plan-frame { overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 0.5rem; }
+.pin { min-height: 0; padding: 0.1rem 0.45rem; font-size: 0.8rem; border-radius: 999px; border: 2px solid var(--accent); background: var(--surface); color: var(--text); }
+.pin.selected { background: var(--accent); color: var(--surface); }

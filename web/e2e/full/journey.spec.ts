@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 import fs from 'node:fs';
 
 // One person's working day, driven through the real browser, web app, API and database. Order matters: later steps use what earlier ones made.
@@ -300,6 +300,12 @@ test('main screens have no serious accessibility problems in English or Arabic',
 
   await page.locator('.prefs select').first().selectOption('en');
 });
+
+/** Picks the option of a select whose text contains the given text (the places are listed by code and name). */
+async function choose(select: Locator, text: string) {
+  const value = await select.locator('option', { hasText: text }).first().getAttribute('value');
+  await select.selectOption(value as string);
+}
 
 async function api(path: string, init: RequestInit & { sub?: string } = {}) {
   const { token } = (await (await fetch(`${IDP}/__token?sub=${init.sub ?? 'e2e-admin'}`)).json()) as { token: string };
@@ -1201,6 +1207,164 @@ test('vendor portal: an invited vendor user sees only their own jobs and contrac
   }
   expect((await api('/vendors', { sub })).status).toBe(403);
   expect((await api('/work-orders', { sub })).status).toBe(403);
+});
+
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+
+test('spaces: a plan with a pinned room, its capacity, an allocation that cannot overfill it, and occupancy', async () => {
+  const floor = ((await (await api(`/locations?q=${FLOOR}`)).json()) as { items: { id: string }[] }).items[0];
+  const made = await api('/locations', { method: 'POST', body: JSON.stringify({ type: 'Space', parentId: floor.id, code: `M1-${SUFFIX}`, name: 'Meeting room M1' }) });
+  expect(made.status).toBe(201);
+
+  await page.goto('/spaces');
+  await choose(page.getByLabel('Floor'), FLOOR);
+  await expect(page.getByText('This floor has no plan yet.')).toBeVisible();
+  await page.getByLabel('Upload the floor plan').setInputFiles({ name: 'floor3.png', mimeType: 'image/png', buffer: PNG });
+  await expect(page.getByRole('img', { name: 'Plan of Floor 3' })).toBeVisible();
+
+  // Pin the room and move it by number, then save.
+  await page.getByLabel('Space to place').selectOption({ index: 1 });
+  await page.getByRole('button', { name: 'Place on plan' }).click();
+  await page.getByLabel(/across the plan, percent/).fill('30');
+  await page.getByLabel(/down the plan, percent/).fill('70');
+  await Promise.all([page.waitForResponse((r) => r.url().includes('/pins') && r.request().method() === 'PUT' && r.ok()), page.getByRole('button', { name: 'Save' }).click()]);
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await page.reload();
+  await choose(page.getByLabel('Floor'), FLOOR);
+  await expect(page.getByLabel(/across the plan, percent/)).toHaveValue('30');
+  await shot('31-floor-plan');
+
+  // Capacity, then an allocation that fits and one that does not.
+  await page.goto('/spaces?tab=spaces');
+  await choose(page.getByLabel('Place', { exact: true }), FLOOR);
+  await page.getByRole('row', { name: new RegExp(`M1-${SUFFIX}`) }).getByRole('button', { name: 'Edit' }).click();
+  const dialog = page.getByRole('dialog', { name: /Space M1/ });
+  await dialog.getByLabel('Used as').selectOption('Meeting');
+  await dialog.getByLabel('Capacity').fill('6');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.goto('/spaces?tab=allocations');
+  await page.getByRole('button', { name: 'New allocation' }).click();
+  const alloc = page.getByRole('dialog', { name: 'New allocation' });
+  await choose(alloc.getByLabel('Floor'), FLOOR);
+  await alloc.getByLabel('Space', { exact: true }).selectOption({ index: 1 });
+  await alloc.getByLabel('Given to').selectOption('Team');
+  await alloc.getByLabel('Team name').fill('Finance');
+  await alloc.getByLabel('Number of people').fill('4');
+  await alloc.getByRole('button', { name: 'Allocate' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('row', { name: /Finance/ })).toContainText('In force');
+
+  await page.getByRole('button', { name: 'New allocation' }).click();
+  const second = page.getByRole('dialog', { name: 'New allocation' });
+  await choose(second.getByLabel('Floor'), FLOOR);
+  await second.getByLabel('Space', { exact: true }).selectOption({ index: 1 });
+  await second.getByLabel('Given to').selectOption('Team');
+  await second.getByLabel('Team name').fill('Legal');
+  await second.getByLabel('Number of people').fill('3');
+  await second.getByRole('button', { name: 'Allocate' }).click();
+  await expect(second.getByText(/do not fit/)).toBeVisible();
+  await second.getByRole('button', { name: 'Cancel' }).click();
+  await shot('32-allocations');
+
+  await page.goto('/spaces?tab=occupancy');
+  await choose(page.getByLabel('Place', { exact: true }), SITE);
+  await expect(page.getByRole('row', { name: new RegExp(`M1-${SUFFIX}`) })).toContainText('66.7%');
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['plans', 'spaces', 'allocations', 'occupancy']) {
+      await page.goto(`/spaces?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`spaces ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('bookings: a room is set up, booked without a clash, cancelled, one needing approval waits, and a calendar address follows the bookings', async () => {
+  const tomorrow = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const CODE = `BR-${SUFFIX}`;
+  const NEEDS = `HALL-${SUFFIX}`;
+
+  await page.goto('/bookings?tab=resources');
+  for (const [code, name, approval] of [[CODE, 'Board room', false], [NEEDS, 'Event hall', true]] as const) {
+    await page.getByRole('button', { name: 'New resource' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New resource' });
+    await dialog.getByLabel('Code').fill(code);
+    await dialog.getByLabel('Name', { exact: true }).fill(name);
+    await dialog.getByLabel('Capacity').fill('8');
+    if (approval) await dialog.getByLabel('Bookings need approval').check();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
+  }
+
+  // A rule is enforced by the server and shown next to the field.
+  await page.getByRole('button', { name: 'New resource' }).click();
+  const bad = page.getByRole('dialog', { name: 'New resource' });
+  await bad.getByLabel('Code').fill(`BAD-${SUFFIX}`);
+  await bad.getByLabel('Name', { exact: true }).fill('Bad zone');
+  await bad.getByLabel('Time zone').fill('Mars/Olympus');
+  await bad.getByRole('button', { name: 'Save' }).click();
+  await expect(bad.getByText('Unknown time zone')).toBeVisible();
+  await bad.getByRole('button', { name: 'Cancel' }).click();
+
+  const bookAt = async (resource: string, time: string, title: string) => {
+    await page.goto('/bookings');
+    await choose(page.getByLabel('Resource', { exact: true }), resource);
+    await page.getByLabel('Day', { exact: true }).fill(tomorrow);
+    await page.getByLabel('Title', { exact: true }).fill(title);
+    await page.getByLabel('Starts at').fill(time);
+    await page.getByRole('button', { name: /^(Book|Request booking)$/ }).click();
+  };
+
+  await bookAt(CODE, '10:00', 'Quarterly review');
+  await expect(page.getByRole('status').filter({ hasText: 'Booked (1)' })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Yours' })).toBeVisible(); // it shows as taken, and as ours
+  await bookAt(CODE, '10:30', 'Clashing meeting');
+  await expect(page.getByRole('alert').filter({ hasText: 'already taken' })).toBeVisible();
+  await shot('33-booking');
+
+  await page.goto('/bookings?tab=mine');
+  const row = page.getByRole('row', { name: /Quarterly review/ });
+  await expect(row).toContainText('Confirmed');
+  await row.getByRole('button', { name: 'Cancel booking' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel booking' }).click();
+  await expect(page.getByRole('row', { name: /Quarterly review/ })).toContainText('Cancelled');
+
+  // Something that needs approval waits; the person who asked cannot decide it.
+  await bookAt(NEEDS, '14:00', 'Town hall');
+  await expect(page.getByRole('status').filter({ hasText: 'Requested (1)' })).toBeVisible();
+  await page.goto('/bookings?tab=approvals');
+  const waiting = page.getByRole('row', { name: /Town hall/ });
+  await expect(waiting).toContainText('Someone else must decide your own request');
+  await expect(waiting.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+
+  // A calendar address follows the bookings; it works without signing in and is shown only once.
+  await page.goto('/bookings?tab=mine');
+  await page.getByRole('button', { name: 'Make an address' }).click();
+  const address = await page.getByLabel('Calendar address').inputValue();
+  expect(address).toContain('/api/v1/calendar/');
+  const feed = await page.request.get(address.replace(/^https?:\/\/[^/]+/, ''), { headers: { Authorization: '' } });
+  expect(feed.status()).toBe(200);
+  expect(await feed.text()).toContain('SUMMARY:Town hall');
+  await page.reload();
+  await expect(page.getByLabel('Calendar address')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Stop sharing' }).click();
+  await expect(page.getByRole('button', { name: 'Make an address' })).toBeVisible();
+  expect((await page.request.get(address.replace(/^https?:\/\/[^/]+/, ''))).status()).toBe(404);
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['book', 'mine', 'approvals', 'resources']) {
+      await page.goto(`/bookings?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`bookings ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
 });
 
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
