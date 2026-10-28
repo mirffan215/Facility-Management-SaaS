@@ -1740,7 +1740,7 @@ test('energy: a meter gets readings by hand and from a file, a device posts with
   // A file: one good row, one for a meter that does not exist. Checked first, then imported.
   const when = new Date(Date.now() - 86_400_000).toISOString();
   await page.getByRole('button', { name: 'Import a CSV file' }).click();
-  await page.getByLabel('CSV file').setInputFiles({ name: 'readings.csv', mimeType: 'text/csv', buffer: Buffer.from(`meter,at,value\n${code},${when},1150\nNO-SUCH,${when},5\n`) });
+  await page.getByRole('dialog').locator('input[type=file]').setInputFiles({ name: 'readings.csv', mimeType: 'text/csv', buffer: Buffer.from(`meter,at,value\n${code},${when},1150\nNO-SUCH,${when},5\n`) });
   await page.getByRole('button', { name: 'Check the file' }).click();
   await expect(page.getByRole('status')).toContainText('1 to add');
   await expect(page.getByRole('dialog').getByText(/Unknown or archived meter/)).toBeVisible();
