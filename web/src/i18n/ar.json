@@ -2147,7 +2147,7 @@
     "editMilestone": "تعديل المرحلة الرئيسية",
     "milestoneName": "المرحلة الرئيسية",
     "achieve": "تم إنجازها",
-    "achieveX": "تسجيل إنجاز {{name}}",
+    "achieveX": "تم إنجازها: {{name}}",
     "achievedOn": "أُنجزت {{date}}",
     "editX": "تعديل {{name}}",
     "deleteX": "حذف {{name}}",
@@ -2173,7 +2173,7 @@
     "chargedTo": "يُحمَّل على فئة الميزانية",
     "link": "ربط",
     "unlink": "إلغاء الربط",
-    "unlinkX": "إلغاء ربط {{number}}",
+    "unlinkX": "إلغاء الربط: {{number}}",
     "excluded": "غير محسوب",
     "lateMilestones": "مراحل رئيسية متأخرة: {{count}}"
   },

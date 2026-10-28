@@ -1730,7 +1730,7 @@ test('energy: a meter gets readings by hand and from a file, a device posts with
   await expect(row).toBeVisible();
 
   for (const [daysAgo, value] of [[3, '1000'], [2, '1100']] as const) {
-    await row.getByRole('button', { name: `Add a reading to ${code.toUpperCase()}` }).click();
+    await row.getByRole('button', { name: `Add reading to ${code.toUpperCase()}` }).click();
     await page.getByRole('dialog').getByLabel(/^Reading/).fill(value);
     await page.getByLabel('Taken at').fill(stamp(daysAgo));
     await page.getByRole('button', { name: 'Save' }).click();
