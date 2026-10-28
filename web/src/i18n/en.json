@@ -492,6 +492,10 @@
       "help": "Three or more repair requests in the last 90 days. Counted from the work orders, not guessed.",
       "line": "{{count}} requests ({{emergencies}} emergencies), latest {{last}}.",
       "gap": "About every {{days}} days."
+    },
+    "similar": {
+      "title": "Already reported?",
+      "help": "Open requests from the last 30 days about the same asset or place with similar words."
     }
   },
   "slaState": {
@@ -2333,6 +2337,10 @@
     "checkIt": "Written by AI. Check it before you rely on it.",
     "summaryTitle": "AI summary of this work order",
     "summarise": "Summarise with AI",
-    "saved": "Saved."
+    "saved": "Saved.",
+    "accepted": "Used",
+    "helpful": "Helpful",
+    "notHelpful": "Not helpful",
+    "thanks": "Thank you."
   }
 }

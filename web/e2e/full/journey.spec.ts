@@ -1980,6 +1980,7 @@ test('ai: off until an administrator turns it on, then suggestions are checked, 
   await expectNoSeriousA11yIssues('ai suggestion en');
   await box.getByRole('button', { name: 'Use this' }).click();
   await expect(page.getByLabel('Priority', { exact: true })).toHaveValue('High');
+  await expect.poll(async () => ((await (await api('/ai/usage')).json()) as { last30Days: { accepted: number }[] }).last30Days[0]?.accepted ?? 0).toBeGreaterThan(0);
   const seen = (await (await fetch('http://localhost:9099/__ai')).json()) as { prompt: string };
   expect(seen.prompt).toContain('Water leaking from ceiling');
   expect(seen.prompt).not.toContain('0551234567');

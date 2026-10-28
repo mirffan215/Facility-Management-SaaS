@@ -80,6 +80,7 @@ export function AiSettingsPage() {
                       <th scope="col">{t('ai.feature')}</th>
                       <th scope="col">{t('ai.ok')}</th>
                       <th scope="col">{t('ai.failed')}</th>
+                      <th scope="col">{t('ai.accepted')}</th>
                       <th scope="col">{t('ai.tokens')}</th>
                     </tr>
                   </thead>
@@ -89,6 +90,7 @@ export function AiSettingsPage() {
                         <th scope="row">{featureLabel(l.feature)}</th>
                         <td>{l.ok}</td>
                         <td>{l.failed}</td>
+                        <td>{l.accepted + l.dismissed === 0 ? '—' : `${formatNumber((100 * l.accepted) / (l.accepted + l.dismissed), i18n.language, 0)}% (${l.accepted}/${l.accepted + l.dismissed})`}</td>
                         <td>{formatNumber(l.inputTokens + l.outputTokens, i18n.language, 0)}</td>
                       </tr>
                     ))}

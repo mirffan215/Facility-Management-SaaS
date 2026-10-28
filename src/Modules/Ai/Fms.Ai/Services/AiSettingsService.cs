@@ -75,6 +75,8 @@ public sealed class AiSettingsService(AiDbContext db, IAiProvider provider, ICur
             .Select(g => new { g.Key.Feature, g.Key.Outcome, N = g.Count(), In = g.Sum(x => (long)x.InputTokens), Out = g.Sum(x => (long)x.OutputTokens) }).ToListAsync(ct);
         var lines = rows.GroupBy(r => r.Feature).OrderBy(g => g.Key)
             .Select(g => new UsageLineDto(g.Key, g.Where(x => x.Outcome == AiOutcome.Ok).Sum(x => x.N), g.Where(x => x.Outcome == AiOutcome.Failed).Sum(x => x.N), g.Sum(x => x.In), g.Sum(x => x.Out))).ToList();
+        var answers = await db.Feedback.AsNoTracking().Where(f => f.At >= since).GroupBy(f => new { f.Feature, f.Accepted }).Select(g => new { g.Key.Feature, g.Key.Accepted, N = g.Count() }).ToListAsync(ct);
+        lines = lines.Select(l => l with { Accepted = answers.Where(a => a.Feature == l.Feature && a.Accepted).Sum(a => a.N), Dismissed = answers.Where(a => a.Feature == l.Feature && !a.Accepted).Sum(a => a.N) }).ToList();
         var limit = (await db.Settings.AsNoTracking().FirstOrDefaultAsync(ct))?.DailyLimit ?? AiRules.DefaultDailyLimit;
         return new UsageDto(await UsedTodayAsync(ct), limit, lines);
     }

@@ -27,6 +27,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkCostLookup, WorkCostLookup>();
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkAiSource, WorkAiSource>();
         services.AddScoped<RepeatProblemService>();
+        services.AddScoped<SimilarRequestService>();
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkOrderFromSource, WorkOrderFromSource>();
         services.AddScoped<PmEngine>();
         services.AddScoped<PmService>();

@@ -12,6 +12,7 @@ public sealed class AiDbContext(DbContextOptions<AiDbContext> options, ITenantCo
 
     public DbSet<AiSettings> Settings => Set<AiSettings>();
     public DbSet<AiUsage> Usage => Set<AiUsage>();
+    public DbSet<AiFeedback> Feedback => Set<AiFeedback>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -29,6 +30,13 @@ public sealed class AiDbContext(DbContextOptions<AiDbContext> options, ITenantCo
             e.ToTable("Usage");
             e.HasIndex(x => new { x.TenantId, x.At });
             e.HasIndex(x => new { x.TenantId, x.UserId, x.At });
+        });
+
+        b.Entity<AiFeedback>(e =>
+        {
+            e.ToTable("Feedback");
+            e.HasIndex(x => new { x.TenantId, x.UsageId }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.At });
         });
 
         base.OnModelCreating(b);

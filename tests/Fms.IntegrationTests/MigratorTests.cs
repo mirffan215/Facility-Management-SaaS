@@ -114,7 +114,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(reader.GetInt32(31), reader.GetInt32(30)); // and every leases table
         Assert.Equal(2, reader.GetInt32(31)); // leases, documents
         Assert.Equal(reader.GetInt32(33), reader.GetInt32(32)); // and every ai table
-        Assert.Equal(2, reader.GetInt32(33)); // settings, usage
+        Assert.Equal(3, reader.GetInt32(33)); // settings, usage, feedback
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
     }
 

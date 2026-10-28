@@ -44,6 +44,18 @@ public sealed class AiUsage : ITenantOwned, IAppendOnly
     public Guid? SubjectId { get; set; }
 }
 
+/// <summary>Whether the person used a suggestion (or found a summary helpful) or set it aside. One answer per call, never changed; no words are kept.</summary>
+public sealed class AiFeedback : ITenantOwned, IAppendOnly
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid UsageId { get; set; }
+    public DateTimeOffset At { get; set; }
+    public Guid? UserId { get; set; }
+    public AiFeature Feature { get; set; }
+    public bool Accepted { get; set; }
+}
+
 public sealed record TriageAnswer(string? CategoryCode, string? Priority, double Confidence, string Reason);
 
 /// <summary>Pure rules: cleaning what is sent, and checking what comes back. Tested without a database or a model.</summary>

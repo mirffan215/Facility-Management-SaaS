@@ -1649,9 +1649,10 @@ export interface LeaseTotals { active: number; draft: number; expired: number; e
 
 export interface AiStatus { available: boolean; enabled: boolean; triage: boolean; summary: boolean; dailyLimit: number; usedToday: number }
 export interface AiSettings { available: boolean; enabled: boolean; triageEnabled: boolean; summaryEnabled: boolean; dailyLimit: number; rowVersion: string | null }
-export interface AiTriageSuggestion { categoryId: string | null; categoryCode: string | null; categoryName: string | null; priority: WorkPriority | null; confidence: number; reason: string }
-export interface AiSummary { workOrderId: string; text: string }
-export interface AiUsage { usedToday: number; dailyLimit: number; last30Days: { feature: 'Triage' | 'Summary'; ok: number; failed: number; inputTokens: number; outputTokens: number }[] }
+export interface AiTriageSuggestion { usageId: string | null; categoryId: string | null; categoryCode: string | null; categoryName: string | null; priority: WorkPriority | null; confidence: number; reason: string }
+export interface AiSummary { workOrderId: string; text: string; usageId: string | null }
+export interface SimilarRequest { id: string; number: string; title: string; status: string; requestedAt: string; sharedWords: number }
+export interface AiUsage { usedToday: number; dailyLimit: number; last30Days: { feature: 'Triage' | 'Summary'; ok: number; failed: number; inputTokens: number; outputTokens: number; accepted: number; dismissed: number }[] }
 
 export interface RepeatProblem { assetId: string; assetCode: string | null; assetName: string | null; count: number; emergencies: number; firstAt: string; lastAt: string; lastTitle: string; averageDaysBetween: number | null }
 

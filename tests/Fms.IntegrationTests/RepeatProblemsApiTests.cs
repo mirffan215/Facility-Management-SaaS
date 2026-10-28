@@ -85,4 +85,31 @@ public sealed class RepeatProblemsApiTests : IDisposable
         Assert.Single(await ReadAsync<List<RepeatProblemDto>>(await a.Manager.GetAsync("/api/v1/work-orders/repeat-problems")));
         Assert.Empty(await ReadAsync<List<RepeatProblemDto>>(await b.Manager.GetAsync("/api/v1/work-orders/repeat-problems")));
     }
+
+    [Fact]
+    public async Task Similar_open_requests_about_the_same_asset_are_suggested_by_shared_words_and_only_to_people_who_read_work_orders()
+    {
+        var rig = await NewRigAsync();
+        var other = await NewRigAsync();
+        var chiller = await NewAssetAsync(rig, "Chiller 1");
+        var pump = await NewAssetAsync(rig, "Pump 1");
+        await RequestAsync(rig, chiller, "Chiller not cooling in the east wing");
+        await RequestAsync(rig, chiller, "Replace filter");
+        await RequestAsync(rig, pump, "Chiller not cooling"); // the same words, a different asset
+
+        string Url(string title, object? asset = null, object? place = null) => $"/api/v1/work-orders/similar?title={Uri.EscapeDataString(title)}" + (asset is null ? "" : $"&assetId={asset}") + (place is null ? "" : $"&locationId={place}");
+        var found = await ReadAsync<List<SimilarRequestDto>>(await rig.Manager.GetAsync(Url("Chiller is not cooling", chiller.Id)));
+        var one = Assert.Single(found);
+        Assert.Equal("Chiller not cooling in the east wing", one.Title);
+        Assert.True(one.SharedWords >= 2);
+
+        Assert.Empty(await ReadAsync<List<SimilarRequestDto>>(await rig.Manager.GetAsync(Url("Broken window", chiller.Id))));
+        Assert.Empty(await ReadAsync<List<SimilarRequestDto>>(await rig.Manager.GetAsync(Url("the and of", chiller.Id)))); // no meaningful words
+        Assert.Empty(await ReadAsync<List<SimilarRequestDto>>(await rig.Manager.GetAsync(Url("Chiller not cooling")))); // no place, no asset
+        Assert.Equal(2, (await ReadAsync<List<SimilarRequestDto>>(await rig.Manager.GetAsync(Url("Chiller not cooling", place: rig.Site.Id)))).Count); // by place when there is no asset
+
+        Assert.Equal(HttpStatusCode.OK, (await rig.Viewer.GetAsync(Url("Chiller not cooling", chiller.Id))).StatusCode);
+        Assert.Empty(await ReadAsync<List<SimilarRequestDto>>(await other.Manager.GetAsync(Url("Chiller not cooling", chiller.Id)))); // nothing of another organisation
+        Assert.Equal(HttpStatusCode.Forbidden, (await _api.GuestClient().GetAsync(Url("Chiller", chiller.Id))).StatusCode);
+    }
 }

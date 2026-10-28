@@ -194,3 +194,22 @@ public sealed class RepeatMathTests
         Assert.Null(Fms.Work.Services.RepeatMath.AverageDaysBetween(first, first, 1));
     }
 }
+
+public sealed class SimilarMathTests
+{
+    [Fact]
+    public void Meaningful_words_are_kept_and_filler_and_short_words_dropped()
+    {
+        Assert.Equal(new[] { "chiller", "leaking", "roof" }.Order(), Fms.Work.Services.SimilarMath.Words("The Chiller is leaking, roof! 12").Order());
+        Assert.Empty(Fms.Work.Services.SimilarMath.Words("and the of it"));
+        Assert.Empty(Fms.Work.Services.SimilarMath.Words(null));
+    }
+
+    [Theory]
+    [InlineData("Water leaking from ceiling", "Ceiling leaking again in corridor", 2)]
+    [InlineData("Door closer loose", "Broken window", 0)]
+    [InlineData("تسرب مياه من السقف", "السقف يتسرب منه الماء", 1)]
+    [InlineData("AC not cooling", "ac NOT cooling in room 4", 1)] // "ac" is too short and "not" is filler
+    public void Shared_words_are_counted_ignoring_case(string a, string b, int expected) =>
+        Assert.Equal(expected, Fms.Work.Services.SimilarMath.SharedWords(a, b));
+}

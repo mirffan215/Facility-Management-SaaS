@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useAssetChoices, useLocationTree, usePermissions, useWorkCategories } from '../api/hooks';
+import { useAssetChoices, useLocationTree, usePermissions, useSimilarRequests, useWorkCategories } from '../api/hooks';
 import type { WorkOrder, WorkOrderType, WorkPriority } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { ErrorBanner, Field, useEnumLabel } from '../components/ui';
@@ -41,6 +41,7 @@ export function WorkOrderCreatePage() {
   const choices = useAssetChoices(assetSearch, tag && !assetId ? tag : '');
   const places = useMemo(() => flatten(buildTree(tree.data ?? [])), [tree.data]);
   const dispatcher = can('workorders.assign') || can('workorders.manage');
+  const similar = useSimilarRequests({ locationId, assetId, title });
 
   // A scanned label resolves to exactly one asset: select it and take its place.
   useEffect(() => {
@@ -93,6 +94,16 @@ export function WorkOrderCreatePage() {
         <Field label={t('work.titleField')} error={first('title')} required hint={t('work.titleHint')}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus />
         </Field>
+        {similar.data && similar.data.length > 0 ? (
+          <div className="banner" role="group" aria-label={t('work.similar.title')}>
+            <strong>{t('work.similar.title')}</strong> <span className="muted">{t('work.similar.help')}</span>
+            <ul className="plain">
+              {similar.data.map((r) => (
+                <li key={r.id}><Link to={`/work-orders/${r.id}`}><bdi>{r.number}</bdi> · <bdi>{r.title}</bdi></Link></li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <Field label={t('work.description')} error={first('description')}>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={4000} />
         </Field>

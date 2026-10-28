@@ -119,6 +119,7 @@ public static class WorkEndpoints
         categories.MapPost("/{id:guid}/restore", async (Guid id, RowVersionRequest r, WorkSetupService s, CancellationToken ct) => (await s.SetArchivedAsync(id, false, r.RowVersion, ct)).ToHttp())
             .RequirePermission(Permissions.WorkOrdersManage);
 
+        g.MapGet("/similar", async (SimilarRequestService s, Guid? locationId, Guid? assetId, string? title, CancellationToken ct) => Results.Ok(await s.FindAsync(locationId, assetId, title, ct))).RequirePermission(Permissions.WorkOrdersRead);
         g.MapGet("/repeat-problems", async (RepeatProblemService s, int? days, int? minimum, CancellationToken ct) => Results.Ok(await s.ListAsync(days, minimum, ct))).RequireAnyPermission(Permissions.WorkOrdersManage, Permissions.WorkOrdersAssign);
         g.MapGet("/{id:guid}", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.GetAsync(id, ct)).ToHttp()).RequireAnyPermission(Everyone);
         g.MapPost("", async (CreateWorkOrderRequest r, WorkOrderService s, CancellationToken ct) =>

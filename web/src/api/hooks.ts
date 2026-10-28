@@ -4,7 +4,7 @@ import type {
   AuditEntry,
   AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
   ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
-  AiSettings, AiStatus, AiUsage, RepeatProblem, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
+  AiSettings, AiStatus, AiUsage, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -580,4 +580,17 @@ export function useRepeatProblems(enabled: boolean) {
 export function useLeaseDocuments(id: string | null) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['leases', 'documents', id], enabled: !!id, queryFn: () => api.get<LeaseDocument[]>(`/leases/${id}/documents`) });
+}
+
+export function useSimilarRequests(params: { locationId: string; assetId: string | null; title: string }) {
+  const { api } = useAuth();
+  const { can } = usePermissions();
+  const title = params.title.trim();
+  const enabled = can('workorders.read') && title.length >= 5 && (!!params.locationId || !!params.assetId);
+  return useQuery({
+    queryKey: ['work-orders', 'similar', params.locationId, params.assetId, title],
+    enabled,
+    staleTime: 30_000,
+    queryFn: () => api.get<SimilarRequest[]>('/work-orders/similar', { title, locationId: params.locationId || undefined, assetId: params.assetId ?? undefined }),
+  });
 }

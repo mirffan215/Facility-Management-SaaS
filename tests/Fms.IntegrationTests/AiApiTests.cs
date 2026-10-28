@@ -295,4 +295,49 @@ public sealed class AiApiTests : IDisposable
         await using var raw = _sql.Ai(b.Tenant);
         Assert.Equal(1, await raw.Usage.IgnoreQueryFilters().CountAsync());
     }
+
+    [Fact]
+    public async Task The_person_who_asked_can_say_once_whether_they_used_a_suggestion_and_the_counts_show_it()
+    {
+        var rig = await NewRigAsync();
+        await TurnOnAsync(rig.Admin);
+        _model.Respond = _ => new AiResult(true, $"{{\"categoryCode\":\"{rig.PlumbingCode}\",\"priority\":\"High\",\"confidence\":0.9,\"reason\":\"x\"}}", 10, 5, null);
+        var used = await ReadAsync<TriageSuggestionDto>(await Triage(rig.Technician));
+        var ignored = await ReadAsync<TriageSuggestionDto>(await Triage(rig.Technician));
+        Assert.NotNull(used.UsageId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(rig.Technician, "/api/v1/ai/feedback", new { accepted = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(rig.Technician, "/api/v1/ai/feedback", new { usageId = used.UsageId })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(rig.Manager, "/api/v1/ai/feedback", new { usageId = used.UsageId, accepted = true })).StatusCode); // not theirs
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(rig.Technician, "/api/v1/ai/feedback", new { usageId = Guid.NewGuid(), accepted = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Viewer, "/api/v1/ai/feedback", new { usageId = used.UsageId, accepted = true })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PostAsync(rig.Technician, "/api/v1/ai/feedback", new { usageId = used.UsageId, accepted = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await PostAsync(rig.Technician, "/api/v1/ai/feedback", new { usageId = used.UsageId, accepted = false })).StatusCode); // once
+        Assert.Equal(HttpStatusCode.NoContent, (await PostAsync(rig.Technician, "/api/v1/ai/feedback", new { usageId = ignored.UsageId, accepted = false })).StatusCode);
+
+        var line = Assert.Single((await ReadAsync<UsageDto>(await rig.Admin.GetAsync("/api/v1/ai/usage"))).Last30Days);
+        Assert.Equal((2, 1, 1), (line.Ok, line.Accepted, line.Dismissed));
+
+        await using var db = _sql.Ai(rig.Tenant);
+        var ex = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlRawAsync("UPDATE ai.Feedback SET Accepted = 1 - Accepted"));
+        Assert.Contains("append-only", ex.Message);
+    }
+
+    [Fact]
+    public async Task A_call_that_failed_cannot_be_answered_and_another_organisation_cannot_answer_for_it()
+    {
+        var a = await NewRigAsync();
+        var b = await NewRigAsync();
+        await TurnOnAsync(a.Admin);
+        _model.Respond = _ => new AiResult(true, $"{{\"categoryCode\":\"{a.PlumbingCode}\",\"priority\":\"Low\",\"confidence\":0.5,\"reason\":\"x\"}}", 1, 1, null);
+        var s = await ReadAsync<TriageSuggestionDto>(await Triage(a.Technician));
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(b.Technician, "/api/v1/ai/feedback", new { usageId = s.UsageId, accepted = true })).StatusCode);
+
+        _model.Respond = _ => new AiResult(false, null, 0, 0, "down");
+        Assert.Equal(HttpStatusCode.Conflict, (await Triage(a.Technician)).StatusCode);
+        await using var db = _sql.Ai(a.Tenant);
+        var failed = await db.Usage.Where(u => u.Outcome == Fms.Ai.Domain.AiOutcome.Failed).Select(u => u.Id).SingleAsync();
+        Assert.Equal(HttpStatusCode.Conflict, (await PostAsync(a.Technician, "/api/v1/ai/feedback", new { usageId = failed, accepted = true })).StatusCode);
+    }
 }
