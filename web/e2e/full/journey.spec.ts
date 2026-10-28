@@ -1755,7 +1755,7 @@ test('energy: a meter gets readings by hand and from a file, a device posts with
   await page.getByLabel('Price per unit').fill('0.5');
   await page.getByLabel('Applies from').fill(stamp(10).slice(0, 10));
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText(/0\.5000 SAR/)).toBeVisible();
+  await expect(page.getByText(/0\.5 SAR/)).toBeVisible();
 
   // A device with its own secret.
   await page.getByRole('tab', { name: 'Devices' }).click();
