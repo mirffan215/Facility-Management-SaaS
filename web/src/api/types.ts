@@ -1637,3 +1637,9 @@ export interface Lease {
 export interface LeaseInstallment { number: number; dueOn: string; periodEnd: string; amount: number; escalationStep: number; isRentFree: boolean; isPartial: boolean }
 export interface LeaseSchedule { leaseId: string; currencyCode: string; total: number; installments: LeaseInstallment[] }
 export interface LeaseTotals { active: number; draft: number; expired: number; expiringSoon: number; deadlinesSoon: number; rent: { kind: LeaseKind; currencyCode: string; nextTwelveMonths: number }[] }
+
+export interface AiStatus { available: boolean; enabled: boolean; triage: boolean; summary: boolean; dailyLimit: number; usedToday: number }
+export interface AiSettings { available: boolean; enabled: boolean; triageEnabled: boolean; summaryEnabled: boolean; dailyLimit: number; rowVersion: string | null }
+export interface AiTriageSuggestion { categoryId: string | null; categoryCode: string | null; categoryName: string | null; priority: WorkPriority | null; confidence: number; reason: string }
+export interface AiSummary { workOrderId: string; text: string }
+export interface AiUsage { usedToday: number; dailyLimit: number; last30Days: { feature: 'Triage' | 'Summary'; ok: number; failed: number; inputTokens: number; outputTokens: number }[] }

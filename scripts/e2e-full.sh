@@ -48,6 +48,7 @@ Deployment__Mode=OnPrem Deployment__SingleTenantId=$TENANT Deployment__LocalStor
 Authentication__AllowInsecureAuthority=true Authentication__Providers__0__Name=fake Authentication__Providers__0__Authority=http://localhost:9099 \
 Authentication__Providers__0__Audience=api://fms Authentication__Providers__0__ClientId=fms-web Authentication__Providers__0__Scope="openid profile email offline_access" \
 License__Path="$LICENSE_DIR/fms.license" Facilities__PublicBaseUrl=http://localhost:5173 Erp__AllowFakeAdapter=true Calendar__AllowFakeAdapter=true \
+Ai__Provider=Claude Ai__ApiKey=e2e-ai-key Ai__Endpoint=http://localhost:9099 \
   dotnet src/Host/Fms.Api/bin/Debug/net10.0/Fms.Api.dll > "$LOGS/api.log" 2>&1 & PIDS+=($!)
 
 # The worker delivers notifications (outbox) and watches SLA clocks.

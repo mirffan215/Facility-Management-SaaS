@@ -9,6 +9,7 @@ const AUDIENCE = process.env.IDP_AUDIENCE ?? 'api://fms';
 const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'k1', use: 'sig', alg: 'RS256' };
 
+let lastAiPrompt = '';
 let currentUser = { sub: 'e2e-admin', name: 'E2E Admin', email: 'admin@example.test' };
 const codes = new Map();
 const refreshTokens = new Map();
@@ -98,6 +99,19 @@ http
       }
       case '/__token':
         return send(res, 200, { token: accessToken({ sub: url.searchParams.get('sub') ?? 'e2e-admin', name: 'Test', email: 'test@example.test' }) });
+      // ---- a stand-in AI service (the Messages API) so the browser test can exercise the AI suggestions without a key or a network ----
+      case '/v1/messages': {
+        if (req.headers['x-api-key'] !== 'e2e-ai-key') return send(res, 401, { error: 'bad key' });
+        const body = JSON.parse(await readBody(req));
+        const user = body.messages?.[0]?.content ?? '';
+        lastAiPrompt = user;
+        const text = String(body.system).includes('file maintenance requests')
+          ? JSON.stringify({ categoryCode: (/Categories:\n([^:\n]+):/.exec(user) ?? [])[1] ?? null, priority: 'High', confidence: 0.8, reason: 'Looks like a leak.' })
+          : 'The work order is open and being looked at. Nothing looks stuck.';
+        return send(res, 200, { content: [{ type: 'text', text }], usage: { input_tokens: 50, output_tokens: 20 } });
+      }
+      case '/__ai':
+        return send(res, 200, { prompt: lastAiPrompt });
       case '/__ttl':
         ttl = Number(url.searchParams.get('seconds') ?? 3600);
         return send(res, 200, { ttl });

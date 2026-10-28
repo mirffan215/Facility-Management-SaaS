@@ -1762,7 +1762,9 @@
     "audit": "Audit trail",
     "auditHint": "Search and export the record of changes.",
     "license": "License",
-    "licenseHint": "Modules, user limit and expiry."
+    "licenseHint": "Modules, user limit and expiry.",
+    "ai": "AI assistance",
+    "aiHint": "Switch suggestions on or off, set the daily limit, see use."
   },
   "license": {
     "title": "License",
@@ -1813,7 +1815,8 @@
       "compliance": "Compliance and permits",
       "energy": "Energy and utilities",
       "projects": "Projects",
-      "leases": "Leases"
+      "leases": "Leases",
+      "ai": "AI assistance"
     },
     "renewTitle": "Renewing",
     "renewHelp": "Replace the license file on the server (or update the secret it is mounted from). It is picked up within a minute, without a restart."
@@ -2277,5 +2280,42 @@
     "scheduleNote": "This is what the lease terms say is due. Invoices, payments and accounting are not handled here.",
     "daysAway": "{{count}} days",
     "months": "{{count}} months"
+  },
+  "aiFeature": {
+    "Triage": "Request suggestions",
+    "Summary": "Work order summaries"
+  },
+  "ai": {
+    "title": "AI assistance",
+    "intro": "Optional suggestions for people to read and decide on. AI never changes anything by itself.",
+    "on": "On",
+    "off": "Off",
+    "notSetUp": "Not set up",
+    "notSetUpHelp": "Whoever runs this installation has not connected an AI service, so AI cannot be turned on. Nothing is sent anywhere.",
+    "switches": "What is offered",
+    "enable": "Turn AI suggestions on for my organisation",
+    "enableTriage": "Suggest a category and priority when a request is written",
+    "enableSummary": "Offer a summary of a work order",
+    "dailyLimit": "Daily limit",
+    "dailyLimitHint": "The most suggestions the whole organisation can ask for in a day (0 to 5000).",
+    "whatIsSent": "What is sent",
+    "whatIsSentText": "Only the words of the request or work order being looked at, with e-mail addresses, web addresses and long numbers removed. No names of people, no attachments, no other records. The words are not kept by this product; only the number of calls and tokens is recorded. Your organisation’s data is not used to train a model by this product.",
+    "usage": "Use in the last 30 days",
+    "usedToday": "Used today: {{used}} of {{limit}}",
+    "noUsage": "Nothing has been used yet.",
+    "feature": "Suggestion",
+    "ok": "Answered",
+    "failed": "Failed",
+    "tokens": "Tokens",
+    "triageTitle": "AI suggestion for category and priority",
+    "suggest": "Suggest category and priority",
+    "suggestHint": "Uses the title and details above.",
+    "suggested": "Suggested",
+    "use": "Use this",
+    "dismiss": "Dismiss",
+    "checkIt": "Written by AI. Check it before you rely on it.",
+    "summaryTitle": "AI summary of this work order",
+    "summarise": "Summarise with AI",
+    "saved": "Saved."
   }
 }

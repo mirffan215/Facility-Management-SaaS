@@ -8,6 +8,7 @@ import type { WorkOrder, WorkOrderType, WorkPriority } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { ErrorBanner, Field, useEnumLabel } from '../components/ui';
 import { breadcrumb, buildTree, flatten } from '../lib/locations';
+import { TriageSuggest } from '../components/AiAssist';
 import { usePrefs } from '../lib/prefs';
 import { PRIORITIES } from './WorkOrders';
 
@@ -95,6 +96,14 @@ export function WorkOrderCreatePage() {
         <Field label={t('work.description')} error={first('description')}>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={4000} />
         </Field>
+        <TriageSuggest
+          title={title}
+          description={description}
+          onApply={(s) => {
+            if (s.categoryId) setCategoryId(s.categoryId);
+            if (s.priority) setPriority(s.priority);
+          }}
+        />
 
         {assetId ? (
           <p>

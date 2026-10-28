@@ -4,7 +4,7 @@ import type {
   AuditEntry,
   AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
   ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
-  LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseSchedule, LeaseSummary, LeaseTotals,
+  AiSettings, AiStatus, AiUsage, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -553,4 +553,21 @@ export function useLease(id: string | null) {
 export function useLeaseSchedule(id: string | null) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['leases', 'schedule', id], enabled: !!id, queryFn: () => api.get<LeaseSchedule>(`/leases/${id}/schedule`) });
+}
+
+/** Whether AI suggestions are offered to this person. Quiet when they have no right to ask: the answer is then simply "off". */
+export function useAiStatus() {
+  const { api } = useAuth();
+  const { can } = usePermissions();
+  return useQuery({ queryKey: ['ai', 'status'], enabled: can('ai.use') || can('ai.manage'), queryFn: () => api.get<AiStatus>('/ai/status'), staleTime: 60_000 });
+}
+
+export function useAiSettings() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['ai', 'settings'], queryFn: () => api.get<AiSettings>('/ai/settings') });
+}
+
+export function useAiUsage() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['ai', 'usage'], queryFn: () => api.get<AiUsage>('/ai/usage') });
 }

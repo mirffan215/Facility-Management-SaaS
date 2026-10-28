@@ -169,3 +169,5 @@ tr.voided td:last-child, tr.voided td .badge { text-decoration: none; }
 .facts dd { margin: 0; }
 .chip { display: inline-flex; align-items: center; gap: 0.2rem; border: 1px solid var(--border); border-radius: 1rem; padding: 0 0.5rem; margin-inline-end: 0.3rem; }
 .card .value { display: block; }
+
+.ai-box { margin: 0.5rem 0 1rem; padding: 0.5rem 0.75rem; border: 1px dashed var(--border, #b8b8b8); border-radius: 6px; }

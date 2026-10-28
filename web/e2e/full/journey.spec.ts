@@ -1939,6 +1939,66 @@ test('leases: a draft lease is activated, its rent schedule rises on schedule, t
   await page.locator('.prefs select').first().selectOption('en');
 });
 
+test('ai: off until an administrator turns it on, then suggestions are checked, cleaned of personal details and left for the person to accept', async () => {
+  const code = `AI${SUFFIX}`.slice(0, 20);
+  expect((await api('/work-orders/categories', { method: 'POST', body: JSON.stringify({ code, name: 'Plumbing AI' }) })).status).toBe(201);
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+
+  // Off by default: no button on the request form, and the API refuses.
+  expect((await api('/ai/triage', { method: 'POST', body: JSON.stringify({ title: 'Leak' }) })).status).toBe(409);
+  await page.goto('/work-orders/new');
+  await expect(page.getByLabel('Title', { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Suggest category and priority' })).toHaveCount(0);
+
+  await page.goto('/admin/ai');
+  await expect(page.getByRole('heading', { name: 'AI assistance' })).toBeVisible();
+  await expect(page.getByRole('status').first()).toContainText('Off');
+  await expectNoSeriousA11yIssues('ai settings off en');
+  await page.getByLabel('Turn AI suggestions on for my organisation').check();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('status').first()).toContainText('On');
+
+  // The request form now offers a suggestion; nothing is applied until the person says so.
+  await page.goto('/work-orders/new');
+  await page.getByLabel('Title', { exact: false }).first().fill('Water leaking from ceiling, call 0551234567 or mail omar@example.com');
+  await page.getByRole('button', { name: 'Suggest category and priority' }).click();
+  const box = page.getByRole('group', { name: 'AI suggestion for category and priority' });
+  await expect(box.getByText('Suggested')).toBeVisible();
+  await expect(box.getByText('Written by AI. Check it before you rely on it.')).toBeVisible();
+  await expect(page.getByLabel('Priority', { exact: true })).toHaveValue('');
+  await shot('47-ai');
+  await expectNoSeriousA11yIssues('ai suggestion en');
+  await box.getByRole('button', { name: 'Use this' }).click();
+  await expect(page.getByLabel('Priority', { exact: true })).toHaveValue('High');
+  const seen = (await (await fetch('http://localhost:9099/__ai')).json()) as { prompt: string };
+  expect(seen.prompt).toContain('Water leaking from ceiling');
+  expect(seen.prompt).not.toContain('0551234567');
+  expect(seen.prompt).not.toContain('omar@example.com');
+
+  // A summary on a work order.
+  const wo = (await (await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'AI summary job', type: 'Emergency', locationId: site.id }) })).json()) as { id: string };
+  await page.goto(`/work-orders/${wo.id}`);
+  await page.getByRole('button', { name: 'Summarise with AI' }).click();
+  await expect(page.getByText('Nothing looks stuck.')).toBeVisible();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/admin/ai');
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectNoSeriousA11yIssues(`ai settings ${lang}`);
+    await page.goto('/work-orders/new');
+    await expectNoSeriousA11yIssues(`ai request form ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+
+  // Switch it off again: the API refuses once more.
+  await page.goto('/admin/ai');
+  await page.getByLabel('Turn AI suggestions on for my organisation').uncheck();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('status').first()).toContainText('Off');
+  expect((await api('/ai/triage', { method: 'POST', body: JSON.stringify({ title: 'Leak' }) })).status).toBe(409);
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

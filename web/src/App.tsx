@@ -15,6 +15,7 @@ import { SetupPage } from './pages/Setup';
 import { AdminPage } from './pages/Admin';
 import { AuditPage } from './pages/Audit';
 import { CompliancePage } from './pages/Compliance';
+import { AiSettingsPage } from './pages/AiSettings';
 import { LeasesPage } from './pages/Leases';
 import { ProjectsPage } from './pages/Projects';
 import { EnergyPage } from './pages/Energy';
@@ -159,6 +160,7 @@ export function App() {
         <Route path="admin" element={<AdminPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="admin/license" element={<LicensePage />} />
+        <Route path="admin/ai" element={<AiSettingsPage />} />
         <Route path="a/:tag" element={<ScanRedirectPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

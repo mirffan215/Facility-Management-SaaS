@@ -12,6 +12,7 @@ import { PRIORITIES, priorityTone, slaTone, workStatusTone } from './WorkOrders'
 import { ChecklistTab, CostsTab, FilesTab, SignaturesTab } from './WorkOrderEvidence';
 import { PartsTab } from './WorkParts';
 import { VendorRows } from './WorkVendor';
+import { SummaryPanel } from '../components/AiAssist';
 
 const CLOSURE_CODES: ClosureCode[] = ['Fixed', 'NoFaultFound', 'TemporaryFix', 'PartsRequired', 'Duplicate', 'NotRequired'];
 
@@ -68,6 +69,8 @@ export function WorkOrderDetailPage() {
                 ))}
               </div>
             </header>
+
+            <SummaryPanel workOrderId={o.id} />
 
             {o.sla.state !== 'None' ? (
               <div className="banner" role="group" aria-label={t('work.sla')}>

@@ -13,6 +13,7 @@ export const ADMIN_ENTRIES: Entry[] = [
   { key: 'accounting', to: '/integrations', any: ['integration.read'] },
   { key: 'visitors', to: '/visitors', any: ['visitors.security'] },
   { key: 'audit', to: '/audit', any: ['audit.read'] },
+  { key: 'ai', to: '/admin/ai', any: ['ai.manage'] },
   { key: 'license', to: '/admin/license', any: ['license.read'] },
 ];
 
