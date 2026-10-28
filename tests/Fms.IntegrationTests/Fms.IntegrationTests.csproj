@@ -43,4 +43,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\Leases\Fms.Leases\Fms.Leases.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Ai\Fms.Ai\Fms.Ai.csproj" />
+  </ItemGroup>
 </Project>

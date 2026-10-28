@@ -8,6 +8,7 @@ using Fms.Purchasing.Persistence;
 using Fms.Bookings.Persistence;
 using Fms.Reporting.Persistence;
 using Fms.Visitors.Persistence;
+using Fms.Ai.Persistence;
 using Fms.Leases.Persistence;
 using Fms.Projects.Persistence;
 using Fms.Energy.Persistence;
@@ -69,6 +70,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var spacesOwner = SpacesContext(OwnerConnectionString, null, platform: true)) await spacesOwner.Database.MigrateAsync();
             await using (var purchasingOwner = PurchasingContext(OwnerConnectionString, null, platform: true)) await purchasingOwner.Database.MigrateAsync();
             await using (var integrationOwner = IntegrationContext(OwnerConnectionString, null, platform: true)) await integrationOwner.Database.MigrateAsync();
+            await using (var aiOwner = AiContext(OwnerConnectionString, null, platform: true)) await aiOwner.Database.MigrateAsync();
             await using (var leasesOwner = LeasesContext(OwnerConnectionString, null, platform: true)) await leasesOwner.Database.MigrateAsync();
             await using (var projectsOwner = ProjectsContext(OwnerConnectionString, null, platform: true)) await projectsOwner.Database.MigrateAsync();
             await using (var energyOwner = EnergyContext(OwnerConnectionString, null, platform: true)) await energyOwner.Database.MigrateAsync();
@@ -189,6 +191,15 @@ public sealed class SqlServerFixture : IAsyncLifetime
         return db;
     }
 
+    /// <summary>A Ai context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public AiDbContext Ai(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = AiContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
     /// <summary>A Visitors context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
     public VisitorsDbContext Visitors(Guid? tenantId, bool platform = false)
     {
@@ -304,6 +315,16 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
     }
 
+    private static AiDbContext AiContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new AiDbContext(
+            new DbContextOptionsBuilder<AiDbContext>().UseSqlServer(connectionString, AiDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
+    }
+
     private static VisitorsDbContext VisitorsContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
     {
         var tenant = new TenantContext();
@@ -409,6 +430,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var spacesOwned = SpacesContext(owner, null, platform: true)) await spacesOwned.Database.MigrateAsync();
             await using (var purchasingOwned = PurchasingContext(owner, null, platform: true)) await purchasingOwned.Database.MigrateAsync();
             await using (var integrationOwned = IntegrationContext(owner, null, platform: true)) await integrationOwned.Database.MigrateAsync();
+            await using (var aiOwned = AiContext(owner, null, platform: true)) await aiOwned.Database.MigrateAsync();
             await using (var leasesOwned = LeasesContext(owner, null, platform: true)) await leasesOwned.Database.MigrateAsync();
             await using (var projectsOwned = ProjectsContext(owner, null, platform: true)) await projectsOwned.Database.MigrateAsync();
             await using (var energyOwned = EnergyContext(owner, null, platform: true)) await energyOwned.Database.MigrateAsync();

@@ -153,6 +153,12 @@ public static class Permissions
     /// <summary>Create and change leases: terms, activation, extension and termination.</summary>
     public const string LeasesManage = "leases.manage";
 
+    /// <summary>Ask for AI suggestions (a category and priority for a request, a summary of a work order). Suggestions only; a person decides.</summary>
+    public const string AiUse = "ai.use";
+
+    /// <summary>Switch AI on or off for the organisation, choose which suggestions are offered, set the daily limit and see how much is used.</summary>
+    public const string AiManage = "ai.manage";
+
     /// <summary>See the installation's license: modules, user limit, expiry.</summary>
     public const string LicenseRead = "license.read";
 
@@ -176,7 +182,7 @@ public static class Permissions
         ReportsRead, ReportsManage,
         ComplianceRead, ComplianceManage, PermitsRead, PermitsRequest, PermitsApprove, PermitsIssue, PermitsWork,
         EnergyRead, EnergyRecord, EnergyManage,
-        ProjectsRead, ProjectsManage, LeasesRead, LeasesManage,
+        ProjectsRead, ProjectsManage, LeasesRead, LeasesManage, AiUse, AiManage,
         LicenseRead,
         PortalUse,
     ];

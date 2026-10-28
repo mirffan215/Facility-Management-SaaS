@@ -42,6 +42,7 @@ public static class SystemRoles
             Permissions.PermitsRead, Permissions.PermitsRequest, Permissions.PermitsApprove, Permissions.PermitsIssue, Permissions.PermitsWork,
             Permissions.EnergyRead, Permissions.EnergyRecord, Permissions.EnergyManage,
             Permissions.ProjectsRead, Permissions.ProjectsManage, Permissions.LeasesRead, Permissions.LeasesManage,
+            Permissions.AiUse, Permissions.AiManage,
         ],
         [Technician] =
         [
@@ -50,7 +51,7 @@ public static class SystemRoles
             Permissions.InventoryRead, Permissions.InventoryIssue, Permissions.PurchasingRequest,
             Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost,
             Permissions.ComplianceRead, Permissions.PermitsRead, Permissions.PermitsRequest, Permissions.PermitsWork,
-            Permissions.EnergyRead, Permissions.EnergyRecord,
+            Permissions.EnergyRead, Permissions.EnergyRecord, Permissions.AiUse,
         ],
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest, Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost],
         [Reception] = [Permissions.LocationsRead, Permissions.UsersRead, Permissions.VisitorsReception, Permissions.VisitorsHost, Permissions.BookingsRead, Permissions.BookingsBook],

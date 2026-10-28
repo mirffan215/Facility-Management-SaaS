@@ -8,6 +8,7 @@ using Fms.Purchasing.Persistence;
 using Fms.Bookings.Persistence;
 using Fms.Reporting.Persistence;
 using Fms.Visitors.Persistence;
+using Fms.Ai.Persistence;
 using Fms.Leases.Persistence;
 using Fms.Projects.Persistence;
 using Fms.Energy.Persistence;
@@ -77,6 +78,10 @@ await using var integrationDb = new IntegrationDbContext(
     new DbContextOptionsBuilder<IntegrationDbContext>().UseSqlServer(migratorConnection, IntegrationDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 contexts.Add(("Integration", integrationDb));
+await using var aiDb = new AiDbContext(
+    new DbContextOptionsBuilder<AiDbContext>().UseSqlServer(migratorConnection, AiDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+contexts.Add(("Ai", aiDb));
 await using var leasesDb = new LeasesDbContext(
     new DbContextOptionsBuilder<LeasesDbContext>().UseSqlServer(migratorConnection, LeasesDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);

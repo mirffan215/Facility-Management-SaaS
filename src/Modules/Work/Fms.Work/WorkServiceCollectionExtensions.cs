@@ -25,6 +25,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<OfflineJobsService>();
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkOrderLookup, WorkOrderLookup>();
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkCostLookup, WorkCostLookup>();
+        services.AddScoped<Fms.BuildingBlocks.Identity.IWorkAiSource, WorkAiSource>();
         services.AddScoped<PmEngine>();
         services.AddScoped<PmService>();
         services.AddSingleton<PmGenerator>();

@@ -138,6 +138,7 @@ public sealed class LicenseTests : IDisposable
     [InlineData("/api/v1/permits/mine", "compliance")]
     [InlineData("/api/v1/projects/abc/costs", "projects")]
     [InlineData("/api/v1/leases/abc/schedule", "leases")]
+    [InlineData("/api/v1/ai/triage", "ai")]
     [InlineData("/api/v1/odata/WorkOrders", "reporting")]
     [InlineData("/API/V1/Reports/dashboard", "reporting")]
     public void Paths_map_to_their_module(string path, string module) => Assert.Equal(module, LicenseModules.For(path));
@@ -158,7 +159,7 @@ public sealed class LicenseTests : IDisposable
         var found = new[]
         {
             "/api/v1/work-orders", "/api/v1/pm", "/api/v1/inventory", "/api/v1/vendors", "/api/v1/purchasing",
-            "/api/v1/spaces", "/api/v1/bookings", "/api/v1/visits", "/api/v1/reports", "/api/v1/compliance", "/api/v1/energy/meters", "/api/v1/projects", "/api/v1/leases",
+            "/api/v1/spaces", "/api/v1/bookings", "/api/v1/visits", "/api/v1/reports", "/api/v1/compliance", "/api/v1/energy/meters", "/api/v1/projects", "/api/v1/leases", "/api/v1/ai/status",
         }.Select(LicenseModules.For).ToHashSet();
         Assert.Equivalent(LicenseModules.All, found);
     }

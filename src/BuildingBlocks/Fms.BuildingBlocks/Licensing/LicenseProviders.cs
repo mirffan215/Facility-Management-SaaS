@@ -174,8 +174,9 @@ public static class LicenseModules
     public const string Energy = "energy";
     public const string Projects = "projects";
     public const string Leases = "leases";
+    public const string Ai = "ai";
 
-    public static readonly IReadOnlyList<string> All = [Work, PreventiveMaintenance, Inventory, Vendors, Purchasing, Spaces, Bookings, Visitors, Reporting, Compliance, Energy, Projects, Leases];
+    public static readonly IReadOnlyList<string> All = [Work, PreventiveMaintenance, Inventory, Vendors, Purchasing, Spaces, Bookings, Visitors, Reporting, Compliance, Energy, Projects, Leases, Ai];
 
     private static readonly (string Prefix, string Module)[] Prefixes =
     [
@@ -191,6 +192,7 @@ public static class LicenseModules
         ("/api/v1/energy", Energy),
         ("/api/v1/projects", Projects),
         ("/api/v1/leases", Leases),
+        ("/api/v1/ai", Ai),
         ("/api/v1/work-orders", Work),
     ];
 
