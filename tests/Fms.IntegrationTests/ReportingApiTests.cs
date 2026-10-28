@@ -66,11 +66,15 @@ public sealed class ReportingApiTests(SqlServerFixture sql) : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, (await _api.GuestClient().GetAsync("/api/v1/reports/dashboard")).StatusCode);
 
         var manager = await DashboardAsync(rig.Manager);
-        Assert.Equal(["work", "facilities", "inventory", "purchasing", "vendors", "spaces", "bookings", "visitors", "compliance"], manager.Groups.Select(g => g.Group).ToArray());
+        var managerGroups = manager.Groups.Select(g => g.Group).ToArray();
+        Assert.Equal(["work", "facilities", "inventory", "purchasing", "vendors", "spaces", "bookings", "visitors"], managerGroups.Take(8).ToArray());
+        Assert.Equivalent(new[] { "compliance", "energy", "projects", "leases" }, managerGroups.Skip(8).ToArray()); // later modules: their order is the order they were registered in
         Assert.All(manager.Groups, g => Assert.False(g.Failed));
 
         var viewer = await DashboardAsync(rig.Viewer);
-        Assert.Equal(["work", "facilities", "inventory", "vendors", "spaces", "bookings"], viewer.Groups.Select(g => g.Group).ToArray()); // no purchasing, no visitors
+        var viewerGroups = viewer.Groups.Select(g => g.Group).ToArray();
+        Assert.Equal(["work", "facilities", "inventory", "vendors", "spaces", "bookings"], viewerGroups.Take(6).ToArray()); // no purchasing, no visitors
+        Assert.Equivalent(new[] { "compliance", "energy", "projects", "leases" }, viewerGroups.Skip(6).ToArray());
     }
 
     [Fact]
