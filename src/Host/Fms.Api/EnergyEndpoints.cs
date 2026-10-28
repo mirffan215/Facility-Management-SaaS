@@ -54,6 +54,7 @@ public static class EnergyEndpoints
         g.MapGet("/alarms/rules", async (AlarmService s, CancellationToken ct) => Results.Ok(await s.RulesAsync(ct))).RequirePermission(Permissions.EnergyRead);
         g.MapPost("/alarms/rules", async (SaveAlarmRuleRequest r, AlarmService s, CancellationToken ct) => (await s.SaveAsync(null, r, ct)).ToHttp(x => Results.Created($"/api/v1/energy/alarms/rules", x))).RequirePermission(Permissions.EnergyManage);
         g.MapPut("/alarms/rules/{id:guid}", async (Guid id, SaveAlarmRuleRequest r, AlarmService s, CancellationToken ct) => (await s.SaveAsync(id, r, ct)).ToHttp()).RequirePermission(Permissions.EnergyManage);
+        g.MapPost("/alarms/events/{id:guid}/work-order", async (Guid id, AlarmService s, CancellationToken ct) => (await s.RaiseWorkOrderAsync(id, ct)).ToHttp()).RequirePermission(Permissions.EnergyManage);
         g.MapGet("/alarms/events", async (AlarmService s, Guid? meterId, int? page, int? pageSize, CancellationToken ct) => Results.Ok(await s.EventsAsync(meterId, page, pageSize, ct))).RequirePermission(Permissions.EnergyRead);
 
         // A device posts here. It has no sign-in: its secret (Authorization: Bearer fmse_... or X-Api-Key) names the organisation and the meters it may report for.

@@ -163,6 +163,9 @@ namespace Fms.Energy.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("CreateWorkOrder")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -196,6 +199,9 @@ namespace Fms.Energy.Persistence.Migrations
                     b.Property<decimal>("Threshold")
                         .HasPrecision(19, 4)
                         .HasColumnType("decimal(19,4)");
+
+                    b.Property<Guid?>("WorkOrderRequesterId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 

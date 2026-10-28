@@ -160,3 +160,21 @@ public static class LeaseMath
 
     public static int TermMonths(Lease l) => (l.EndOn.Year - l.StartOn.Year) * 12 + l.EndOn.Month - l.StartOn.Month;
 }
+
+/// <summary>The signed lease, amendments, notices: files kept with the lease. Removing one needs a reason and keeps the record.</summary>
+public sealed class LeaseDocument : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public Guid LeaseId { get; set; }
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public long SizeBytes { get; set; }
+    public string Sha256 { get; set; } = "";
+    public string StorageKey { get; set; } = "";
+    public DateTimeOffset UploadedAt { get; set; }
+    public Guid? UploadedBy { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+    public Guid? DeletedBy { get; set; }
+    public string? DeleteReason { get; set; }
+}

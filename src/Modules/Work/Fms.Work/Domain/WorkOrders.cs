@@ -59,6 +59,10 @@ public sealed class WorkOrder : ITenantOwned
     public string? ClosureNotes { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
+    /// <summary>Set when the work order was raised because of something in another module (an alarm, a failed inspection): what kind of thing, and which one.</summary>
+    public string? SourceKind { get; set; }
+    public Guid? SourceId { get; set; }
+
     // --- SLA clocks (see SlaRules). Started once, when the work is authorised. ---
     public Guid? SlaPolicyId { get; set; }
     public Guid? SlaCalendarId { get; set; }

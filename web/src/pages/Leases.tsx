@@ -3,12 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useLease, useLeaseSchedule, useLeaseTotals, useLeases, usePermissions } from '../api/hooks';
+import { useLease, useLeaseDocuments, useLeaseSchedule, useLeaseTotals, useLeases, usePermissions } from '../api/hooks';
 import type { DeadlineKind, Lease, LeaseDeadline, LeaseKind, LeaseState, RentFrequency } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Dialog } from '../components/InventoryBits';
 import { LocationSelect } from '../components/LocationSelect';
 import { Badge, ErrorBanner, Field, Pager, QueryState, ReasonDialog, useEnumLabel } from '../components/ui';
+import { downloadBlob } from '../lib/csv';
 import { formatNumber } from '../lib/format';
 import { usePrefs } from '../lib/prefs';
 
@@ -344,6 +345,9 @@ function LeaseView({ id }: { id: string }) {
             </QueryState>
             <p className="muted">{t('leases.scheduleNote')}</p>
 
+            <h2>{t('leases.documents')}</h2>
+            <LeaseDocuments leaseId={l.id} canManage={canManage} />
+
             {editing ? <LeaseForm lease={l} onClose={() => setEditing(false)} /> : null}
             {extending ? <ExtendDialog lease={l} onClose={() => setExtending(false)} /> : null}
             {ending ? <TerminateDialog lease={l} onClose={() => setEnding(false)} /> : null}
@@ -406,5 +410,52 @@ function TerminateDialog({ lease, onClose }: { lease: Lease; onClose: () => void
         </div>
       </form>
     </Dialog>
+  );
+}
+
+function LeaseDocuments({ leaseId, canManage }: { leaseId: string; canManage: boolean }) {
+  const { t } = useTranslation();
+  const { api } = useAuth();
+  const refresh = useRefresh();
+  const docs = useLeaseDocuments(leaseId);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const upload = useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return api.upload(`/leases/${leaseId}/documents`, form);
+    },
+    onSuccess: refresh,
+  });
+  const download = useMutation({
+    mutationFn: async (id: string) => {
+      const { blob, fileName } = await api.blob(`/leases/documents/${id}`);
+      downloadBlob(fileName ?? 'document', blob);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (reason: string) => api.post(`/leases/documents/${removing}/delete`, { reason }),
+    onSuccess: async () => { setRemoving(null); await refresh(); },
+  });
+  return (
+    <QueryState query={docs}>
+      {docs.data && docs.data.length === 0 ? <p className="muted">{t('leases.noDocuments')}</p> : null}
+      <div>
+        {(docs.data ?? []).map((d) => (
+          <span key={d.id} className="chip">
+            <button type="button" className="link" onClick={() => download.mutate(d.id)}><bdi>{d.fileName}</bdi></button>
+            {canManage ? <button type="button" className="link" aria-label={t('leases.removeFile', { name: d.fileName })} onClick={() => setRemoving(d.id)}>×</button> : null}{' '}
+          </span>
+        ))}
+      </div>
+      {canManage ? (
+        <label className="file">
+          <span className="visually-hidden">{t('leases.attach')}</span>
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.xlsx,.txt" disabled={upload.isPending} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); e.target.value = ''; }} />
+        </label>
+      ) : null}
+      <ErrorBanner error={upload.error ?? download.error} />
+      {removing ? <ReasonDialog title={t('leases.removeFileTitle')} label={t('leases.reason')} confirmLabel={t('common.delete')} busy={remove.isPending} error={remove.error} onConfirm={(r) => remove.mutate(r)} onCancel={() => setRemoving(null)} /> : null}
+    </QueryState>
   );
 }

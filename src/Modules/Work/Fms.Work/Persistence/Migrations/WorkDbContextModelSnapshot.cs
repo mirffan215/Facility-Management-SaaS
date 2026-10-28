@@ -778,6 +778,13 @@ namespace Fms.Work.Persistence.Migrations
                     b.Property<DateTimeOffset?>("SlaStartedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SourceKind")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -831,6 +838,10 @@ namespace Fms.Work.Persistence.Migrations
                     b.HasIndex("TenantId", "ResolutionDueAt");
 
                     b.HasIndex("TenantId", "Status");
+
+                    b.HasIndex("TenantId", "SourceKind", "SourceId")
+                        .IsUnique()
+                        .HasFilter("[SourceId] IS NOT NULL");
 
                     b.ToTable("WorkOrders", "work");
                 });

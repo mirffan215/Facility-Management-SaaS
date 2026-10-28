@@ -432,6 +432,72 @@ public sealed class EnergyApiTests(SqlServerFixture sql) : IDisposable
         Assert.Contains((await ReadAsync<Page<NotificationDto>>(await rig.Manager.GetAsync("/api/v1/notifications?pageSize=50"))).Items, n => n.Type == "energy.noreading");
     }
 
+    [Fact]
+    public async Task An_alarm_rule_can_raise_a_work_order_once_for_the_meters_place_and_a_manager_can_raise_one_by_hand_otherwise()
+    {
+        var rig = await NewRigAsync();
+        var auto = await NewMeterAsync(rig.Manager, rig);
+        var hand = await NewMeterAsync(rig.Manager, rig);
+        foreach (var m in new[] { auto, hand })
+        {
+            await Read(rig.Manager, m, Midnight(2), 0);
+            await Read(rig.Manager, m, Midnight(0), 200);
+        }
+
+        var withWork = await ReadAsync<AlarmRuleDto>(await PostAsync(rig.Manager, "/api/v1/energy/alarms/rules", new { meterId = auto.Id, kind = "HighDailyUse", threshold = 50, createWorkOrder = true }));
+        Assert.True(withWork.CreateWorkOrder);
+        var without = await ReadAsync<AlarmRuleDto>(await PostAsync(rig.Manager, "/api/v1/energy/alarms/rules", new { meterId = hand.Id, kind = "HighDailyUse", threshold = 50 }));
+        Assert.False(without.CreateWorkOrder);
+
+        var monitor = new EnergyMonitor(_api.Factory.Services.GetRequiredService<IServiceScopeFactory>(), NullLogger<EnergyMonitor>.Instance);
+        await monitor.RunOnceAsync();
+        await monitor.RunOnceAsync();
+
+        var events = (await ReadAsync<Page<AlarmEventDto>>(await rig.Viewer.GetAsync("/api/v1/energy/alarms/events"))).Items;
+        var autoEvent = events.Single(e => e.MeterId == auto.Id);
+        var handEvent = events.Single(e => e.MeterId == hand.Id);
+        Assert.NotNull(autoEvent.WorkOrderId);
+        Assert.Null(handEvent.WorkOrderId);
+        var wo = (await ReadAsync<Fms.Work.Services.WorkOrderDetailDto>(await rig.Manager.GetAsync($"/api/v1/work-orders/{autoEvent.WorkOrderId}"))).Order;
+        Assert.Contains("high use", wo.Title);
+        Assert.Equal(rig.Site.Id, wo.LocationId);
+
+        // By hand: forbidden for people who do not manage energy; the same work order however many times it is asked for.
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Technician, $"/api/v1/energy/alarms/events/{handEvent.Id}/work-order", new { })).StatusCode);
+        var first = await ReadAsync<Fms.BuildingBlocks.Identity.WorkFromSourceResult>(await PostAsync(rig.Manager, $"/api/v1/energy/alarms/events/{handEvent.Id}/work-order", new { }));
+        var second = await ReadAsync<Fms.BuildingBlocks.Identity.WorkFromSourceResult>(await PostAsync(rig.Manager, $"/api/v1/energy/alarms/events/{handEvent.Id}/work-order", new { }));
+        Assert.True(first.Created);
+        Assert.False(second.Created);
+        Assert.Equal(first.WorkOrderId, second.WorkOrderId);
+        var again = await ReadAsync<Fms.BuildingBlocks.Identity.WorkFromSourceResult>(await PostAsync(rig.Manager, $"/api/v1/energy/alarms/events/{autoEvent.Id}/work-order", new { }));
+        Assert.False(again.Created); // the check had already raised it
+        Assert.Equal(autoEvent.WorkOrderId, again.WorkOrderId);
+
+        var titles = (await ReadAsync<Page<Fms.Work.Services.WorkOrderDto>>(await rig.Manager.GetAsync("/api/v1/work-orders?pageSize=100"))).Items.Select(w => w.Title).ToList();
+        Assert.Equal(2, titles.Count(t => t.StartsWith("Energy alarm", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task A_cleared_alarm_or_another_organisations_alarm_cannot_be_given_a_work_order()
+    {
+        var rig = await NewRigAsync();
+        var other = await NewRigAsync();
+        var m = await NewMeterAsync(rig.Manager, rig);
+        await Read(rig.Manager, m, Midnight(2), 0);
+        await Read(rig.Manager, m, Midnight(0), 200);
+        var rule = await ReadAsync<AlarmRuleDto>(await PostAsync(rig.Manager, "/api/v1/energy/alarms/rules", new { meterId = m.Id, kind = "HighDailyUse", threshold = 50 }));
+        var monitor = new EnergyMonitor(_api.Factory.Services.GetRequiredService<IServiceScopeFactory>(), NullLogger<EnergyMonitor>.Instance);
+        await monitor.RunOnceAsync();
+        var raised = (await ReadAsync<Page<AlarmEventDto>>(await rig.Viewer.GetAsync("/api/v1/energy/alarms/events"))).Items.Single();
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(other.Manager, $"/api/v1/energy/alarms/events/{raised.Id}/work-order", new { })).StatusCode);
+
+        rule = (await ReadAsync<List<AlarmRuleDto>>(await rig.Viewer.GetAsync("/api/v1/energy/alarms/rules"))).Single(); // the check updated it, so its version moved on
+        Assert.Equal(HttpStatusCode.OK, (await PutAsync(rig.Manager, $"/api/v1/energy/alarms/rules/{rule.Id}", new { meterId = m.Id, kind = "HighDailyUse", threshold = 500, rowVersion = rule.RowVersion })).StatusCode);
+        await monitor.RunOnceAsync();
+        var cleared = (await ReadAsync<Page<AlarmEventDto>>(await rig.Viewer.GetAsync("/api/v1/energy/alarms/events"))).Items.Single(e => e.Kind == AlarmEventKind.Cleared);
+        Assert.Equal(HttpStatusCode.Conflict, (await PostAsync(rig.Manager, $"/api/v1/energy/alarms/events/{cleared.Id}/work-order", new { })).StatusCode);
+    }
+
     // ------------------------------------------------------------------ reports
 
     [Fact]

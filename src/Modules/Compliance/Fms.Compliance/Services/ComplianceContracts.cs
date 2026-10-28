@@ -5,10 +5,10 @@ namespace Fms.Compliance.Services;
 public sealed record ObligationDto(
     Guid Id, string Title, ObligationCategory Category, string? Authority, Guid? LocationId, string? LocationName, Guid? AssetId, string? AssetName, int? IntervalMonths, int LeadDays,
     DateOnly? FirstDueOn, DateOnly? DueOn, int? DaysToDue, Guid? OwnerId, string? OwnerName, string? Notes, bool IsArchived, DateOnly? LastCompletedOn, DateOnly? ValidUntil, CompletionResult? LastResult,
-    ComplianceStatus Status, string RowVersion);
+    ComplianceStatus Status, string RowVersion, bool CreateWorkOrderOnFail = false);
 
 public sealed record SaveObligationRequest(
-    string? Title, ObligationCategory? Category, string? Authority, Guid? LocationId, Guid? AssetId, int? IntervalMonths, int? LeadDays, DateOnly? FirstDueOn, Guid? OwnerId, string? Notes, string? RowVersion);
+    string? Title, ObligationCategory? Category, string? Authority, Guid? LocationId, Guid? AssetId, int? IntervalMonths, int? LeadDays, DateOnly? FirstDueOn, Guid? OwnerId, string? Notes, string? RowVersion, bool? CreateWorkOrderOnFail = null);
 
 public sealed record ArchiveObligationRequest(string? RowVersion);
 
@@ -16,7 +16,7 @@ public sealed record RecordCompletionRequest(DateOnly? PerformedOn, DateOnly? Va
 
 public sealed record CompletionDto(
     Guid Id, Guid ObligationId, DateOnly PerformedOn, DateOnly? ValidUntil, CompletionResult Result, string? Reference, string? ProviderName, string? Notes, DateTimeOffset RecordedAt, string? RecordedByName,
-    IReadOnlyList<CompletionDocumentDto> Documents);
+    IReadOnlyList<CompletionDocumentDto> Documents, Guid? WorkOrderId = null, string? WorkOrderNumber = null);
 
 public sealed record CompletionDocumentDto(Guid Id, Guid CompletionId, string FileName, string ContentType, long SizeBytes, string Sha256, DateTimeOffset UploadedAt);
 

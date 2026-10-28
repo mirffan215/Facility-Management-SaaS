@@ -18,6 +18,7 @@ public static class LeasesServiceCollectionExtensions
 
         services.AddScoped<LeaseService>();
         services.AddScoped<LeaseAlerts>();
+        services.AddScoped<LeaseDocumentService>();
         services.AddSingleton<LeaseMonitor>();
         services.AddHealthChecks().AddDbContextCheck<LeasesDbContext>("leases-db", tags: ["ready"]);
         services.AddScoped<Fms.BuildingBlocks.Reporting.IDatasetCatalog>(sp => new Fms.BuildingBlocks.Reporting.DatasetCatalog(LeasesDatasets.All(sp.GetRequiredService<LeasesDbContext>()).ToList()));

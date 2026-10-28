@@ -27,6 +27,10 @@ public sealed record TerminateRequest(DateOnly? On, string? Reason, string? RowV
 
 public sealed record DeleteRequest(string? Reason);
 
+public sealed record LeaseDocumentDto(Guid Id, Guid LeaseId, string FileName, string ContentType, long SizeBytes, string Sha256, DateTimeOffset UploadedAt);
+
+public sealed record DownloadedLeaseDocument(LeaseDocumentDto Document, Stream Content);
+
 public sealed record InstallmentDto(int Number, DateOnly DueOn, DateOnly PeriodEnd, decimal Amount, int EscalationStep, bool IsRentFree, bool IsPartial);
 
 public sealed record ScheduleDto(Guid LeaseId, string CurrencyCode, decimal Total, IReadOnlyList<InstallmentDto> Installments);

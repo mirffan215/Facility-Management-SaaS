@@ -38,6 +38,9 @@ public sealed class Obligation : ITenantOwned
     public string? Notes { get; set; }
     public bool IsArchived { get; set; }
 
+    /// <summary>When true, a failed result also raises a work order for the place or asset, in the name of the person who recorded it.</summary>
+    public bool CreateWorkOrderOnFail { get; set; }
+
     // The newest completion, kept here so lists and alerts do not have to read the whole history.
     public DateOnly? LastCompletedOn { get; set; }
     public DateOnly? ValidUntil { get; set; }
@@ -122,6 +125,10 @@ public sealed class Permit : ITenantOwned
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid TenantId { get; set; }
     public int Number { get; set; }
+
+    /// <summary>The day the last warning about this permit being past its planned end was sent, so there is one warning a day.</summary>
+    public DateOnly? LastOverdueAlertOn { get; set; }
+
     public Guid TypeId { get; set; }
     public string TypeCode { get; set; } = "";
     public string TypeName { get; set; } = "";

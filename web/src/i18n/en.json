@@ -589,7 +589,8 @@
         "requested": "Permit PTW-{{number}} needs approval",
         "approved": "Permit PTW-{{number}} is ready to issue",
         "rejected": "Permit PTW-{{number}} was rejected",
-        "issued": "Permit PTW-{{number}} has been issued"
+        "issued": "Permit PTW-{{number}} has been issued",
+        "overdue": "Permit past its planned end: {{number}} {{title}}"
       },
       "energy": {
         "highuse": "High energy use: {{title}}",
@@ -1887,7 +1888,7 @@
     "plannedStart": "Starts",
     "plannedEnd": "Ends",
     "requestedBy": "Asked by",
-    "workOrder": "Work order",
+    "workOrder": "Work order {{number}}",
     "isolation": "Isolation reference",
     "rejectedBecause": "Rejected because",
     "cancelledBecause": "Cancelled because",
@@ -1924,7 +1925,9 @@
     "typeName": "Name",
     "typeNameAr": "Name (Arabic)",
     "maxHours": "Longest duration (hours)",
-    "precautionsHint": "One per line."
+    "precautionsHint": "One per line.",
+    "raiseOnFail": "When an inspection fails, also raise a work order",
+    "raiseNow": "Raise a work order"
   },
   "complianceStatus": {
     "Scheduled": "Scheduled",
@@ -2067,7 +2070,10 @@
       "Active": "Active",
       "Revoked": "Revoked",
       "Expired": "Expired"
-    }
+    },
+    "raiseWorkOrder": "When the alarm is raised, also raise a work order for the meter’s place",
+    "makesWorkOrder": "Raises work order",
+    "raiseNow": "Raise a work order"
   },
   "energyKind": {
     "Electricity": "Electricity",
@@ -2285,7 +2291,12 @@
     "stepN": "After rise {{step}}",
     "scheduleNote": "This is what the lease terms say is due. Invoices, payments and accounting are not handled here.",
     "daysAway": "{{count}} days",
-    "months": "{{count}} months"
+    "months": "{{count}} months",
+    "documents": "Documents",
+    "noDocuments": "No files yet. Attach the signed lease and any amendments.",
+    "attach": "Attach a file to this lease",
+    "removeFile": "Remove {{name}}",
+    "removeFileTitle": "Remove this file"
   },
   "aiFeature": {
     "Triage": "Request suggestions",

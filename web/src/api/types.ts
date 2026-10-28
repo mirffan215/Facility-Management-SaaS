@@ -1302,6 +1302,7 @@ export interface Obligation {
   lastResult: CompletionResult | null;
   status: ComplianceStatus;
   rowVersion: string;
+  createWorkOrderOnFail: boolean;
 }
 
 export interface CompletionDocument {
@@ -1326,6 +1327,8 @@ export interface Completion {
   recordedAt: string;
   recordedByName: string | null;
   documents: CompletionDocument[];
+  workOrderId: string | null;
+  workOrderNumber: string | null;
 }
 
 export interface ObligationDetail {
@@ -1503,19 +1506,25 @@ export interface AlarmRule {
   kind: 'HighDailyUse' | 'NoReading';
   threshold: number;
   isActive: boolean;
+  createWorkOrder: boolean;
   isRaised: boolean;
   raisedAt: string | null;
   rowVersion: string;
 }
 
 export interface AlarmEvent {
+  id: string;
   ruleId: string;
   meterId: string;
   meterCode: string;
   at: string;
   kind: 'Raised' | 'Cleared';
   value: number | null;
+  workOrderId: string | null;
+  workOrderNumber: string | null;
 }
+
+export interface WorkFromSourceResult { workOrderId: string; number: string; created: boolean }
 
 export type ProjectStatus = 'Planning' | 'Active' | 'OnHold' | 'Completed' | 'Cancelled';
 export type BudgetCategory = 'Design' | 'Construction' | 'Equipment' | 'Furniture' | 'Professional' | 'Contingency' | 'Other';
@@ -1645,3 +1654,5 @@ export interface AiSummary { workOrderId: string; text: string }
 export interface AiUsage { usedToday: number; dailyLimit: number; last30Days: { feature: 'Triage' | 'Summary'; ok: number; failed: number; inputTokens: number; outputTokens: number }[] }
 
 export interface RepeatProblem { assetId: string; assetCode: string | null; assetName: string | null; count: number; emergencies: number; firstAt: string; lastAt: string; lastTitle: string; averageDaysBetween: number | null }
+
+export interface LeaseDocument { id: string; leaseId: string; fileName: string; contentType: string; sizeBytes: number; sha256: string; uploadedAt: string }

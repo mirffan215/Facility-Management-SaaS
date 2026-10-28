@@ -11,6 +11,7 @@ public sealed class LeasesDbContext(DbContextOptions<LeasesDbContext> options, I
     public const string Schema = "leases";
 
     public DbSet<Lease> Leases => Set<Lease>();
+    public DbSet<LeaseDocument> Documents => Set<LeaseDocument>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -38,6 +39,17 @@ public sealed class LeasesDbContext(DbContextOptions<LeasesDbContext> options, I
             e.Property(x => x.LastAlertKey).HasMaxLength(40);
             e.HasIndex(x => new { x.TenantId, x.Reference }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.Status, x.EndOn });
+        });
+
+        b.Entity<LeaseDocument>(e =>
+        {
+            e.ToTable("Documents");
+            e.Property(x => x.FileName).HasMaxLength(255).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            e.Property(x => x.StorageKey).HasMaxLength(400).IsRequired();
+            e.Property(x => x.DeleteReason).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.LeaseId });
         });
 
         base.OnModelCreating(b);

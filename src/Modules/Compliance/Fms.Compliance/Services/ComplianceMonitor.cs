@@ -21,7 +21,9 @@ public sealed class ComplianceMonitor(IServiceScopeFactory scopes, ILogger<Compl
         await using (var scope = scopes.CreateAsyncScope())
         {
             scope.ServiceProvider.GetRequiredService<TenantContext>().BeginPlatformScope();
-            tenants = await scope.ServiceProvider.GetRequiredService<ComplianceDbContext>().Obligations.IgnoreQueryFilters().Where(o => !o.IsArchived).Select(o => o.TenantId).Distinct().ToListAsync(ct);
+            var context = scope.ServiceProvider.GetRequiredService<ComplianceDbContext>();
+            tenants = await context.Obligations.IgnoreQueryFilters().Where(o => !o.IsArchived).Select(o => o.TenantId)
+                .Union(context.Permits.IgnoreQueryFilters().Where(p => p.Status == PermitStatus.Issued || p.Status == PermitStatus.Started).Select(p => p.TenantId)).ToListAsync(ct);
         }
 
         var sent = 0;
@@ -82,9 +84,37 @@ public sealed class ComplianceAlerts(ComplianceDbContext db, IUserDirectory user
             o.LastAlertOn = today;
         }
 
+        sent += await PermitsAsync(today, ct);
         await db.SaveChangesAsync(ct);
         return sent;
     }
+
+    /// <summary>
+    /// A permit still in force after its planned end is a risk, not a due date: the people who issued and started it, and everyone who can issue permits, are told once a day until it is closed.
+    /// </summary>
+    private async Task<int> PermitsAsync(DateOnly today, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        var late = await db.Permits.Where(p => (p.Status == PermitStatus.Issued || p.Status == PermitStatus.Started) && p.PlannedEnd < now && (p.LastOverdueAlertOn == null || p.LastOverdueAlertOn < today)).Take(200).ToListAsync(ct);
+        if (late.Count == 0) return 0;
+        var issuers = (await users.WithPermissionAsync(Permissions.PermitsIssue, ct)).Select(u => u.Id).ToList();
+        var sent = 0;
+        foreach (var p in late)
+        {
+            var number = $"PTW-{p.Number:0000}";
+            var people = issuers.Concat(new[] { p.IssuedBy, p.StartedBy }.Where(x => x is not null).Select(x => x!.Value)).Distinct().ToList();
+            var en = $"Permit past its planned end: {number} {p.TypeName} at {p.LocationName} (ended {p.PlannedEnd.UtcDateTime:yyyy-MM-dd HH:mm} UTC). Close it or check the work is finished.";
+            var ar = $"تصريح تجاوز موعد انتهائه: {number} {p.TypeName} في {p.LocationName} (انتهى {p.PlannedEnd.UtcDateTime:yyyy-MM-dd HH:mm} UTC). أغلقه أو تأكد من انتهاء العمل.";
+            var requests = people.Select(id => new NotificationRequest(id, "permit.overdue", new { permitId = p.Id, number, title = p.TypeName }, $"/compliance?tab=permits&permit={p.Id}", en, en + "\n\n" + ar)).ToList();
+            if (requests.Count > 0) sent += await sink.NotifyAsync(PermitSourceId(p.Id, today), requests, ct);
+            p.LastOverdueAlertOn = today;
+        }
+
+        return sent;
+    }
+
+    public static Guid PermitSourceId(Guid permitId, DateOnly day) =>
+        new(MD5.HashData(Encoding.UTF8.GetBytes($"permit-overdue:{permitId:N}:{day:yyyyMMdd}")));
 
     /// <summary>The same obligation, state and day always give the same id, so a run repeated after a crash does not double-notify.</summary>
     public static Guid SourceId(Guid obligationId, ComplianceStatus status, DateOnly day) =>

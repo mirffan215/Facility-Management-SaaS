@@ -23,6 +23,7 @@ public static class ComplianceEndpoints
             (await s.RecordAsync(id, r, ct)).ToHttp(x => Results.Created($"/api/v1/compliance/obligations/{id}", x))).RequirePermission(Permissions.ComplianceManage);
 
         // multipart/form-data: file (required).
+        g.MapPost("/completions/{id:guid}/work-order", async (Guid id, ObligationService s, CancellationToken ct) => (await s.RaiseWorkOrderAsync(id, ct)).ToHttp()).RequirePermission(Permissions.ComplianceManage);
         g.MapPost("/completions/{id:guid}/documents", async (Guid id, HttpContext http, CompletionDocumentService s, CancellationToken ct) =>
             {
                 if (!http.Request.HasFormContentType) return Results.Problem(statusCode: StatusCodes.Status415UnsupportedMediaType, title: "Send the file as multipart/form-data.");

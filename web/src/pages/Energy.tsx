@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import {
   useAlarmEvents, useAlarmRules, useConsumption, useEnergyDevices, useEnergyMeters, useEnergyReadings, usePermissions, useTariffs,
 } from '../api/hooks';
-import type { AlarmRule, CreatedEnergyDevice, EnergyKind, EnergyMeter, ImportResult, Tariff } from '../api/types';
+import type { AlarmRule, CreatedEnergyDevice, WorkFromSourceResult, EnergyKind, EnergyMeter, ImportResult, Tariff } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Dialog } from '../components/InventoryBits';
 import { LocationSelect } from '../components/LocationSelect';
@@ -440,7 +440,7 @@ function AlarmsTab() {
           {(rules.data ?? []).map((r) => (
             <li key={r.id}>
               <bdi>{r.meterCode}</bdi> · {t(`energy.alarmKind.${r.kind}`, { threshold: r.threshold })}{' '}
-              {r.isRaised ? <Badge tone="bad">{t('energy.raised')}</Badge> : r.isActive ? <Badge tone="ok">{t('energy.watching')}</Badge> : <Badge tone="neutral">{t('energy.off')}</Badge>}{' '}
+              {r.createWorkOrder ? <Badge tone="neutral">{t('energy.makesWorkOrder')}</Badge> : null}{' '}{r.isRaised ? <Badge tone="bad">{t('energy.raised')}</Badge> : r.isActive ? <Badge tone="ok">{t('energy.watching')}</Badge> : <Badge tone="neutral">{t('energy.off')}</Badge>}{' '}
               {can('energy.manage') ? <button type="button" onClick={() => setEditing(r)} aria-label={t('energy.editRule', { code: r.meterCode })}>{t('common.edit')}</button> : null}
             </li>
           ))}
@@ -450,8 +450,11 @@ function AlarmsTab() {
       <QueryState query={events}>
         {events.data && events.data.items.length === 0 ? <p className="muted">{t('energy.noEvents')}</p> : null}
         <ul className="plain">
-          {(events.data?.items ?? []).map((e, i) => (
-            <li key={i}>{date(e.at, true)} · <bdi>{e.meterCode}</bdi> · <Badge tone={e.kind === 'Raised' ? 'bad' : 'ok'}>{t(`energy.eventKind.${e.kind}`)}</Badge>{e.value != null ? <> · {e.value}</> : null}</li>
+          {(events.data?.items ?? []).map((e) => (
+            <li key={e.id}>
+              {date(e.at, true)} · <bdi>{e.meterCode}</bdi> · <Badge tone={e.kind === 'Raised' ? 'bad' : 'ok'}>{t(`energy.eventKind.${e.kind}`)}</Badge>{e.value != null ? <> · {e.value}</> : null}
+              {e.workOrderId ? <> · <Link to={`/work-orders/${e.workOrderId}`}>{e.workOrderNumber}</Link></> : e.kind === 'Raised' && can('energy.manage') && can('workorders.read') ? <> · <RaiseWorkOrder eventId={e.id} /></> : null}
+            </li>
           ))}
         </ul>
       </QueryState>
@@ -469,9 +472,10 @@ function RuleForm({ rule, onClose }: { rule: AlarmRule | null; onClose: () => vo
   const [kind, setKind] = useState<AlarmRule['kind']>(rule?.kind ?? 'HighDailyUse');
   const [threshold, setThreshold] = useState(rule?.threshold.toString() ?? '');
   const [active, setActive] = useState(rule?.isActive ?? true);
+  const [raiseWork, setRaiseWork] = useState(rule?.createWorkOrder ?? false);
   const save = useMutation({
     mutationFn: () => {
-      const body = { meterId: meterId || null, kind, threshold: threshold.trim() ? Number(threshold) : null, isActive: active, rowVersion: rule?.rowVersion ?? null };
+      const body = { meterId: meterId || null, kind, threshold: threshold.trim() ? Number(threshold) : null, isActive: active, createWorkOrder: raiseWork, rowVersion: rule?.rowVersion ?? null };
       return rule ? api.put(`/energy/alarms/rules/${rule.id}`, body) : api.post('/energy/alarms/rules', body);
     },
     onSuccess: async () => { await refresh(); onClose(); },
@@ -494,6 +498,8 @@ function RuleForm({ rule, onClose }: { rule: AlarmRule | null; onClose: () => vo
         </Field>
         <Field label={kind === 'HighDailyUse' ? t('energy.limitPerDay') : t('energy.limitHours')} error={errors.threshold?.[0]} required><input type="number" step="any" min={0} value={threshold} onChange={(e) => setThreshold(e.target.value)} /></Field>
         <label className="check"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /><span>{t('energy.ruleActive')}</span></label>
+        <label className="check"><input type="checkbox" checked={raiseWork} onChange={(e) => setRaiseWork(e.target.checked)} /><span>{t('energy.raiseWorkOrder')}</span></label>
+        {errors.createWorkOrder ? <p className="error" role="alert">{errors.createWorkOrder[0]}</p> : null}
         <ErrorBanner error={Object.keys(errors).length ? null : save.error} />
         <div className="actions">
           <button type="button" onClick={onClose}>{t('common.cancel')}</button>
@@ -501,6 +507,19 @@ function RuleForm({ rule, onClose }: { rule: AlarmRule | null; onClose: () => vo
         </div>
       </form>
     </Dialog>
+  );
+}
+
+function RaiseWorkOrder({ eventId }: { eventId: string }) {
+  const { t } = useTranslation();
+  const { api } = useAuth();
+  const refresh = useRefresh();
+  const raise = useMutation({ mutationFn: () => api.post<WorkFromSourceResult>(`/energy/alarms/events/${eventId}/work-order`, {}), onSuccess: () => refresh() });
+  return (
+    <>
+      <button type="button" disabled={raise.isPending} onClick={() => raise.mutate()}>{t('energy.raiseNow')}</button>
+      <ErrorBanner error={raise.error} />
+    </>
   );
 }
 

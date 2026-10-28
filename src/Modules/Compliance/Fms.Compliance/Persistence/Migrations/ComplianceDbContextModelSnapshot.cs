@@ -255,6 +255,9 @@ namespace Fms.Compliance.Persistence.Migrations
                     b.Property<int>("Category")
                         .HasColumnType("int");
 
+                    b.Property<bool>("CreateWorkOrderOnFail")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -395,6 +398,9 @@ namespace Fms.Compliance.Persistence.Migrations
                     b.Property<string>("IssuedByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly?>("LastOverdueAlertOn")
+                        .HasColumnType("date");
 
                     b.Property<Guid>("LocationId")
                         .HasColumnType("uniqueidentifier");

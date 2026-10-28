@@ -112,6 +112,11 @@ public sealed class AlarmRule : ITenantOwned
     public decimal Threshold { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>When true, raising the alarm also raises a work order for the meter's place, in the name of the person who chose this.</summary>
+    public bool CreateWorkOrder { get; set; }
+
+    public Guid? WorkOrderRequesterId { get; set; }
     public bool IsRaised { get; set; }
     public DateTimeOffset? RaisedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

@@ -49,8 +49,8 @@ public sealed record KindTotalDto(EnergyKind Kind, string Unit, decimal Total, d
 
 public sealed record ConsumptionDto(DateOnly From, DateOnly To, IReadOnlyList<MeterUseDto> Meters, IReadOnlyList<KindTotalDto> Totals);
 
-public sealed record AlarmRuleDto(Guid Id, Guid MeterId, string MeterCode, string MeterName, AlarmKind Kind, decimal Threshold, bool IsActive, bool IsRaised, DateTimeOffset? RaisedAt, string RowVersion);
+public sealed record AlarmRuleDto(Guid Id, Guid MeterId, string MeterCode, string MeterName, AlarmKind Kind, decimal Threshold, bool IsActive, bool CreateWorkOrder, bool IsRaised, DateTimeOffset? RaisedAt, string RowVersion);
 
-public sealed record SaveAlarmRuleRequest(Guid? MeterId, AlarmKind? Kind, decimal? Threshold, bool? IsActive, string? RowVersion);
+public sealed record SaveAlarmRuleRequest(Guid? MeterId, AlarmKind? Kind, decimal? Threshold, bool? IsActive, bool? CreateWorkOrder, string? RowVersion);
 
-public sealed record AlarmEventDto(Guid RuleId, Guid MeterId, string MeterCode, DateTimeOffset At, AlarmEventKind Kind, decimal? Value);
+public sealed record AlarmEventDto(Guid Id, Guid RuleId, Guid MeterId, string MeterCode, DateTimeOffset At, AlarmEventKind Kind, decimal? Value, Guid? WorkOrderId = null, string? WorkOrderNumber = null);

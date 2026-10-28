@@ -1907,6 +1907,16 @@ test('leases: a draft lease is activated, its rent schedule rises on schedule, t
   await expect(page.getByRole('button', { name: 'Activate' })).toHaveCount(0);
   await shot('46-leases');
 
+  // The signed lease is attached and can be removed with a reason.
+  await page.getByLabel('Attach a file to this lease').setInputFiles({ name: 'signed lease.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF') });
+  await expect(page.getByRole('button', { name: 'signed lease.pdf' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove signed lease.pdf' }).click();
+  await page.getByRole('dialog').getByLabel('Reason').fill('Wrong version');
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('button', { name: 'signed lease.pdf' })).toHaveCount(0);
+  await page.getByLabel('Attach a file to this lease').setInputFiles({ name: 'signed lease v2.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF') });
+  await expect(page.getByRole('button', { name: 'signed lease v2.pdf' })).toBeVisible();
+
   // The rent and dates are locked once active; extending needs a reason.
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Rent for one period')).toBeDisabled();

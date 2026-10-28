@@ -232,6 +232,8 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
             e.Property(x => x.Description).HasMaxLength(4000);
             e.Property(x => x.StatusReason).HasMaxLength(500);
             e.Property(x => x.ClosureNotes).HasMaxLength(2000);
+            e.Property(x => x.SourceKind).HasMaxLength(40);
+            e.HasIndex(x => new { x.TenantId, x.SourceKind, x.SourceId }).IsUnique().HasFilter("[SourceId] IS NOT NULL");
             e.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.Status });
             e.HasIndex(x => new { x.TenantId, x.RequestedBy });

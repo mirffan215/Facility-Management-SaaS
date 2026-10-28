@@ -175,6 +175,91 @@ public sealed class WorkOrderService(
         return Result<WorkOrderDto>.Ok((await ToDtosAsync([saved], ct))[0]);
     }
 
+    /// <summary>
+    /// Raises a work order because of something that happened elsewhere (an alarm, a failed inspection), in the name of <paramref name="requestedBy"/>. The cause is recorded on the work order
+    /// and is unique, so asking again for the same cause returns the same work order, also when two callers ask at once. Null when the place cannot be found.
+    /// </summary>
+    public async Task<WorkFromSourceResult?> CreateFromSourceAsync(WorkFromSource r, Guid requestedBy, CancellationToken ct = default)
+    {
+        var kind = r.Kind?.Trim() ?? "";
+        if (kind.Length is 0 or > 40) throw new ArgumentException("A source kind of 1 to 40 characters is required.", nameof(r));
+        var existing = await FindOneAsync(kind, r.SourceId, ct);
+        if (existing is not null) return existing;
+
+        var locationId = r.LocationId;
+        if (r.AssetId is { } assetId)
+        {
+            var asset = await facilities.GetAssetAsync(assetId, ct);
+            if (asset is null) return null;
+            locationId ??= asset.LocationId;
+        }
+
+        if (locationId is null || await facilities.GetLocationAsync(locationId.Value, ct) is null) return null;
+        var title = r.Title?.Trim() ?? "";
+        if (title.Length == 0) title = kind;
+        if (title.Length > 200) title = title[..200];
+        var description = Clean(r.Description);
+        if (description is { Length: > 4000 }) description = description[..4000];
+        var priority = Enum.TryParse<WorkPriority>(r.Priority, true, out var p) && Enum.IsDefined(p) ? p : WorkPriority.Medium;
+        var type = r.Emergency ? WorkOrderType.Emergency : WorkOrderType.Corrective;
+        var settings = await SettingsAsync(ct);
+        var now = clock.GetUtcNow();
+        var status = WorkOrderRules.InitialStatus(type, settings, priority);
+        var tenantKey = user.TenantId?.ToString() ?? "none";
+        var id = Guid.NewGuid();
+        var strategy = db.Database.CreateExecutionStrategy();
+        try
+        {
+            var saved = await strategy.ExecuteAsync(
+                0,
+                async (_, _, token) =>
+                {
+                    db.ChangeTracker.Clear();
+                    await using var tx = await db.Database.BeginTransactionAsync(token);
+                    var next = await WorkOrderNumbers.NextAsync(db, tenantKey, token);
+                    var wo = new WorkOrder
+                    {
+                        Id = id, Number = next, Title = title, Description = description, Type = type, Priority = priority, Status = status, LocationId = locationId.Value, AssetId = r.AssetId,
+                        RequestedBy = requestedBy, RequestedAt = now, UpdatedAt = now, SourceKind = kind, SourceId = r.SourceId,
+                    };
+                    if (status == WorkOrderStatus.Approved) await sla.StartAsync(wo, now, token);
+                    db.WorkOrders.Add(wo);
+                    db.WorkOrderEvents.Add(Event(wo, WorkOrderAction.Created, null, status, requestedBy, now, null));
+                    outbox.Enqueue(WorkMessages.Event, new WorkOrderEventMessage(wo.Id, WorkOrderAction.Created, requestedBy, null));
+                    audit.Record("workorder.created", nameof(WorkOrder), wo.Id.ToString(),
+                        JsonSerializer.Serialize(new { wo.Number, wo.Title, wo.Type, wo.Priority, wo.LocationId, wo.AssetId, status, source = kind, sourceId = r.SourceId }));
+                    await db.SaveChangesAsync(token);
+                    await tx.CommitAsync(token);
+                    return wo;
+                },
+                async (_, _, token) =>
+                {
+                    db.ChangeTracker.Clear();
+                    var found = await db.WorkOrders.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id, token);
+                    return new ExecutionResult<WorkOrder>(found is not null, found!);
+                },
+                ct);
+            return new WorkFromSourceResult(saved.Id, WorkOrderRules.DisplayNumber(saved.Number), true);
+        }
+        catch (DbUpdateException)
+        {
+            // Another caller raised it for the same cause a moment ago: the unique index on the cause refused this one.
+            db.ChangeTracker.Clear();
+            return await FindOneAsync(kind, r.SourceId, ct) ?? throw new InvalidOperationException("The work order could not be raised.");
+        }
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, WorkFromSourceResult>> FindFromSourceAsync(string kind, IEnumerable<Guid> sourceIds, CancellationToken ct = default)
+    {
+        var ids = sourceIds.Distinct().Take(500).ToList();
+        if (ids.Count == 0) return new Dictionary<Guid, WorkFromSourceResult>();
+        var rows = await db.WorkOrders.AsNoTracking().Where(w => w.SourceKind == kind && w.SourceId != null && ids.Contains(w.SourceId.Value)).Select(w => new { w.Id, w.Number, SourceId = w.SourceId!.Value }).ToListAsync(ct);
+        return rows.ToDictionary(w => w.SourceId, w => new WorkFromSourceResult(w.Id, WorkOrderRules.DisplayNumber(w.Number), false));
+    }
+
+    private async Task<WorkFromSourceResult?> FindOneAsync(string kind, Guid sourceId, CancellationToken ct) =>
+        (await FindFromSourceAsync(kind, [sourceId], ct)).GetValueOrDefault(sourceId);
+
     public async Task<Result<WorkOrderDto>> UpdateAsync(Guid id, UpdateWorkOrderRequest r, CancellationToken ct = default)
     {
         var wo = await (await VisibleAsync(true, ct)).FirstOrDefaultAsync(w => w.Id == id, ct);

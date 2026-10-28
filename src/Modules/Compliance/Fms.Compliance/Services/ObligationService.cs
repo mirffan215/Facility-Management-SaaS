@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Fms.BuildingBlocks.Identity;
 using Fms.BuildingBlocks.Results;
 using Fms.BuildingBlocks.Security;
@@ -9,8 +10,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Fms.Compliance.Services;
 
 /// <summary>What must be done, by when, and the history of it having been done.</summary>
-public sealed class ObligationService(ComplianceDbContext db, IFacilityLookup facilities, IUserDirectory users, ICurrentUser user, IAuditPort audit, TimeProvider clock)
+public sealed class ObligationService(ComplianceDbContext db, IFacilityLookup facilities, IUserDirectory users, ICurrentUser user, IAuditPort audit, TimeProvider clock, IWorkOrderFromSource? work = null, ILogger<ObligationService>? log = null)
 {
+    public const string WorkSourceKind = "compliance.failed";
+
     public const int MaxObligations = 5000;
     public const int MaxListed = 2000;
 
@@ -48,7 +51,8 @@ public sealed class ObligationService(ComplianceDbContext db, IFacilityLookup fa
         var completions = await db.Completions.AsNoTracking().Where(c => c.ObligationId == id).OrderByDescending(c => c.PerformedOn).ThenByDescending(c => c.RecordedAt).Take(200).ToListAsync(ct);
         var ids = completions.Select(c => c.Id).ToList();
         var docs = await db.Documents.AsNoTracking().Where(d => ids.Contains(d.CompletionId) && d.DeletedAt == null).ToListAsync(ct);
-        var dtos = completions.Select(c => ToDto(c, docs.Where(d => d.CompletionId == c.Id).Select(ToDto).ToList())).ToList();
+        var orders = work is null ? new Dictionary<Guid, WorkFromSourceResult>() : (await work.FindAsync(WorkSourceKind, completions.Where(c => c.Result == CompletionResult.Failed).Select(c => c.Id), ct)).ToDictionary(x => x.Key, x => x.Value);
+        var dtos = completions.Select(c => ToDto(c, docs.Where(d => d.CompletionId == c.Id).Select(ToDto).ToList()) with { WorkOrderId = orders.GetValueOrDefault(c.Id)?.WorkOrderId, WorkOrderNumber = orders.GetValueOrDefault(c.Id)?.Number }).ToList();
         return Result<ObligationDetailDto>.Ok(new ObligationDetailDto(ToDto(o, Common.Today(clock)), dtos));
     }
 
@@ -140,8 +144,41 @@ public sealed class ObligationService(ComplianceDbContext db, IFacilityLookup fa
             return Result<CompletionDto>.Conflict("Someone else changed this obligation. Reload and try again.");
         }
 
-        return Result<CompletionDto>.Ok(ToDto(c, []));
+        var dto = ToDto(c, []);
+        if (c.Result == CompletionResult.Failed && o.CreateWorkOrderOnFail && user.UserId is { } me && work is not null)
+        {
+            // The failure is on record; a work order that cannot be raised now can be raised from the failure by hand.
+            try
+            {
+                var raised = await work.EnsureAsync(FailureWork(o, c), me, ct);
+                if (raised is not null) dto = dto with { WorkOrderId = raised.WorkOrderId, WorkOrderNumber = raised.Number };
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                log?.LogError(ex, "A work order for a failed inspection could not be raised");
+            }
+        }
+
+        return Result<CompletionDto>.Ok(dto);
     }
+
+    /// <summary>A manager raises the work order for a failed result by hand. Asking again for the same failure returns the same work order.</summary>
+    public async Task<Result<WorkFromSourceResult>> RaiseWorkOrderAsync(Guid completionId, CancellationToken ct = default)
+    {
+        if (work is null) return Result<WorkFromSourceResult>.Conflict("Work orders are not available.");
+        if (user.UserId is not { } me) return Result<WorkFromSourceResult>.Forbidden("Sign in first.");
+        var c = await db.Completions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == completionId, ct);
+        if (c is null) return Result<WorkFromSourceResult>.NotFound();
+        if (c.Result != CompletionResult.Failed) return Result<WorkFromSourceResult>.Conflict("Only a failed result can have a work order.");
+        var o = await db.Obligations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == c.ObligationId, ct);
+        if (o is null) return Result<WorkFromSourceResult>.NotFound();
+        if (o.LocationId is null && o.AssetId is null) return Result<WorkFromSourceResult>.Conflict("The obligation has no place or asset, so a work order cannot be raised for it.");
+        var result = await work.EnsureAsync(FailureWork(o, c), me, ct);
+        return result is null ? Result<WorkFromSourceResult>.Conflict("The place or asset no longer exists.") : Result<WorkFromSourceResult>.Ok(result);
+    }
+
+    private static WorkFromSource FailureWork(Obligation o, Completion c) =>
+        new(WorkSourceKind, c.Id, $"Failed inspection: {o.Title}", $"{o.Title} failed on {c.PerformedOn:yyyy-MM-dd}. {c.Notes}".Trim(), o.LocationId, o.AssetId, "High", false);
 
     private async Task<Result<ObligationDto>?> ApplyAsync(Obligation o, SaveObligationRequest r, CancellationToken ct)
     {
@@ -164,8 +201,11 @@ public sealed class ObligationService(ComplianceDbContext db, IFacilityLookup fa
         if (r.AssetId is { } aid && (asset = await facilities.GetAssetAsync(aid, ct)) is null) errors.Add("assetId", "That asset does not exist.");
         DirectoryUser? owner = null;
         if (r.OwnerId is { } oid && ((owner = (await users.GetAsync([oid], ct)).GetValueOrDefault(oid)) is null || !owner.IsActive)) errors.Add("ownerId", "Choose an active person.");
+        var raiseOnFail = r.CreateWorkOrderOnFail ?? false;
+        if (raiseOnFail && location is null && asset is null) errors.Add("createWorkOrderOnFail", "Give a place or an asset first: a work order needs to know where.");
         if (errors.Any) return errors.ToResult<ObligationDto>();
 
+        o.CreateWorkOrderOnFail = raiseOnFail;
         o.Title = title!;
         o.Category = r.Category!.Value;
         o.Authority = authority;
@@ -201,7 +241,7 @@ public sealed class ObligationService(ComplianceDbContext db, IFacilityLookup fa
     {
         var due = ComplianceRules.DueOn(o);
         return new ObligationDto(o.Id, o.Title, o.Category, o.Authority, o.LocationId, o.LocationName, o.AssetId, o.AssetName, o.IntervalMonths, o.LeadDays, o.FirstDueOn, due,
-            due is { } d ? d.DayNumber - today.DayNumber : null, o.OwnerId, o.OwnerName, o.Notes, o.IsArchived, o.LastCompletedOn, o.ValidUntil, o.LastResult, ComplianceRules.StatusOf(o, today), Common.Version(o.RowVersion));
+            due is { } d ? d.DayNumber - today.DayNumber : null, o.OwnerId, o.OwnerName, o.Notes, o.IsArchived, o.LastCompletedOn, o.ValidUntil, o.LastResult, ComplianceRules.StatusOf(o, today), Common.Version(o.RowVersion), o.CreateWorkOrderOnFail);
     }
 
     private static CompletionDto ToDto(Completion c, IReadOnlyList<CompletionDocumentDto> docs) =>

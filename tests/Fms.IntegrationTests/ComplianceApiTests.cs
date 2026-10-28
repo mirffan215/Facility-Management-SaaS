@@ -542,4 +542,106 @@ public sealed class ComplianceApiTests(SqlServerFixture sql) : IDisposable
         Assert.Contains("Obligations", datasets);
         Assert.Contains("Permits", datasets);
     }
+
+    // ------------------------------------------------------------------ work orders from failures, overdue permit warnings
+
+    private static async Task<CompletionDto> FailAsync(HttpClient c, ObligationDto o, string notes = "Detector 4 did not respond")
+    {
+        var response = await PostAsync(c, $"/api/v1/compliance/obligations/{o.Id}/completions", new { performedOn = Day(0), result = "Failed", notes });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return await ReadAsync<CompletionDto>(response);
+    }
+
+    [Fact]
+    public async Task A_failed_inspection_raises_one_work_order_when_the_obligation_says_so()
+    {
+        var rig = await NewRigAsync();
+        var o = await NewObligationAsync(rig.Manager, rig, new { title = "Sprinkler test", createWorkOrderOnFail = true });
+        Assert.True(o.CreateWorkOrderOnFail);
+
+        var passed = await PostAsync(rig.Manager, $"/api/v1/compliance/obligations/{o.Id}/completions", new { performedOn = Day(-1), result = "Passed" });
+        Assert.Null((await ReadAsync<CompletionDto>(passed)).WorkOrderId);
+
+        var failed = await FailAsync(rig.Manager, o);
+        Assert.NotNull(failed.WorkOrderId);
+        Assert.StartsWith("WO-", failed.WorkOrderNumber);
+        var wo = (await ReadAsync<Fms.Work.Services.WorkOrderDetailDto>(await rig.Manager.GetAsync($"/api/v1/work-orders/{failed.WorkOrderId}"))).Order;
+        Assert.Equal("Failed inspection: Sprinkler test", wo.Title);
+        Assert.Equal(rig.Site.Id, wo.LocationId);
+        Assert.Contains("Detector 4", wo.Description);
+
+        // The obligation's history shows the link, and asking for it by hand again gives the same work order.
+        var detail = await ReadAsync<ObligationDetailDto>(await rig.Viewer.GetAsync($"/api/v1/compliance/obligations/{o.Id}"));
+        Assert.Equal(failed.WorkOrderId, detail.Completions.Single(c => c.Id == failed.Id).WorkOrderId);
+        var again = await ReadAsync<Fms.BuildingBlocks.Identity.WorkFromSourceResult>(await PostAsync(rig.Manager, $"/api/v1/compliance/completions/{failed.Id}/work-order", new { }));
+        Assert.False(again.Created);
+        Assert.Equal(failed.WorkOrderId, again.WorkOrderId);
+    }
+
+    [Fact]
+    public async Task Without_the_switch_a_manager_can_still_raise_the_work_order_by_hand_once()
+    {
+        var rig = await NewRigAsync();
+        var o = await NewObligationAsync(rig.Manager, rig, new { title = "Lift inspection" });
+        Assert.False(o.CreateWorkOrderOnFail);
+        var failed = await FailAsync(rig.Manager, o);
+        Assert.Null(failed.WorkOrderId);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Viewer, $"/api/v1/compliance/completions/{failed.Id}/work-order", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Technician, $"/api/v1/compliance/completions/{failed.Id}/work-order", new { })).StatusCode);
+        var first = await ReadAsync<Fms.BuildingBlocks.Identity.WorkFromSourceResult>(await PostAsync(rig.Manager, $"/api/v1/compliance/completions/{failed.Id}/work-order", new { }));
+        Assert.True(first.Created);
+        var second = await ReadAsync<Fms.BuildingBlocks.Identity.WorkFromSourceResult>(await PostAsync(rig.Second, $"/api/v1/compliance/completions/{failed.Id}/work-order", new { }));
+        Assert.False(second.Created);
+        Assert.Equal(first.WorkOrderId, second.WorkOrderId);
+
+        var orders = await ReadAsync<Page<Fms.Work.Services.WorkOrderDto>>(await rig.Manager.GetAsync("/api/v1/work-orders?pageSize=100"));
+        Assert.Single(orders.Items, w => w.Title == "Failed inspection: Lift inspection");
+    }
+
+    [Fact]
+    public async Task A_work_order_needs_somewhere_to_go_and_only_a_failure_gets_one_and_other_organisations_cannot_ask()
+    {
+        var rig = await NewRigAsync();
+        var other = await NewRigAsync();
+        var noPlace = await PostAsync(rig.Manager, "/api/v1/compliance/obligations", new { title = "Floating", category = "Fire", firstDueOn = Day(60), createWorkOrderOnFail = true });
+        Assert.Equal(HttpStatusCode.BadRequest, noPlace.StatusCode);
+        Assert.Contains("place or an asset", await noPlace.Content.ReadAsStringAsync());
+
+        var o = await NewObligationAsync(rig.Manager, rig);
+        var passed = await ReadAsync<CompletionDto>(await PostAsync(rig.Manager, $"/api/v1/compliance/obligations/{o.Id}/completions", new { performedOn = Day(-1), result = "Passed" }));
+        Assert.Equal(HttpStatusCode.Conflict, (await PostAsync(rig.Manager, $"/api/v1/compliance/completions/{passed.Id}/work-order", new { })).StatusCode);
+
+        var failed = await FailAsync(rig.Manager, o);
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(other.Manager, $"/api/v1/compliance/completions/{failed.Id}/work-order", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(rig.Manager, $"/api/v1/compliance/completions/{Guid.NewGuid()}/work-order", new { })).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_permit_left_in_force_past_its_end_is_warned_about_once_a_day_to_the_issuer_and_the_people_who_can_issue()
+    {
+        var rig = await NewRigAsync();
+        var type = await NewTypeAsync(rig.Manager, "LATE");
+        var approved = await Ok(await Act(rig.Manager, await RequestAsync(rig.Technician, rig, type), "approve"));
+        var issued = await Ok(await Act(rig.Second, approved, "issue", IssueBody(approved)));
+        await using (var db = sql.Compliance(rig.Tenant))
+        {
+            var row = await db.Permits.FirstAsync(x => x.Id == issued.Id);
+            row.PlannedStart = DateTimeOffset.UtcNow.AddHours(-6);
+            row.PlannedEnd = DateTimeOffset.UtcNow.AddHours(-1);
+            await db.SaveChangesAsync();
+        }
+
+        var monitor = new ComplianceMonitor(_api.Factory.Services.GetRequiredService<IServiceScopeFactory>(), NullLogger<ComplianceMonitor>.Instance);
+        await monitor.RunOnceAsync();
+        await monitor.RunOnceAsync();
+
+        async Task<List<NotificationDto>> Notices(HttpClient c) => (await ReadAsync<Page<NotificationDto>>(await c.GetAsync("/api/v1/notifications?pageSize=50"))).Items.Where(n => n.Type == "permit.overdue").ToList();
+        var forIssuer = await Notices(rig.Second);
+        Assert.Single(forIssuer);
+        Assert.Contains("PTW-", forIssuer[0].Data.ToString());
+        Assert.Single(await Notices(rig.Manager)); // can issue permits too
+        Assert.Empty(await Notices(rig.Viewer));
+        Assert.Empty(await Notices(rig.Technician));
+    }
 }

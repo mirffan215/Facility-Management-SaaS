@@ -589,7 +589,8 @@
         "requested": "التصريح PTW-{{number}} بحاجة إلى موافقة",
         "approved": "التصريح PTW-{{number}} جاهز للإصدار",
         "rejected": "رُفض التصريح PTW-{{number}}",
-        "issued": "صدر التصريح PTW-{{number}}"
+        "issued": "صدر التصريح PTW-{{number}}",
+        "overdue": "تصريح تجاوز موعد انتهائه: {{number}} {{title}}"
       },
       "energy": {
         "highuse": "استهلاك طاقة مرتفع: {{title}}",
@@ -1887,7 +1888,7 @@
     "plannedStart": "البداية",
     "plannedEnd": "النهاية",
     "requestedBy": "طلبه",
-    "workOrder": "أمر العمل",
+    "workOrder": "أمر العمل {{number}}",
     "isolation": "مرجع العزل",
     "rejectedBecause": "سبب الرفض",
     "cancelledBecause": "سبب الإلغاء",
@@ -1924,7 +1925,9 @@
     "typeName": "الاسم",
     "typeNameAr": "الاسم (بالعربية)",
     "maxHours": "أطول مدة (ساعات)",
-    "precautionsHint": "واحد في كل سطر."
+    "precautionsHint": "واحد في كل سطر.",
+    "raiseOnFail": "عند فشل الفحص، أنشئ أيضًا أمر عمل",
+    "raiseNow": "إنشاء أمر عمل"
   },
   "complianceStatus": {
     "Scheduled": "مجدول",
@@ -2067,7 +2070,10 @@
       "Active": "نشط",
       "Revoked": "مُلغى",
       "Expired": "منتهٍ"
-    }
+    },
+    "raiseWorkOrder": "عند إطلاق الإنذار، أنشئ أيضًا أمر عمل لمكان العداد",
+    "makesWorkOrder": "ينشئ أمر عمل",
+    "raiseNow": "إنشاء أمر عمل"
   },
   "energyKind": {
     "Electricity": "الكهرباء",
@@ -2285,7 +2291,12 @@
     "stepN": "بعد الزيادة {{step}}",
     "scheduleNote": "هذا ما تنص عليه شروط العقد. الفواتير والمدفوعات والمحاسبة لا تُدار هنا.",
     "daysAway": "{{count}} يومًا",
-    "months": "{{count}} شهرًا"
+    "months": "{{count}} شهرًا",
+    "documents": "المستندات",
+    "noDocuments": "لا ملفات بعد. أرفق العقد الموقّع وأي ملاحق.",
+    "attach": "إرفاق ملف بهذا العقد",
+    "removeFile": "إزالة {{name}}",
+    "removeFileTitle": "إزالة هذا الملف"
   },
   "aiFeature": {
     "Triage": "اقتراحات الطلبات",

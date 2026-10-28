@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using Fms.Api;
 using Fms.BuildingBlocks.Results;
 using Fms.Facilities.Services;
@@ -23,7 +24,7 @@ public sealed class LeasesApiTests : IDisposable
     public LeasesApiTests(SqlServerFixture sql)
     {
         _sql = sql;
-        _api = new ApiHarness(sql);
+        _api = new ApiHarness(sql, settings: new Dictionary<string, string?> { ["Storage:Provider"] = "InMemory" });
     }
 
     public void Dispose() => _api.Dispose();
@@ -320,5 +321,65 @@ public sealed class LeasesApiTests : IDisposable
 
         await using var raw = _sql.Leases(b.Tenant);
         Assert.Equal(0, await raw.Leases.IgnoreQueryFilters().CountAsync(x => x.Id == l.Id && x.TenantId == b.Tenant));
+    }
+
+    private static MultipartFormDataContent Form(byte[] bytes, string name)
+    {
+        var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        content.Add(file, "file", name);
+        return content;
+    }
+
+    [Fact]
+    public async Task The_signed_lease_is_attached_by_content_downloaded_with_an_audit_entry_and_removed_only_with_a_reason()
+    {
+        var rig = await NewRigAsync();
+        var l = await NewLeaseAsync(rig.Manager, rig);
+        var pdf = "%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"u8.ToArray();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await rig.Viewer.PostAsync($"/api/v1/leases/{l.Id}/documents", Form(pdf, "lease.pdf"))).StatusCode);
+        var up = await rig.Manager.PostAsync($"/api/v1/leases/{l.Id}/documents", Form(pdf, "../../signed lease.pdf"));
+        Assert.Equal(HttpStatusCode.Created, up.StatusCode);
+        var doc = await ReadAsync<LeaseDocumentDto>(up);
+        Assert.Equal("application/pdf", doc.ContentType);
+        Assert.DoesNotContain("..", doc.FileName);
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, (await rig.Manager.PostAsync($"/api/v1/leases/{l.Id}/documents", Form([0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0xFF, 0xFF], "evil.pdf"))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await rig.Manager.PostAsync($"/api/v1/leases/{l.Id}/documents", Form([], "empty.pdf"))).StatusCode);
+
+        var list = await ReadAsync<List<LeaseDocumentDto>>(await rig.Viewer.GetAsync($"/api/v1/leases/{l.Id}/documents"));
+        Assert.Equal(doc.Id, Assert.Single(list).Id);
+        var download = await rig.Viewer.GetAsync($"/api/v1/leases/documents/{doc.Id}");
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+        Assert.Equal(pdf, await download.Content.ReadAsByteArrayAsync());
+        Assert.True(download.Headers.CacheControl?.NoStore);
+        Assert.Equal(HttpStatusCode.Forbidden, (await rig.Technician.GetAsync($"/api/v1/leases/documents/{doc.Id}")).StatusCode);
+
+        var admin = await _api.ClientAsync(rig.Tenant, SystemRoles.Administrator);
+        var actions = (await ReadAsync<Page<Fms.Platform.Services.AuditEntryDto>>(await admin.GetAsync("/api/v1/audit?pageSize=100"))).Items.Select(a => a.Action).ToList();
+        Assert.Contains("lease.document_uploaded", actions);
+        Assert.Contains("lease.document_downloaded", actions);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await PostAsync(rig.Manager, $"/api/v1/leases/documents/{doc.Id}/delete", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostAsync(rig.Viewer, $"/api/v1/leases/documents/{doc.Id}/delete", new { reason = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(rig.Manager, $"/api/v1/leases/documents/{doc.Id}/delete", new { reason = "Wrong file" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await rig.Viewer.GetAsync($"/api/v1/leases/documents/{doc.Id}")).StatusCode);
+        Assert.Empty(await ReadAsync<List<LeaseDocumentDto>>(await rig.Viewer.GetAsync($"/api/v1/leases/{l.Id}/documents")));
+    }
+
+    [Fact]
+    public async Task Another_organisation_cannot_list_download_add_or_remove_lease_documents()
+    {
+        var a = await NewRigAsync();
+        var b = await NewRigAsync();
+        var l = await NewLeaseAsync(a.Manager, a);
+        var pdf = "%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"u8.ToArray();
+        var doc = await ReadAsync<LeaseDocumentDto>(await a.Manager.PostAsync($"/api/v1/leases/{l.Id}/documents", Form(pdf, "lease.pdf")));
+
+        Assert.Equal(HttpStatusCode.NotFound, (await b.Manager.GetAsync($"/api/v1/leases/{l.Id}/documents")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await b.Manager.GetAsync($"/api/v1/leases/documents/{doc.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await b.Manager.PostAsync($"/api/v1/leases/{l.Id}/documents", Form(pdf, "x.pdf"))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await PostAsync(b.Manager, $"/api/v1/leases/documents/{doc.Id}/delete", new { reason = "x" })).StatusCode);
     }
 }

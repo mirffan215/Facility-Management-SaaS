@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace Fms.Energy.Services;
 
 /// <summary>Rules that watch a meter: using more than a limit in a day, or sending nothing for too long.</summary>
-public sealed class AlarmService(EnergyDbContext db, ICurrentUser user, IAuditPort audit, TimeProvider clock)
+public sealed class AlarmService(EnergyDbContext db, ICurrentUser user, IAuditPort audit, TimeProvider clock, IWorkOrderFromSource? work = null)
 {
     public const int MaxRules = 2000;
 
@@ -55,8 +55,12 @@ public sealed class AlarmService(EnergyDbContext db, ICurrentUser user, IAuditPo
 
         rule.Threshold = Math.Round(r.Threshold!.Value, 4);
         rule.IsActive = r.IsActive ?? true;
+        var wantsWork = r.CreateWorkOrder ?? false;
+        if (wantsWork && meter.LocationId is null) return Result<AlarmRuleDto>.Invalid("createWorkOrder", "The meter has no place, so a work order cannot be raised for it. Give the meter a place first.");
+        if (wantsWork && !rule.CreateWorkOrder) rule.WorkOrderRequesterId = user.UserId;
+        rule.CreateWorkOrder = wantsWork;
         if (!rule.IsActive) { rule.IsRaised = false; rule.RaisedAt = null; }
-        audit.Record(id is null ? "energy.alarm_rule_created" : "energy.alarm_rule_updated", nameof(AlarmRule), rule.Id.ToString(), JsonSerializer.Serialize(new { meter.Code, rule.Kind, rule.Threshold, rule.IsActive }));
+        audit.Record(id is null ? "energy.alarm_rule_created" : "energy.alarm_rule_updated", nameof(AlarmRule), rule.Id.ToString(), JsonSerializer.Serialize(new { meter.Code, rule.Kind, rule.Threshold, rule.IsActive, rule.CreateWorkOrder }));
         try
         {
             await db.SaveChangesAsync(ct);
@@ -78,7 +82,27 @@ public sealed class AlarmService(EnergyDbContext db, ICurrentUser user, IAuditPo
         var (number, size) = Page<AlarmEventDto>.Normalize(page, pageSize);
         var rows = await query.OrderByDescending(e => e.At).Skip((number - 1) * size).Take(size).ToListAsync(ct);
         var meters = await MetersAsync(rows.Select(e => e.MeterId), ct);
-        return new Page<AlarmEventDto>(rows.Select(e => new AlarmEventDto(e.RuleId, e.MeterId, meters.GetValueOrDefault(e.MeterId)?.Code ?? "", e.At, e.Kind, e.Value)).ToList(), total, number, size);
+        var raisedIds = rows.Where(e => e.Kind == AlarmEventKind.Raised).Select(e => e.Id).ToList();
+        var orders = work is null ? new Dictionary<Guid, WorkFromSourceResult>() : (await work.FindAsync(WorkSourceKind, raisedIds, ct)).ToDictionary(x => x.Key, x => x.Value);
+        return new Page<AlarmEventDto>(rows.Select(e => new AlarmEventDto(e.Id, e.RuleId, e.MeterId, meters.GetValueOrDefault(e.MeterId)?.Code ?? "", e.At, e.Kind, e.Value, orders.GetValueOrDefault(e.Id)?.WorkOrderId, orders.GetValueOrDefault(e.Id)?.Number)).ToList(), total, number, size);
+    }
+
+    public const string WorkSourceKind = "energy.alarm";
+
+    /// <summary>A manager raises the work order for an alarm by hand. Asking again for the same alarm returns the same work order.</summary>
+    public async Task<Result<WorkFromSourceResult>> RaiseWorkOrderAsync(Guid eventId, CancellationToken ct = default)
+    {
+        if (work is null) return Result<WorkFromSourceResult>.Conflict("Work orders are not available.");
+        if (user.UserId is not { } me) return Result<WorkFromSourceResult>.Forbidden("Sign in first.");
+        var ev = await db.AlarmEvents.AsNoTracking().FirstOrDefaultAsync(e => e.Id == eventId, ct);
+        if (ev is null) return Result<WorkFromSourceResult>.NotFound();
+        if (ev.Kind != AlarmEventKind.Raised) return Result<WorkFromSourceResult>.Conflict("Only a raised alarm can have a work order.");
+        var rule = await db.AlarmRules.AsNoTracking().FirstOrDefaultAsync(r => r.Id == ev.RuleId, ct);
+        var meter = await db.Meters.AsNoTracking().FirstOrDefaultAsync(m => m.Id == ev.MeterId, ct);
+        if (rule is null || meter is null) return Result<WorkFromSourceResult>.NotFound();
+        if (meter.LocationId is null) return Result<WorkFromSourceResult>.Conflict("The meter has no place, so a work order cannot be raised for it.");
+        var result = await work.EnsureAsync(AlarmWork.Request(ev, rule, meter), me, ct);
+        return result is null ? Result<WorkFromSourceResult>.Conflict("The meter's place no longer exists.") : Result<WorkFromSourceResult>.Ok(result);
     }
 
     private async Task<Dictionary<Guid, EnergyMeter>> MetersAsync(IEnumerable<Guid> ids, CancellationToken ct)
@@ -87,11 +111,11 @@ public sealed class AlarmService(EnergyDbContext db, ICurrentUser user, IAuditPo
         return await db.Meters.AsNoTracking().Where(m => list.Contains(m.Id)).ToDictionaryAsync(m => m.Id, ct);
     }
 
-    private static AlarmRuleDto ToDto(AlarmRule r, EnergyMeter? m) => new(r.Id, r.MeterId, m?.Code ?? "", m?.Name ?? "", r.Kind, r.Threshold, r.IsActive, r.IsRaised, r.RaisedAt, Common.Version(r.RowVersion));
+    private static AlarmRuleDto ToDto(AlarmRule r, EnergyMeter? m) => new(r.Id, r.MeterId, m?.Code ?? "", m?.Name ?? "", r.Kind, r.Threshold, r.IsActive, r.CreateWorkOrder, r.IsRaised, r.RaisedAt, Common.Version(r.RowVersion));
 }
 
 /// <summary>Checks every active rule of one organisation, raising and clearing alarms and telling the energy managers when one is raised.</summary>
-public sealed class AlarmEvaluator(EnergyDbContext db, ConsumptionService consumption, IUserDirectory users, INotificationSink sink, TimeProvider clock)
+public sealed class AlarmEvaluator(EnergyDbContext db, ConsumptionService consumption, IUserDirectory users, INotificationSink sink, TimeProvider clock, ILogger<AlarmEvaluator> log, IWorkOrderFromSource? work = null)
 {
     public async Task<int> RunAsync(CancellationToken ct = default)
     {
@@ -100,6 +124,7 @@ public sealed class AlarmEvaluator(EnergyDbContext db, ConsumptionService consum
         var rules = await db.AlarmRules.Where(r => r.IsActive || r.IsRaised).ToListAsync(ct);
         var meters = await db.Meters.AsNoTracking().Where(m => rules.Select(r => r.MeterId).Contains(m.Id)).ToDictionaryAsync(m => m.Id, ct);
         List<DirectoryUser>? managers = null;
+        var toRaise = new List<(AlarmEvent Event, AlarmRule Rule, EnergyMeter Meter)>();
 
         foreach (var rule in rules)
         {
@@ -109,7 +134,9 @@ public sealed class AlarmEvaluator(EnergyDbContext db, ConsumptionService consum
             {
                 rule.IsRaised = true;
                 rule.RaisedAt = now;
-                db.AlarmEvents.Add(new AlarmEvent { RuleId = rule.Id, MeterId = meter.Id, At = now, Kind = AlarmEventKind.Raised, Value = value });
+                var raisedEvent = new AlarmEvent { RuleId = rule.Id, MeterId = meter.Id, At = now, Kind = AlarmEventKind.Raised, Value = value };
+                db.AlarmEvents.Add(raisedEvent);
+                if (rule.CreateWorkOrder) toRaise.Add((raisedEvent, rule, meter));
                 managers ??= (await users.WithPermissionAsync(Permissions.EnergyManage, ct)).ToList();
                 var (en, ar) = rule.Kind == AlarmKind.HighDailyUse
                     ? ($"High use on {meter.Name}: {value:0.##} {meter.Unit} yesterday (limit {rule.Threshold:0.##})", $"استهلاك مرتفع على {meter.Name}: {value:0.##} {meter.Unit} أمس (الحد {rule.Threshold:0.##})")
@@ -127,6 +154,21 @@ public sealed class AlarmEvaluator(EnergyDbContext db, ConsumptionService consum
         }
 
         await db.SaveChangesAsync(ct);
+
+        // The alarm stands once it is saved. A work order that cannot be raised now is not retried by the check; a manager can raise it from the alarm.
+        foreach (var (ev, rule, meter) in toRaise)
+        {
+            if (work is null || rule.WorkOrderRequesterId is not { } requester || meter.LocationId is null) continue;
+            try
+            {
+                await work.EnsureAsync(AlarmWork.Request(ev, rule, meter), requester, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                log.LogError(ex, "A work order for an energy alarm could not be raised");
+            }
+        }
+
         return raised;
     }
 
@@ -178,5 +220,17 @@ public sealed class EnergyMonitor(IServiceScopeFactory scopes, ILogger<EnergyMon
         }
 
         return raised;
+    }
+}
+
+/// <summary>What a work order raised for an alarm says. The same words whether raised by the check or by a manager.</summary>
+internal static class AlarmWork
+{
+    public static WorkFromSource Request(AlarmEvent ev, AlarmRule rule, EnergyMeter meter)
+    {
+        var what = rule.Kind == AlarmKind.HighDailyUse
+            ? $"Energy alarm: high use on {meter.Name} ({ev.Value:0.##} {meter.Unit} in a day, limit {rule.Threshold:0.##})"
+            : $"Energy alarm: no reading from {meter.Name} for {ev.Value:0} hours (limit {rule.Threshold:0.##})";
+        return new WorkFromSource(AlarmService.WorkSourceKind, ev.Id, what, $"Raised by the energy alarm on meter {meter.Code} at {ev.At:yyyy-MM-dd HH:mm} UTC. Find the cause, and check the meter and the equipment it serves.", meter.LocationId, null, "Medium", false);
     }
 }

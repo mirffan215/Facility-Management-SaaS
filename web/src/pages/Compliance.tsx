@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
 import { useComplianceSummary, useObligation, useObligations, usePermit, usePermitTypes, usePermits, usePermissions, useUsers } from '../api/hooks';
-import type { Completion, CompletionResult, ComplianceStatus, Obligation, ObligationCategory, Permit, PermitStatus, PermitType } from '../api/types';
+import type { WorkFromSourceResult, Completion, CompletionResult, ComplianceStatus, Obligation, ObligationCategory, Permit, PermitStatus, PermitType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Dialog } from '../components/InventoryBits';
 import { LocationSelect } from '../components/LocationSelect';
@@ -160,12 +160,13 @@ function ObligationForm({ obligation, onClose }: { obligation: Obligation | null
   const [firstDue, setFirstDue] = useState(obligation?.firstDueOn ?? '');
   const [ownerId, setOwnerId] = useState(obligation?.ownerId ?? '');
   const [notes, setNotes] = useState(obligation?.notes ?? '');
+  const [raiseOnFail, setRaiseOnFail] = useState(obligation?.createWorkOrderOnFail ?? false);
 
   const save = useMutation({
     mutationFn: () => {
       const body = {
         title, category, authority: authority || null, locationId: locationId || null, intervalMonths: interval.trim() ? Number(interval) : null, leadDays: Number(lead || 30),
-        firstDueOn: firstDue || null, ownerId: ownerId || null, notes: notes || null, rowVersion: obligation?.rowVersion ?? null,
+        firstDueOn: firstDue || null, ownerId: ownerId || null, notes: notes || null, rowVersion: obligation?.rowVersion ?? null, createWorkOrderOnFail: raiseOnFail,
       };
       return obligation ? api.put<Obligation>(`/compliance/obligations/${obligation.id}`, body) : api.post<Obligation>('/compliance/obligations', body);
     },
@@ -198,6 +199,8 @@ function ObligationForm({ obligation, onClose }: { obligation: Obligation | null
           </Field>
         ) : null}
         <Field label={t('compliance.notes')} error={errors.notes?.[0]}><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={1000} /></Field>
+        <label className="check"><input type="checkbox" checked={raiseOnFail} onChange={(e) => setRaiseOnFail(e.target.checked)} /><span>{t('compliance.raiseOnFail')}</span></label>
+        {errors.createWorkOrderOnFail ? <p className="error" role="alert">{errors.createWorkOrderOnFail[0]}</p> : null}
         <ErrorBanner error={Object.keys(errors).length ? null : save.error} />
         <div className="actions">
           <button type="button" onClick={onClose}>{t('common.cancel')}</button>
@@ -260,6 +263,7 @@ function ObligationDialog({ id, onClose, onEdit }: { id: string; onClose: () => 
                     {c.reference ? <> · <bdi>{c.reference}</bdi></> : null}
                     {c.providerName ? <> · <bdi>{c.providerName}</bdi></> : null}
                     {c.notes ? <div className="muted"><bdi>{c.notes}</bdi></div> : null}
+                    {c.result === 'Failed' ? (c.workOrderId ? <div><Link to={`/work-orders/${c.workOrderId}`}>{t('compliance.workOrder', { number: c.workOrderNumber })}</Link></div> : can('compliance.manage') && can('workorders.read') ? <RaiseFailureWork completionId={c.id} /> : null) : null}
                     <Documents completion={c} canManage={can('compliance.manage')} />
                   </li>
                 ))}
@@ -275,6 +279,19 @@ function ObligationDialog({ id, onClose, onEdit }: { id: string; onClose: () => 
           onConfirm={() => archive.mutate()} onCancel={() => setArchiving(false)} />
       ) : null}
     </Dialog>
+  );
+}
+
+function RaiseFailureWork({ completionId }: { completionId: string }) {
+  const { t } = useTranslation();
+  const { api } = useAuth();
+  const refresh = useRefresh();
+  const raise = useMutation({ mutationFn: () => api.post<WorkFromSourceResult>(`/compliance/completions/${completionId}/work-order`, {}), onSuccess: () => refresh() });
+  return (
+    <div>
+      <button type="button" disabled={raise.isPending} onClick={() => raise.mutate()}>{t('compliance.raiseNow')}</button>
+      <ErrorBanner error={raise.error} />
+    </div>
   );
 }
 
