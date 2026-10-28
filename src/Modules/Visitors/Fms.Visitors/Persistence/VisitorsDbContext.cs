@@ -55,5 +55,7 @@ public sealed class VisitorsDbContext(DbContextOptions<VisitorsDbContext> option
             e.Property(x => x.InductionText).HasMaxLength(4000);
             e.HasIndex(x => x.TenantId).IsUnique();
         });
+
+        base.OnModelCreating(b);
     }
 }

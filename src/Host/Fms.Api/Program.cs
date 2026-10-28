@@ -10,6 +10,10 @@ using Fms.Bookings;
 using Fms.Spaces;
 using Fms.Reporting;
 using Fms.Visitors;
+using Fms.Compliance;
+using Fms.Leases;
+using Fms.Projects;
+using Fms.Energy;
 using Fms.Vendors;
 using Fms.Work;
 using Fms.Platform;
@@ -49,6 +53,10 @@ if (builder.Configuration.GetConnectionString("Default") is { Length: > 0 } conn
     builder.Services.AddFmsReporting(connectionString);
     builder.Services.AddFmsPurchasing(connectionString);
     builder.Services.AddFmsIntegration(connectionString);
+    builder.Services.AddFmsLeases(connectionString);
+    builder.Services.AddFmsProjects(connectionString);
+    builder.Services.AddFmsEnergy(connectionString);
+    builder.Services.AddFmsCompliance(connectionString);
 }
 
 // Enums travel as readable strings ("Site", not 1), so the contract does not depend on enum numbering.
@@ -124,6 +132,10 @@ if (app.Configuration.GetConnectionString("Default") is { Length: > 0 })
     v1.MapSpaces();
     v1.MapBookings();
     v1.MapVisitors();
+    v1.MapLeases();
+    v1.MapProjects();
+    v1.MapEnergy();
+    v1.MapCompliance();
     v1.MapReporting();
     v1.MapPurchasing();
     v1.MapIntegration();

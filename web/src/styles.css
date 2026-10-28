@@ -167,3 +167,5 @@ tr.voided td:last-child, tr.voided td .badge { text-decoration: none; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
+.chip { display: inline-flex; align-items: center; gap: 0.2rem; border: 1px solid var(--border); border-radius: 1rem; padding: 0 0.5rem; margin-inline-end: 0.3rem; }
+.card .value { display: block; }

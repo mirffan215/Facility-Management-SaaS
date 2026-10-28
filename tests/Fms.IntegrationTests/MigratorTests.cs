@@ -67,7 +67,15 @@ public sealed class MigratorTests(SqlServerFixture sql)
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'visitors'),
                    (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'visitors' AND t.name <> N'__EFMigrationsHistory'),
                    (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'reporting'),
-                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'reporting' AND t.name <> N'__EFMigrationsHistory')
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'reporting' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'compliance'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'compliance' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'energy'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'energy' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'projects'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'projects' AND t.name <> N'__EFMigrationsHistory'),
+                   (SELECT COUNT(DISTINCT p.target_object_id) FROM sys.security_predicates p JOIN sys.objects o ON o.object_id = p.target_object_id JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE s.name = N'leases'),
+                   (SELECT COUNT(*) FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE s.name = N'leases' AND t.name <> N'__EFMigrationsHistory')
             """, conn);
         await using var reader = await cmd.ExecuteReaderAsync();
         await reader.ReadAsync();
@@ -95,6 +103,14 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.Equal(3, reader.GetInt32(21)); // visits, watchlist, settings
         Assert.Equal(reader.GetInt32(23), reader.GetInt32(22)); // and every reporting table
         Assert.Equal(1, reader.GetInt32(23)); // feed tokens
+        Assert.Equal(reader.GetInt32(25), reader.GetInt32(24)); // and every compliance table
+        Assert.Equal(6, reader.GetInt32(25)); // obligations, completions, documents, permit types, permits, permit events
+        Assert.Equal(reader.GetInt32(27), reader.GetInt32(26)); // and every energy table
+        Assert.Equal(7, reader.GetInt32(27));
+        Assert.Equal(reader.GetInt32(29), reader.GetInt32(28)); // and every projects table
+        Assert.Equal(6, reader.GetInt32(29)); // projects, phases, tasks, milestones, budget lines, links
+        Assert.Equal(reader.GetInt32(31), reader.GetInt32(30)); // and every leases table
+        Assert.Equal(1, reader.GetInt32(31)); // leases
         Assert.Equal(8, reader.GetInt32(5)); // Locations, CustomFieldDefinitions, AssetClasses, Assets, AssetDocuments, Meters, MeterReadings, MeterReadingVoids
     }
 

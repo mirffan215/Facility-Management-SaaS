@@ -11,6 +11,14 @@ using Fms.Purchasing;
 using Fms.Bookings;
 using Fms.Bookings.Services;
 using Fms.Visitors;
+using Fms.Leases;
+using Fms.Leases.Services;
+using Fms.Projects;
+using Fms.Projects.Services;
+using Fms.Energy;
+using Fms.Energy.Services;
+using Fms.Compliance;
+using Fms.Compliance.Services;
 using Fms.Visitors.Services;
 using Fms.Vendors;
 using Fms.Vendors.Services;
@@ -43,6 +51,10 @@ builder.Services.AddFmsPurchasing(connectionString);
 builder.Services.AddFmsIntegration(connectionString);
 builder.Services.AddFmsBookings(connectionString, builder.Configuration);
 builder.Services.AddFmsVisitors(connectionString);
+builder.Services.AddFmsLeases(connectionString);
+builder.Services.AddFmsProjects(connectionString);
+builder.Services.AddFmsEnergy(connectionString);
+builder.Services.AddFmsCompliance(connectionString);
 builder.Services.AddOptions<OutboxOptions>().Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 builder.Services.AddFmsEmail(builder.Configuration);
 builder.Services.AddHostedService<OutboxWorker>();
@@ -52,6 +64,9 @@ builder.Services.AddHostedService<ContractWorker>();
 builder.Services.AddHostedService<ErpSyncWorker>();
 builder.Services.AddHostedService<BookingWorker>();
 builder.Services.AddHostedService<VisitorWorker>();
+builder.Services.AddHostedService<ComplianceWorker>();
+builder.Services.AddHostedService<EnergyWorker>();
+builder.Services.AddHostedService<LeaseWorker>();
 
 // Module handlers register here as modules are built: builder.Services.AddOutboxHandler<SomeHandler>();
 
@@ -252,6 +267,84 @@ internal sealed class VisitorWorker(VisitMonitor monitor, ILogger<VisitorWorker>
             {
                 log.LogError(ex, "Visitor housekeeping failed");
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Warns people about obligations that are due soon, overdue or failed. Twice a day is plenty: due dates are whole days.</summary>
+internal sealed class ComplianceWorker(ComplianceMonitor monitor, ILogger<ComplianceWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var sent = await monitor.RunOnceAsync(stoppingToken);
+                if (sent > 0) log.LogInformation("Compliance alerts sent: {Count}", sent);
+                await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Compliance alerts failed");
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Warns about lease notice dates, break dates and endings. Twice a day: the dates are whole days.</summary>
+internal sealed class LeaseWorker(LeaseMonitor monitor, ILogger<LeaseWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var sent = await monitor.RunOnceAsync(stoppingToken);
+                if (sent > 0) log.LogInformation("Lease alerts sent: {Count}", sent);
+                await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Lease alerts failed");
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+            }
+        }
+    }
+}
+
+/// <summary>Checks the energy alarm rules. Hourly: a day's use only completes once a day, and a silent meter is measured in hours.</summary>
+internal sealed class EnergyWorker(EnergyMonitor monitor, ILogger<EnergyWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var raised = await monitor.RunOnceAsync(stoppingToken);
+                if (raised > 0) log.LogInformation("Energy alarms raised: {Count}", raised);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "Energy alarm check failed");
+                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
             }
         }
     }

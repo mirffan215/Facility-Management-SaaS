@@ -111,6 +111,48 @@ public static class Permissions
     /// <summary>Manage the BI feed: make and revoke access tokens for outside tools.</summary>
     public const string ReportsManage = "reports.manage";
 
+    /// <summary>See obligations, certificates and their history.</summary>
+    public const string ComplianceRead = "compliance.read";
+
+    /// <summary>Create and change obligations, record inspections and certificates, upload evidence and set up permit types.</summary>
+    public const string ComplianceManage = "compliance.manage";
+
+    /// <summary>See permits to work.</summary>
+    public const string PermitsRead = "permits.read";
+
+    /// <summary>Ask for a permit and withdraw one's own request.</summary>
+    public const string PermitsRequest = "permits.request";
+
+    /// <summary>Approve or reject a permit request (never one's own).</summary>
+    public const string PermitsApprove = "permits.approve";
+
+    /// <summary>Issue an approved permit after confirming its precautions (never one's own), and cancel an issued one.</summary>
+    public const string PermitsIssue = "permits.issue";
+
+    /// <summary>Accept an issued permit and start the work (never the person who issued it), and close a permit once the area is safe.</summary>
+    public const string PermitsWork = "permits.work";
+
+    /// <summary>See energy meters, readings, use and cost.</summary>
+    public const string EnergyRead = "energy.read";
+
+    /// <summary>Add readings by hand and import them from a file, and void a wrong one.</summary>
+    public const string EnergyRecord = "energy.record";
+
+    /// <summary>Set up meters, tariffs, alarm rules and the devices that post readings.</summary>
+    public const string EnergyManage = "energy.manage";
+
+    /// <summary>See projects, their plans, budgets and costs.</summary>
+    public const string ProjectsRead = "projects.read";
+
+    /// <summary>Create and change projects: plan, budget, status, and the work and orders charged to them.</summary>
+    public const string ProjectsManage = "projects.manage";
+
+    /// <summary>See leases, their terms, rent schedules and upcoming deadlines.</summary>
+    public const string LeasesRead = "leases.read";
+
+    /// <summary>Create and change leases: terms, activation, extension and termination.</summary>
+    public const string LeasesManage = "leases.manage";
+
     /// <summary>See the installation's license: modules, user limit, expiry.</summary>
     public const string LicenseRead = "license.read";
 
@@ -132,6 +174,9 @@ public static class Permissions
         BookingsRead, BookingsBook, BookingsApprove, BookingsManage,
         VisitorsHost, VisitorsReception, VisitorsSecurity,
         ReportsRead, ReportsManage,
+        ComplianceRead, ComplianceManage, PermitsRead, PermitsRequest, PermitsApprove, PermitsIssue, PermitsWork,
+        EnergyRead, EnergyRecord, EnergyManage,
+        ProjectsRead, ProjectsManage, LeasesRead, LeasesManage,
         LicenseRead,
         PortalUse,
     ];

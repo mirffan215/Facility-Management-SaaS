@@ -1273,3 +1273,367 @@ export interface LicenseStatus {
   graceEndsAt: string | null;
   detail: string | null;
 }
+
+// ---- compliance and permits ----
+export type ObligationCategory = 'Fire' | 'Electrical' | 'Lifts' | 'Pressure' | 'Water' | 'Environmental' | 'HealthAndSafety' | 'Other';
+export type CompletionResult = 'Passed' | 'PassedWithRemarks' | 'Failed';
+export type ComplianceStatus = 'Scheduled' | 'Compliant' | 'DueSoon' | 'Overdue' | 'Failed';
+
+export interface Obligation {
+  id: string;
+  title: string;
+  category: ObligationCategory;
+  authority: string | null;
+  locationId: string | null;
+  locationName: string | null;
+  assetId: string | null;
+  assetName: string | null;
+  intervalMonths: number | null;
+  leadDays: number;
+  firstDueOn: string | null;
+  dueOn: string | null;
+  daysToDue: number | null;
+  ownerId: string | null;
+  ownerName: string | null;
+  notes: string | null;
+  isArchived: boolean;
+  lastCompletedOn: string | null;
+  validUntil: string | null;
+  lastResult: CompletionResult | null;
+  status: ComplianceStatus;
+  rowVersion: string;
+}
+
+export interface CompletionDocument {
+  id: string;
+  completionId: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  sha256: string;
+  uploadedAt: string;
+}
+
+export interface Completion {
+  id: string;
+  obligationId: string;
+  performedOn: string;
+  validUntil: string | null;
+  result: CompletionResult;
+  reference: string | null;
+  providerName: string | null;
+  notes: string | null;
+  recordedAt: string;
+  recordedByName: string | null;
+  documents: CompletionDocument[];
+}
+
+export interface ObligationDetail {
+  obligation: Obligation;
+  completions: Completion[];
+}
+
+export interface ComplianceSummary {
+  total: number;
+  compliant: number;
+  dueSoon: number;
+  overdue: number;
+  failed: number;
+  scheduled: number;
+  percentCompliant: number | null;
+}
+
+export interface PermitType {
+  id: string;
+  code: string;
+  name: string;
+  nameAr: string | null;
+  maxDurationHours: number;
+  exclusive: boolean;
+  requiresIsolation: boolean;
+  precautions: string[];
+  isArchived: boolean;
+  rowVersion: string;
+}
+
+export type PermitStatus = 'Requested' | 'Approved' | 'Rejected' | 'Issued' | 'Started' | 'Closed' | 'Cancelled';
+
+export interface Permit {
+  id: string;
+  number: number;
+  typeId: string;
+  typeCode: string;
+  typeName: string;
+  exclusive: boolean;
+  requiresIsolation: boolean;
+  workOrderId: string | null;
+  workOrderNumber: string | null;
+  locationId: string;
+  locationName: string;
+  description: string;
+  contractorName: string | null;
+  plannedStart: string;
+  plannedEnd: string;
+  status: PermitStatus;
+  isOverdue: boolean;
+  precautions: { text: string; confirmed: boolean }[];
+  requestedBy: string;
+  requestedByName: string;
+  requestedAt: string;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  rejectReason: string | null;
+  issuedByName: string | null;
+  issuedAt: string | null;
+  isolationReference: string | null;
+  startedByName: string | null;
+  startedAt: string | null;
+  closedByName: string | null;
+  closedAt: string | null;
+  closureNote: string | null;
+  areaSafe: boolean | null;
+  cancelReason: string | null;
+  rowVersion: string;
+}
+
+export interface PermitDetail {
+  permit: Permit;
+  events: { at: string; byName: string; action: string; note: string | null }[];
+}
+
+// ---- energy ----
+export type EnergyKind = 'Electricity' | 'Water' | 'Gas' | 'Cooling' | 'Heat' | 'Other';
+
+export interface EnergyMeter {
+  id: string;
+  code: string;
+  name: string;
+  kind: EnergyKind;
+  unit: string;
+  locationId: string | null;
+  locationName: string | null;
+  isCumulative: boolean;
+  rolloverAt: number | null;
+  isArchived: boolean;
+  latestAt: string | null;
+  latestValue: number | null;
+  rowVersion: string;
+}
+
+export interface EnergyReading {
+  id: string;
+  meterId: string;
+  at: string;
+  value: number;
+  source: 'Manual' | 'Device' | 'Import';
+  recordedAt: string;
+  note: string | null;
+  isVoided: boolean;
+  voidReason: string | null;
+}
+
+export interface ImportRow {
+  line: number;
+  meter: string | null;
+  status: 'Accepted' | 'Duplicate' | 'Rejected';
+  message: string | null;
+}
+
+export interface ImportResult {
+  dryRun: boolean;
+  total: number;
+  accepted: number;
+  duplicates: number;
+  rejected: number;
+  rows: ImportRow[];
+}
+
+export interface Tariff {
+  id: string;
+  kind: EnergyKind;
+  effectiveFrom: string;
+  pricePerUnit: number;
+  currency: string;
+  rowVersion: string;
+}
+
+export interface EnergyDevice {
+  id: string;
+  name: string;
+  prefix: string;
+  meterIds: string[];
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  state: 'Active' | 'Revoked' | 'Expired';
+}
+
+export interface CreatedEnergyDevice {
+  device: EnergyDevice;
+  secret: string;
+  ingestPath: string;
+}
+
+export interface MeterUse {
+  meterId: string;
+  code: string;
+  name: string;
+  kind: EnergyKind;
+  unit: string;
+  total: number;
+  cost: number | null;
+  currency: string | null;
+  resets: number;
+  days: { day: string; amount: number }[];
+}
+
+export interface Consumption {
+  from: string;
+  to: string;
+  meters: MeterUse[];
+  totals: { kind: EnergyKind; unit: string; total: number; cost: number | null; currency: string | null; mixedUnits: boolean }[];
+}
+
+export interface AlarmRule {
+  id: string;
+  meterId: string;
+  meterCode: string;
+  meterName: string;
+  kind: 'HighDailyUse' | 'NoReading';
+  threshold: number;
+  isActive: boolean;
+  isRaised: boolean;
+  raisedAt: string | null;
+  rowVersion: string;
+}
+
+export interface AlarmEvent {
+  ruleId: string;
+  meterId: string;
+  meterCode: string;
+  at: string;
+  kind: 'Raised' | 'Cleared';
+  value: number | null;
+}
+
+export type ProjectStatus = 'Planning' | 'Active' | 'OnHold' | 'Completed' | 'Cancelled';
+export type BudgetCategory = 'Design' | 'Construction' | 'Equipment' | 'Furniture' | 'Professional' | 'Contingency' | 'Other';
+export type WorkItemStatus = 'ToDo' | 'InProgress' | 'Blocked' | 'Done';
+export type LinkKind = 'WorkOrder' | 'PurchaseOrder';
+
+export interface ProjectSummary {
+  id: string;
+  code: string;
+  name: string;
+  status: ProjectStatus;
+  managerName: string | null;
+  locationName: string | null;
+  startOn: string;
+  endOn: string;
+  currencyCode: string;
+  budget: number;
+  tasksDone: number;
+  tasksTotal: number;
+  percentDone: number;
+  milestonesLate: number;
+  endOverdue: boolean;
+}
+
+export interface ProjectPhase { id: string; name: string; sortOrder: number }
+export interface ProjectTask { id: string; phaseId: string | null; title: string; assigneeId: string | null; assigneeName: string | null; status: WorkItemStatus; dueOn: string | null; doneOn: string | null; notes: string | null; isOverdue: boolean; rowVersion: string }
+export interface ProjectMilestone { id: string; name: string; dueOn: string; achievedOn: string | null; isLate: boolean; rowVersion: string }
+export interface ProjectBudgetLine { id: string; category: BudgetCategory; description: string; amount: number; rowVersion: string }
+export interface ProjectLink { id: string; kind: LinkKind; refId: string; refNumber: string; category: BudgetCategory; linkedAt: string }
+
+export interface ProjectDetail {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  nextStatuses: ProjectStatus[];
+  managerId: string | null;
+  managerName: string | null;
+  locationId: string | null;
+  locationName: string | null;
+  startOn: string;
+  endOn: string;
+  closedOn: string | null;
+  closeReason: string | null;
+  currencyCode: string;
+  percentDone: number;
+  rowVersion: string;
+  phases: ProjectPhase[];
+  tasks: ProjectTask[];
+  milestones: ProjectMilestone[];
+  budget: ProjectBudgetLine[];
+  links: ProjectLink[];
+}
+
+export interface ProjectCostRow { category: BudgetCategory; budget: number; spent: number; committed: number; remaining: number }
+export interface ProjectLinkCost { linkId: string; kind: LinkKind; number: string; title: string; status: string; category: BudgetCategory; spent: number; committed: number; excluded: boolean; excludedBecause: string | null }
+export interface ProjectCosts { currencyCode: string; budget: number; spent: number; committed: number; remaining: number; overBudget: boolean; byCategory: ProjectCostRow[]; items: ProjectLinkCost[] }
+
+export type LeaseKind = 'Occupied' | 'LetOut';
+export type LeaseState = 'Draft' | 'Active' | 'Expired' | 'Terminated';
+export type RentFrequency = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Annual';
+export type DeadlineKind = 'Notice' | 'Break' | 'Expiry';
+
+export interface LeaseDeadline { kind: DeadlineKind; on: string; daysAway: number }
+
+export interface LeaseSummary {
+  id: string;
+  reference: string;
+  title: string;
+  kind: LeaseKind;
+  state: LeaseState;
+  counterparty: string;
+  locationName: string | null;
+  startOn: string;
+  endOn: string;
+  currencyCode: string;
+  baseRent: number;
+  frequency: RentFrequency;
+  nextDeadline: LeaseDeadline | null;
+}
+
+export interface Lease {
+  id: string;
+  reference: string;
+  title: string;
+  kind: LeaseKind;
+  state: LeaseState;
+  counterparty: string;
+  locationId: string | null;
+  locationName: string | null;
+  areaSquareMetres: number | null;
+  startOn: string;
+  endOn: string;
+  noticeDays: number;
+  noticeDeadline: string | null;
+  breakOn: string | null;
+  breakNoticeDays: number;
+  breakDeadline: string | null;
+  renewalMonths: number | null;
+  currencyCode: string;
+  baseRent: number;
+  frequency: RentFrequency;
+  escalationPercent: number;
+  escalationEveryMonths: number;
+  rentFreeMonths: number;
+  deposit: number | null;
+  alertLeadDays: number;
+  notes: string | null;
+  activatedOn: string | null;
+  terminatedOn: string | null;
+  terminationReason: string | null;
+  termsLocked: boolean;
+  deadlines: LeaseDeadline[];
+  totalRent: number;
+  rowVersion: string;
+}
+
+export interface LeaseInstallment { number: number; dueOn: string; periodEnd: string; amount: number; escalationStep: number; isRentFree: boolean; isPartial: boolean }
+export interface LeaseSchedule { leaseId: string; currencyCode: string; total: number; installments: LeaseInstallment[] }
+export interface LeaseTotals { active: number; draft: number; expired: number; expiringSoon: number; deadlinesSoon: number; rent: { kind: LeaseKind; currencyCode: string; nextTwelveMonths: number }[] }

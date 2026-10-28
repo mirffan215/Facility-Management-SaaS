@@ -2,7 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type {
   AuditEntry,
-  LicenseStatus,
+  AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
+  ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
+  LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -451,4 +453,104 @@ export function useSystemInfo() {
 export function useLicense() {
   const { api } = useAuth();
   return useQuery({ queryKey: ['license'], queryFn: () => api.get<LicenseStatus>('/license') });
+}
+
+export function useComplianceSummary() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['compliance', 'summary'], queryFn: () => api.get<ComplianceSummary>('/compliance/summary') });
+}
+
+export function useObligations(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['compliance', 'obligations', params], queryFn: () => api.get<Page<Obligation>>('/compliance/obligations', params) });
+}
+
+export function useObligation(id: string | null) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['compliance', 'obligation', id], enabled: !!id, queryFn: () => api.get<ObligationDetail>(`/compliance/obligations/${id}`) });
+}
+
+export function usePermitTypes(includeArchived = false) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['compliance', 'permit-types', includeArchived], queryFn: () => api.get<PermitType[]>('/compliance/permit-types', { includeArchived }) });
+}
+
+export function usePermits(params: Record<string, string | number | boolean | undefined>, mine: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['compliance', 'permits', mine, params], queryFn: () => api.get<Page<Permit>>(mine ? '/permits/mine' : '/permits', params) });
+}
+
+export function usePermit(id: string | null) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['compliance', 'permit', id], enabled: !!id, queryFn: () => api.get<PermitDetail>(`/permits/${id}`) });
+}
+
+export function useEnergyMeters(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'meters', params], queryFn: () => api.get<Page<EnergyMeter>>('/energy/meters', params) });
+}
+
+export function useEnergyReadings(meterId: string | null, page: number) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'readings', meterId, page], enabled: !!meterId, queryFn: () => api.get<Page<EnergyReading>>(`/energy/meters/${meterId}/readings`, { page, pageSize: 20 }) });
+}
+
+export function useConsumption(params: Record<string, string | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'consumption', params], queryFn: () => api.get<Consumption>('/energy/consumption', params) });
+}
+
+export function useTariffs() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'tariffs'], queryFn: () => api.get<Tariff[]>('/energy/tariffs') });
+}
+
+export function useEnergyDevices(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'devices'], enabled, queryFn: () => api.get<EnergyDevice[]>('/energy/devices') });
+}
+
+export function useAlarmRules() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'alarm-rules'], queryFn: () => api.get<AlarmRule[]>('/energy/alarms/rules') });
+}
+
+export function useAlarmEvents() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['energy', 'alarm-events'], queryFn: () => api.get<Page<AlarmEvent>>('/energy/alarms/events', { pageSize: 20 }) });
+}
+
+export function useProjects(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['projects', 'list', params], queryFn: () => api.get<Page<ProjectSummary>>('/projects', params) });
+}
+
+export function useProject(id: string | null) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['projects', 'detail', id], enabled: !!id, queryFn: () => api.get<ProjectDetail>(`/projects/${id}`) });
+}
+
+export function useProjectCosts(id: string | null) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['projects', 'costs', id], enabled: !!id, queryFn: () => api.get<ProjectCosts>(`/projects/${id}/costs`) });
+}
+
+export function useLeaseTotals() {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['leases', 'totals'], queryFn: () => api.get<LeaseTotals>('/leases/summary') });
+}
+
+export function useLeases(params: Record<string, string | number | boolean | undefined>) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['leases', 'list', params], queryFn: () => api.get<Page<LeaseSummary>>('/leases', params) });
+}
+
+export function useLease(id: string | null) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['leases', 'detail', id], enabled: !!id, queryFn: () => api.get<Lease>(`/leases/${id}`) });
+}
+
+export function useLeaseSchedule(id: string | null) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['leases', 'schedule', id], enabled: !!id, queryFn: () => api.get<LeaseSchedule>(`/leases/${id}/schedule`) });
 }

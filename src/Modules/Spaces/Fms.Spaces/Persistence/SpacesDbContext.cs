@@ -57,5 +57,7 @@ public sealed class SpacesDbContext(DbContextOptions<SpacesDbContext> options, I
             e.HasIndex(x => new { x.TenantId, x.SpaceId, x.StartOn });
             e.HasIndex(x => new { x.TenantId, x.UserId });
         });
+
+        base.OnModelCreating(b);
     }
 }

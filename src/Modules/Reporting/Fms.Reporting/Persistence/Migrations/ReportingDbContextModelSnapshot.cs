@@ -61,6 +61,8 @@ namespace Fms.Reporting.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("AuditEvents", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
@@ -112,6 +114,8 @@ namespace Fms.Reporting.Persistence.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("OutboxMessages", "dbo", t =>
                         {
@@ -167,6 +171,8 @@ namespace Fms.Reporting.Persistence.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();

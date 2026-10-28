@@ -38,6 +38,10 @@ public static class SystemRoles
             Permissions.BookingsRead, Permissions.BookingsBook, Permissions.BookingsApprove, Permissions.BookingsManage,
             Permissions.VisitorsHost, Permissions.VisitorsReception, Permissions.VisitorsSecurity,
             Permissions.ReportsRead,
+            Permissions.ComplianceRead, Permissions.ComplianceManage,
+            Permissions.PermitsRead, Permissions.PermitsRequest, Permissions.PermitsApprove, Permissions.PermitsIssue, Permissions.PermitsWork,
+            Permissions.EnergyRead, Permissions.EnergyRecord, Permissions.EnergyManage,
+            Permissions.ProjectsRead, Permissions.ProjectsManage, Permissions.LeasesRead, Permissions.LeasesManage,
         ],
         [Technician] =
         [
@@ -45,10 +49,12 @@ public static class SystemRoles
             Permissions.WorkOrdersRead, Permissions.WorkOrdersRequest, Permissions.WorkOrdersWork, Permissions.PmRead,
             Permissions.InventoryRead, Permissions.InventoryIssue, Permissions.PurchasingRequest,
             Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost,
+            Permissions.ComplianceRead, Permissions.PermitsRead, Permissions.PermitsRequest, Permissions.PermitsWork,
+            Permissions.EnergyRead, Permissions.EnergyRecord,
         ],
         [Requester] = [Permissions.LocationsRead, Permissions.WorkOrdersRequest, Permissions.BookingsRead, Permissions.BookingsBook, Permissions.VisitorsHost],
         [Reception] = [Permissions.LocationsRead, Permissions.UsersRead, Permissions.VisitorsReception, Permissions.VisitorsHost, Permissions.BookingsRead, Permissions.BookingsBook],
         [Vendor] = [Permissions.PortalUse],
-        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead, Permissions.SpacesRead, Permissions.BookingsRead, Permissions.ReportsRead],
+        [Viewer] = [Permissions.LocationsRead, Permissions.AssetsRead, Permissions.MetersRead, Permissions.DocumentsRead, Permissions.WorkOrdersRead, Permissions.PmRead, Permissions.InventoryRead, Permissions.VendorsRead, Permissions.SpacesRead, Permissions.BookingsRead, Permissions.ReportsRead, Permissions.ComplianceRead, Permissions.PermitsRead, Permissions.EnergyRead, Permissions.ProjectsRead, Permissions.LeasesRead],
     };
 }

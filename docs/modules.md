@@ -15,8 +15,12 @@
 | Reporting | Fixed KPI pack per area with period and site filters, CSV export, read-only OData BI feed with revocable tokens (Phase 7). Not yet: MTBF, scheduled exports, report builder |
 | Administration | Roles, workflow designer (versioned rules inside fixed safety limits), SLA, custom fields, audit viewer with export, Administration hub, integrations (Phase 7). Not yet: template editor, licensing (Phase 8) |
 
-Later modules: Energy & Utilities (IoT), Inspections & Compliance (HSE, permits-to-work), Projects/CAPEX,
-Lease & Property, Cleaning & Soft Services, Security Rounds, BIM/Digital Twin, AI (predictive maintenance, triage).
+| Compliance & Permits | Recurring inspections and certificates with evidence and warnings; permits to work with configurable types, separation of roles, exclusive-place check (Phase 9) |
+| Energy & Utilities | Meters, readings by hand, CSV and devices with revocable secrets, consumption and cost, tariffs, alarms (Phase 9). Not: BACnet/Modbus/MQTT |
+| Projects | Plans, milestones, budget lines; work orders and purchase orders charged to a project; budget vs committed vs spent (Phase 9). Not: dependencies, Gantt |
+| Leases | Rented and let-out leases, notice and break dates, computed rent schedule with rise, warnings (Phase 9). Not: accounting, IFRS 16, documents |
+
+Later modules: Cleaning & Soft Services, Security Rounds, BIM/Digital Twin, AI (predictive maintenance, triage).
 
 ## Key business controls
 - Approval limits by role and cost; requester cannot approve own request or purchase.

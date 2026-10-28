@@ -27,5 +27,7 @@ public sealed class ReportingDbContext(DbContextOptions<ReportingDbContext> opti
             e.HasIndex(x => x.TokenHash).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.CreatedAt });
         });
+
+        base.OnModelCreating(b);
     }
 }

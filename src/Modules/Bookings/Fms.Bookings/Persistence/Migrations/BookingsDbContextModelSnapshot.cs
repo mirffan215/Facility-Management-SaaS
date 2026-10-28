@@ -108,6 +108,8 @@ namespace Fms.Bookings.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TenantId", "Code")
                         .IsUnique();
 
@@ -194,6 +196,8 @@ namespace Fms.Bookings.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TenantId", "OrganizerId", "StartsAt");
 
                     b.HasIndex("TenantId", "ResourceId", "StartsAt");
@@ -231,6 +235,8 @@ namespace Fms.Bookings.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
@@ -258,6 +264,8 @@ namespace Fms.Bookings.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "BookingId")
                         .IsUnique();
@@ -337,6 +345,8 @@ namespace Fms.Bookings.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("AuditEvents", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
@@ -388,6 +398,8 @@ namespace Fms.Bookings.Persistence.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("OutboxMessages", "dbo", t =>
                         {

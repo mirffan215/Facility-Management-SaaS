@@ -1637,6 +1637,308 @@ test('license: the license page shows what is licensed; an expired license makes
   await expect(page.getByRole('alert').filter({ hasText: 'Data can be read but not changed' })).toHaveCount(0);
 });
 
+test('compliance: an overdue obligation is recorded as done with its certificate, and a permit to work cannot be approved by the person who asked', async () => {
+  const stamp = (offsetMinutes: number) => {
+    const d = new Date(Date.now() + offsetMinutes * 60_000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const overdue = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
+  const title = `Fire alarm test ${SUFFIX}`;
+
+  await page.goto('/compliance');
+  await expect(page.getByRole('heading', { name: 'Compliance and permits' })).toBeVisible();
+  await page.getByRole('button', { name: 'New obligation' }).click();
+  await page.getByLabel('Obligation', { exact: true }).fill(title);
+  await page.getByLabel('Place').selectOption({ index: 1 });
+  await page.getByLabel('Repeats every (months)').fill('12');
+  await page.getByLabel(/First due by/).fill(overdue);
+  await page.getByRole('button', { name: 'Save' }).click();
+  const row = page.getByRole('row', { name: new RegExp(title) });
+  await expect(row).toContainText('Overdue');
+  await shot('43-compliance');
+
+  await row.getByRole('button', { name: title }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Record an inspection or certificate' }).click();
+  await page.getByLabel('Certificate or report number').fill('CERT-77');
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Save' }).click();
+  await expect(dialog.getByText('CERT-77')).toBeVisible();
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'cert.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(dialog.getByRole('button', { name: 'cert.pdf', exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByRole('row', { name: new RegExp(title) })).toContainText('Compliant');
+
+  // Permit type, then a permit asked for by the same person who could approve it.
+  const code = `HOT${SUFFIX}`.slice(0, 30);
+  await page.getByRole('tab', { name: 'Permit types' }).click();
+  await page.getByRole('button', { name: 'New permit type' }).click();
+  await page.getByLabel('Code', { exact: true }).fill(code);
+  await page.getByLabel('Name', { exact: true }).fill('Hot work');
+  await page.getByLabel('Precautions').fill('Fire watch posted\nExtinguisher at hand');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(code.toUpperCase())).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Permits to work' }).click();
+  await page.getByRole('button', { name: 'New permit' }).click();
+  await page.getByLabel('Type', { exact: true }).selectOption({ index: 1 });
+  await page.getByLabel('Place').selectOption({ index: 1 });
+  await page.getByLabel('What work will be done').fill('Weld the bracket');
+  await page.getByLabel('Starts').fill(stamp(10));
+  await page.getByLabel('Ends').fill(stamp(130));
+  await page.getByRole('button', { name: 'Ask for the permit' }).click();
+  const permit = page.getByRole('row', { name: /PTW-\d{4}/ }).first();
+  await expect(permit).toContainText('Waiting for approval');
+
+  await permit.getByRole('button', { name: /PTW-\d{4}/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'You do not have permission to do this.' })).toBeVisible(); // self-approval is refused
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel the permit' }).click();
+  await page.getByRole('dialog').last().getByLabel('Reason').fill('Postponed');
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Cancel the permit' }).click();
+  await expect(page.getByRole('dialog').getByText('Cancelled').first()).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('Postponed').first()).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Back' }).click();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['obligations', 'permits', 'types']) {
+      await page.goto(`/compliance?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`compliance ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('energy: a meter gets readings by hand and from a file, a device posts with its own secret until revoked, and use and an alarm rule show', async () => {
+  const stamp = (daysAgo: number) => {
+    const d = new Date(Date.now() - daysAgo * 86_400_000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T08:00`;
+  };
+  const code = `EM${SUFFIX}`.slice(0, 40);
+
+  await page.goto('/energy?tab=meters');
+  await expect(page.getByRole('heading', { name: 'Energy and utilities' })).toBeVisible();
+  await page.getByRole('button', { name: 'New meter' }).click();
+  await page.getByLabel('Code', { exact: true }).fill(code);
+  await page.getByLabel('Name', { exact: true }).fill('Main incomer');
+  await page.getByLabel('Place').selectOption({ index: 1 });
+  await page.getByRole('button', { name: 'Save' }).click();
+  const row = page.getByRole('row', { name: new RegExp(code, 'i') });
+  await expect(row).toBeVisible();
+
+  for (const [daysAgo, value] of [[3, '1000'], [2, '1100']] as const) {
+    await row.getByRole('button', { name: `Add a reading to ${code.toUpperCase()}` }).click();
+    await page.getByRole('dialog').getByLabel(/^Reading/).fill(value);
+    await page.getByLabel('Taken at').fill(stamp(daysAgo));
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  }
+
+  // A file: one good row, one for a meter that does not exist. Checked first, then imported.
+  const when = new Date(Date.now() - 86_400_000).toISOString();
+  await page.getByRole('button', { name: 'Import a CSV file' }).click();
+  await page.getByLabel('CSV file').setInputFiles({ name: 'readings.csv', mimeType: 'text/csv', buffer: Buffer.from(`meter,at,value\n${code},${when},1150\nNO-SUCH,${when},5\n`) });
+  await page.getByRole('button', { name: 'Check the file' }).click();
+  await expect(page.getByRole('status')).toContainText('1 to add');
+  await expect(page.getByRole('dialog').getByText(/Unknown or archived meter/)).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Imported');
+  await page.getByRole('dialog').getByRole('button', { name: 'Back' }).click();
+  await expect(row).toContainText('1150');
+
+  // A price, then the use is priced.
+  await page.getByRole('tab', { name: 'Prices' }).click();
+  await page.getByRole('button', { name: 'New price' }).click();
+  await page.getByLabel('Price per unit').fill('0.5');
+  await page.getByLabel('Applies from').fill(stamp(10).slice(0, 10));
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/0\.5000 SAR/)).toBeVisible();
+
+  // A device with its own secret.
+  await page.getByRole('tab', { name: 'Devices' }).click();
+  await page.getByLabel('Device name').fill('Plant logger');
+  await page.getByLabel(new RegExp(code, 'i')).check();
+  await page.getByRole('button', { name: 'Make the device' }).click();
+  const secret = await page.getByLabel('Secret', { exact: true }).inputValue();
+  expect(secret).toMatch(/^fmse_/);
+  const body = { readings: [{ meter: code, at: new Date(Date.now() - 3_600_000).toISOString(), value: 1200 }] };
+  const ok = await page.request.post('/api/v1/energy/ingest', { headers: { Authorization: `Bearer ${secret}` }, data: body });
+  expect(ok.status()).toBe(200);
+  expect(((await ok.json()) as { accepted: number }).accepted).toBe(1);
+  expect((await page.request.post('/api/v1/energy/ingest', { headers: { Authorization: 'Bearer fmse_wrong' }, data: body })).status()).toBe(401);
+  await page.getByRole('button', { name: 'Revoke Plant logger' }).click();
+  await expect(page.getByRole('row', { name: /Plant logger/ })).toContainText('Revoked');
+  expect((await page.request.post('/api/v1/energy/ingest', { headers: { Authorization: `Bearer ${secret}` }, data: body })).status()).toBe(401);
+
+  await page.getByRole('tab', { name: 'Overview' }).click();
+  await expect(page.getByRole('row', { name: new RegExp(code, 'i') })).toContainText('kWh');
+  await shot('44-energy');
+
+  await page.getByRole('tab', { name: 'Alarms' }).click();
+  await page.getByRole('button', { name: 'New rule' }).click();
+  await page.getByLabel('Meter', { exact: true }).selectOption({ index: 1 });
+  await page.getByLabel(/^Limit/).fill('500');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Watching')).toBeVisible();
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    for (const tab of ['overview', 'meters', 'tariffs', 'alarms', 'devices']) {
+      await page.goto(`/energy?tab=${tab}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`energy ${tab} ${lang}`);
+    }
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('projects: a plan with a budget, a linked work order that counts as spent, and a project that cannot finish while work is open', async () => {
+  const site = ((await (await api(`/locations?q=${SITE}`)).json()) as { items: { id: string }[] }).items[0];
+  const wo = (await (await api('/work-orders', { method: 'POST', body: JSON.stringify({ title: 'Fit-out snag list', type: 'Emergency', locationId: site.id }) })).json()) as { displayNumber: string };
+  const code = `PRJ${SUFFIX}`.slice(0, 30);
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+
+  await page.goto('/projects');
+  await expect(page.getByRole('heading', { name: 'Projects', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'New project' }).click();
+  await page.getByLabel('Code', { exact: true }).fill(code);
+  await page.getByLabel('Name', { exact: true }).fill('Level 3 fit-out');
+  await page.getByLabel('Start', { exact: true }).fill(day(-5));
+  await page.getByLabel('Planned end').fill(day(60));
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
+
+  // A phase, a task and a milestone.
+  await page.getByRole('button', { name: 'Add a phase' }).click();
+  await page.getByLabel('Phase name').fill('Construction');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add a task' }).click();
+  await page.getByLabel('Task', { exact: true }).fill('Install partitions');
+  await page.getByLabel('Phase', { exact: true }).selectOption({ label: 'Construction' });
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('row', { name: /Install partitions/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Add a milestone' }).click();
+  await page.getByLabel('Milestone', { exact: true }).fill('Handover');
+  await page.getByLabel('Due', { exact: true }).fill(day(55));
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Handover')).toBeVisible();
+
+  // The project cannot be completed while the task and milestone are open.
+  await page.getByRole('button', { name: 'Move to Active' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('button', { name: 'Move to Completed' })).toBeVisible();
+  await page.getByRole('button', { name: 'Move to Completed' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+
+  // A budget line, then a work order charged to it.
+  await page.getByRole('tab', { name: 'Budget and costs' }).click();
+  await page.getByRole('button', { name: 'Add a budget line' }).click();
+  await page.getByLabel('Description', { exact: true }).fill('Partitions and doors');
+  await page.getByLabel(/^Amount/).fill('50000');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('row', { name: /Partitions and doors/ })).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Work and orders' }).click();
+  await page.getByLabel('Number', { exact: true }).fill('WO-999999');
+  await page.getByRole('button', { name: 'Link', exact: true }).click();
+  await expect(page.getByText('No work order has that number.')).toBeVisible();
+  await page.getByLabel('Number', { exact: true }).fill(wo.displayNumber);
+  await page.getByRole('button', { name: 'Link', exact: true }).click();
+  await expect(page.getByRole('row', { name: new RegExp(wo.displayNumber) })).toBeVisible();
+
+  // The same work order cannot be charged to a second project.
+  const second = await api('/projects', { method: 'POST', body: JSON.stringify({ code: `${code}B`.slice(0, 30), name: 'Other', startOn: day(0), endOn: day(30), currencyCode: 'SAR' }) });
+  expect(second.status).toBe(201);
+  const other = (await second.json()) as { id: string };
+  expect((await api(`/projects/${other.id}/links`, { method: 'POST', body: JSON.stringify({ kind: 'WorkOrder', number: wo.displayNumber, category: 'Construction' }) })).status).toBe(409);
+  await shot('45-projects');
+
+  await page.getByRole('tab', { name: 'Budget and costs' }).click();
+  await expect(page.getByRole('region', { name: 'Costs against budget' })).toHaveCount(0); // cards are a list, not a region
+  await expect(page.getByRole('list', { name: 'Costs against budget' })).toContainText('50,000');
+
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    const id = new URL(page.url()).searchParams.get('project');
+    for (const section of ['plan', 'budget', 'links']) {
+      await page.goto(`/projects?project=${id}&section=${section}`);
+      await expect(page.getByRole('tabpanel')).toBeVisible();
+      await expectNoSeriousA11yIssues(`projects ${section} ${lang}`);
+    }
+    await page.goto('/projects');
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectNoSeriousA11yIssues(`projects list ${lang}`);
+    await page.goto(`/projects?project=${id}&section=plan`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
+test('leases: a draft lease is activated, its rent schedule rises on schedule, the notice date shows, and extending and ending need reasons', async () => {
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+  const ref = `LS${SUFFIX}`.slice(0, 30);
+
+  await page.goto('/leases');
+  await expect(page.getByRole('heading', { name: 'Leases', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'New lease' }).click();
+  await page.getByLabel('Reference', { exact: true }).fill(ref);
+  await page.getByLabel('Title', { exact: true }).fill('Head office floor 4');
+  await page.getByLabel('Landlord or occupier').fill('Al Noor Properties');
+  await page.getByLabel('Start', { exact: true }).fill(day(-30));
+  await page.getByLabel('End', { exact: true }).fill(day(700));
+  await page.getByLabel(/^Notice of non-renewal/).fill('60');
+  await page.getByLabel('Rent for one period').fill('10000');
+  await page.getByLabel('Rise (percent)').fill('5');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('heading', { name: new RegExp(ref) })).toBeVisible();
+
+  // A bad second lease with the same reference is refused.
+  expect((await api('/leases', { method: 'POST', body: JSON.stringify({ reference: ref, title: 'Dup', kind: 'Occupied', counterparty: 'x', startOn: day(0), endOn: day(10), baseRent: 1 }) })).status).toBe(409);
+
+  await expect(page.getByRole('row', { name: /^1 / })).toBeVisible();
+  await expect(page.getByRole('row').nth(1)).toContainText('10,000.00 SAR');
+  await page.getByRole('button', { name: 'Activate' }).click();
+  await expect(page.getByText('Give notice by')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Activate' })).toHaveCount(0);
+  await shot('46-leases');
+
+  // The rent and dates are locked once active; extending needs a reason.
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.getByLabel('Rent for one period')).toBeDisabled();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Extend' }).click();
+  await page.getByLabel('New end date').fill(day(1000));
+  await page.getByRole('dialog').getByRole('button', { name: 'Extend' }).click();
+  await expect(page.getByRole('dialog').getByRole('alert').first()).toBeVisible();
+  await page.getByLabel('Reason').fill('Option exercised');
+  await page.getByRole('dialog').getByRole('button', { name: 'Extend' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Terminate' }).click();
+  await page.getByLabel('Reason').fill('Moving to new premises');
+  await page.getByRole('dialog').getByRole('button', { name: 'Terminate' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Terminated').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Extend' })).toHaveCount(0);
+
+  const id = new URL(page.url()).searchParams.get('lease');
+  for (const lang of ['en', 'ar']) {
+    await page.locator('.prefs select').first().selectOption(lang);
+    await page.goto('/leases');
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectNoSeriousA11yIssues(`leases list ${lang}`);
+    await page.goto(`/leases?lease=${id}`);
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectNoSeriousA11yIssues(`lease ${lang}`);
+  }
+  await page.locator('.prefs select').first().selectOption('en');
+});
+
 test('work order screens have no serious accessibility problems in English or Arabic', async () => {
   for (const lang of ['en', 'ar']) {
     await page.goto('/work-orders?view=all');

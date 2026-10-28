@@ -36,7 +36,7 @@ public sealed class SecurityOptions
 
 public static class Hardening
 {
-    private static readonly string[] SecretRoutePrefixes = ["/api/v1/odata", "/api/v1/visits/pass", "/api/v1/calendar"];
+    private static readonly string[] SecretRoutePrefixes = ["/api/v1/odata", "/api/v1/visits/pass", "/api/v1/calendar", "/api/v1/energy/ingest"];
 
     public static bool IsSecretRoute(string? path) =>
         path is not null && SecretRoutePrefixes.Any(p => path.Equals(p, StringComparison.OrdinalIgnoreCase) || path.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));

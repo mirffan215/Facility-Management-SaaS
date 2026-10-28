@@ -17,6 +17,7 @@ public static class PurchasingServiceCollectionExtensions
             .UseSqlServer(connectionString, PurchasingDbContextOptions.Sql)
             .AddInterceptors(new TenantSessionContextInterceptor(sp.GetRequiredService<ITenantContext>())));
 
+        services.AddScoped<Fms.BuildingBlocks.Identity.IPurchaseOrderLookup, PurchaseOrderLookup>();
         services.AddScoped<SettingsService>();
         services.AddScoped<RequestService>();
         services.AddScoped<OrderService>();

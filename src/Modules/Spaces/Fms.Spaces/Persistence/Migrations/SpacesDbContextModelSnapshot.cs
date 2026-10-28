@@ -61,6 +61,8 @@ namespace Fms.Spaces.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("AuditEvents", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
@@ -112,6 +114,8 @@ namespace Fms.Spaces.Persistence.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("OutboxMessages", "dbo", t =>
                         {
@@ -181,6 +185,8 @@ namespace Fms.Spaces.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TenantId", "UserId");
 
                     b.HasIndex("TenantId", "SpaceId", "StartOn");
@@ -241,6 +247,8 @@ namespace Fms.Spaces.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TenantId", "FloorId", "SupersededAt");
 
                     b.ToTable("Plans", "spaces");
@@ -271,6 +279,8 @@ namespace Fms.Spaces.Persistence.Migrations
                         .HasColumnType("float");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "FloorId", "Kind", "TargetId")
                         .IsUnique();
@@ -313,6 +323,8 @@ namespace Fms.Spaces.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "LocationId")
                         .IsUnique();

@@ -24,6 +24,7 @@ public sealed class AttackSurfaceTests(SqlServerFixture sql) : IDisposable
         "GET /api/v1/odata/",                              // BI feed, revocable token (Basic or X-Api-Key), read only
         "GET /api/v1/odata/$metadata",
         "GET /api/v1/odata/{set}",
+        "POST /api/v1/energy/ingest",                      // data loggers, secret device token (Bearer or X-Api-Key), only for the meters it was given
     ];
 
     private static string Describe(RouteEndpoint e) =>

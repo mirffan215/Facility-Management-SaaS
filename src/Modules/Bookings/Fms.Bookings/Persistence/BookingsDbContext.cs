@@ -70,5 +70,7 @@ public sealed class BookingsDbContext(DbContextOptions<BookingsDbContext> option
             e.Property(x => x.Adapter).HasMaxLength(50).IsRequired();
             e.HasIndex(x => x.TenantId).IsUnique();
         });
+
+        base.OnModelCreating(b);
     }
 }

@@ -14,6 +14,10 @@ import { ImportPage } from './pages/Import';
 import { SetupPage } from './pages/Setup';
 import { AdminPage } from './pages/Admin';
 import { AuditPage } from './pages/Audit';
+import { CompliancePage } from './pages/Compliance';
+import { LeasesPage } from './pages/Leases';
+import { ProjectsPage } from './pages/Projects';
+import { EnergyPage } from './pages/Energy';
 import { LicensePage } from './pages/License';
 import { NotificationsPage } from './pages/Notifications';
 import { WorkOrdersPage } from './pages/WorkOrders';
@@ -141,6 +145,10 @@ export function App() {
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="purchasing" element={<PurchasingPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="compliance" element={<CompliancePage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="leases" element={<LeasesPage />} />
+        <Route path="energy" element={<EnergyPage />} />
         <Route path="visitors" element={<VisitorsPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="spaces" element={<SpacesPage />} />

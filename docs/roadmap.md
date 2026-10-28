@@ -9,6 +9,7 @@
 6. **Spaces, Bookings, Visitors** (done; see [phase-6-summary](phase-6-summary.md)): floor plans with pins, allocation and occupancy, bookable resources with rules and approval, calendar feed and a calendar connection interface, visitor pre-registration with QR pass, front desk, watchlist and badges.
 7. **Reporting & Admin** (done; see [phase-7-summary](phase-7-summary.md)): fixed KPI pack with filters and CSV, read-only OData feed with revocable tokens, workflow designer (rules inside fixed safety limits, versioned), audit viewer with export, Administration hub. SLA and custom-field setup already existed from earlier phases.
 8. **Packaging & Licensing** (done, with stated limits; see [phase-8-summary](phase-8-summary.md)): signed offline license with module, user and expiry enforcement, hardening and security self-assessment (no external pen test yet), Helm chart, Docker Compose on-prem bundle, Azure Bicep, release pipeline, upgrade and rollback tooling.
-9. **Later**: IoT/energy, compliance & permits, projects, lease, AI.
+9. **Compliance, Energy, Projects, Leases** (done; see [phase-9-summary](phase-9-summary.md)): obligations and permits to work, energy readings with device secrets and alarms, projects with budget roll-up from work and purchasing, leases with rent schedule and deadline warnings. AI was deferred.
+10. **Later**: AI (predictive maintenance, triage) and the gaps listed in the phase summaries.
 
 Each phase ships with tests and updated docs. Do not start the next phase until told.

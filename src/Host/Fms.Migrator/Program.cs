@@ -8,6 +8,10 @@ using Fms.Purchasing.Persistence;
 using Fms.Bookings.Persistence;
 using Fms.Reporting.Persistence;
 using Fms.Visitors.Persistence;
+using Fms.Leases.Persistence;
+using Fms.Projects.Persistence;
+using Fms.Energy.Persistence;
+using Fms.Compliance.Persistence;
 using Fms.Spaces.Persistence;
 using Fms.Vendors.Persistence;
 using Fms.Work.Persistence;
@@ -73,6 +77,22 @@ await using var integrationDb = new IntegrationDbContext(
     new DbContextOptionsBuilder<IntegrationDbContext>().UseSqlServer(migratorConnection, IntegrationDbContextOptions.Sql)
         .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
 contexts.Add(("Integration", integrationDb));
+await using var leasesDb = new LeasesDbContext(
+    new DbContextOptionsBuilder<LeasesDbContext>().UseSqlServer(migratorConnection, LeasesDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+contexts.Add(("Leases", leasesDb));
+await using var projectsDb = new ProjectsDbContext(
+    new DbContextOptionsBuilder<ProjectsDbContext>().UseSqlServer(migratorConnection, ProjectsDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+contexts.Add(("Projects", projectsDb));
+await using var energyDb = new EnergyDbContext(
+    new DbContextOptionsBuilder<EnergyDbContext>().UseSqlServer(migratorConnection, EnergyDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+contexts.Add(("Energy", energyDb));
+await using var complianceDb = new ComplianceDbContext(
+    new DbContextOptionsBuilder<ComplianceDbContext>().UseSqlServer(migratorConnection, ComplianceDbContextOptions.Sql)
+        .AddInterceptors(new TenantSessionContextInterceptor(tenantContext)).Options, tenantContext);
+contexts.Add(("Compliance", complianceDb));
 
 // A database that has seen migrations this build does not know belongs to a newer release. Running an older release against it would
 // corrupt data silently, so refuse (both for --check and for a real run). Restoring the pre-upgrade backup is the way back.

@@ -28,6 +28,10 @@ export function pointLabelGroup(seriesKey: string): string | null {
   if (seriesKey === 'vendors.byStatus') return 'vendorStatus';
   if (seriesKey === 'spaces.utilisationByKind') return 'spaceKind';
   if (seriesKey === 'visitors.byKind') return 'visitKind';
+  if (seriesKey === 'compliance.byStatus') return 'complianceStatus';
+  if (seriesKey === 'energy.useByKind') return 'energyKind';
+  if (seriesKey === 'projects.byStatus') return 'projectStatus';
+  if (seriesKey === 'leases.byState') return 'leaseState';
   return null;
 }
 

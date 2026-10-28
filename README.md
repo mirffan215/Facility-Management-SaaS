@@ -21,6 +21,7 @@ Status: design phase. See [docs/](docs/).
 - [Phase 6 summary](docs/phase-6-summary.md) (spaces, bookings, visitors)
 - [Phase 7 summary](docs/phase-7-summary.md) (reports, BI feed, workflow designer, audit viewer, administration hub)
 - [Phase 8 summary](docs/phase-8-summary.md) (licensing, hardening, packaging, upgrades)
+- [Phase 9 summary](docs/phase-9-summary.md) (compliance and permits, energy, projects, leases)
 - [Deployment guide](docs/deployment.md), [licensing](docs/licensing.md), [upgrading](docs/upgrading.md), [security documents](docs/security/)
 - [ADRs](docs/adr/)
 

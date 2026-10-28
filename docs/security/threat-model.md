@@ -1,6 +1,6 @@
 # Threat model
 
-STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 8.
+STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 9 (energy device route added).
 
 ## What matters
 1. **Tenant isolation.** One organisation must never read or change another's data (SaaS). 
@@ -17,7 +17,8 @@ Signed-in staff (roles), vendor users (portal), visitors (a pass link, no accoun
 |---|---|---|---|
 | Browser to web tier | Spoofing, tampering, information disclosure on the wire | TLS terminated at the customer's or cloud load balancer (required; HSTS sent when forwarded as https); strict CSP, frame denial, no-referrer, nosniff on the web tier | nginx template; e2e "security headers"; `HardeningTests` |
 | Web tier to API | Tampering: forged client address to dodge limits or poison logs | Forwarded headers believed only from configured networks | `HardeningTests` (untrusted and trusted cases) |
-| Anyone to API (anonymous routes) | Information disclosure by guessing a secret; denial of service | Only ten anonymous routes, listed and locked by a test; secrets are 128 to 256 random bits, stored as SHA-256 hashes; every wrong secret gets the same answer; 60 requests a minute per address on secret routes | `AttackSurfaceTests`; `HardeningTests`; module tests |
+| Device to readings route (`energy/ingest`) | Spoofing a meter; flooding with false readings; reaching another organisation | Per-device secret (256 random bits, SHA-256 stored, shown once, revocable); a device can post only for the meters it was tied to; same 401 for any bad secret; per-address budget; batch of at most 500; readings must be recent and not in the future; a device cannot void or edit anything | `EnergyApiTests`; `AttackSurfaceTests`; `HardeningTests` |
+| Anyone to API (anonymous routes) | Information disclosure by guessing a secret; denial of service | Only eleven anonymous routes, listed and locked by a test; secrets are 128 to 256 random bits, stored as SHA-256 hashes; every wrong secret gets the same answer; 60 requests a minute per address on secret routes | `AttackSurfaceTests`; `HardeningTests`; module tests |
 | Signed-in user to API | Spoofing, elevation | Tokens validated against the configured identity provider (issuer, audience, lifetime, signing key); default policy denies anonymous; each route names a permission; no self-approval, no self role change, verifier is never the worker | Authentication tests; `AttackSurfaceTests`; workflow and access tests |
 | User of tenant A to tenant B's data | Information disclosure, tampering | Tenant resolved from the token's identity-provider tenant, never from a header (SaaS); EF global query filters; **SQL Server row-level security** in the database as a second wall; the API's database login cannot bypass it | `TenantIsolationSqlTests` and per-module isolation tests |
 | API to database | Injection | EF Core parameterised queries; the few raw SQL statements (lock and queue-claim statements) use EF's interpolated, parameterised form | code review; no string-built SQL |

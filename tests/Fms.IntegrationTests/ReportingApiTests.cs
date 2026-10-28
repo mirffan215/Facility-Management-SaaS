@@ -66,7 +66,7 @@ public sealed class ReportingApiTests(SqlServerFixture sql) : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, (await _api.GuestClient().GetAsync("/api/v1/reports/dashboard")).StatusCode);
 
         var manager = await DashboardAsync(rig.Manager);
-        Assert.Equal(["work", "facilities", "inventory", "purchasing", "vendors", "spaces", "bookings", "visitors"], manager.Groups.Select(g => g.Group).ToArray());
+        Assert.Equal(["work", "facilities", "inventory", "purchasing", "vendors", "spaces", "bookings", "visitors", "compliance"], manager.Groups.Select(g => g.Group).ToArray());
         Assert.All(manager.Groups, g => Assert.False(g.Failed));
 
         var viewer = await DashboardAsync(rig.Viewer);

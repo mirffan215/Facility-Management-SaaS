@@ -61,6 +61,8 @@ namespace Fms.Visitors.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("AuditEvents", "dbo", t =>
                         {
                             t.ExcludeFromMigrations();
@@ -112,6 +114,8 @@ namespace Fms.Visitors.Persistence.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("OutboxMessages", "dbo", t =>
                         {
@@ -238,6 +242,8 @@ namespace Fms.Visitors.Persistence.Migrations
                     b.HasIndex("PassHash")
                         .IsUnique();
 
+                    b.HasIndex("TenantId");
+
                     b.HasIndex("TenantId", "HostId", "ExpectedAt");
 
                     b.HasIndex("TenantId", "SiteId", "Status");
@@ -330,6 +336,8 @@ namespace Fms.Visitors.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "NameKey");
 

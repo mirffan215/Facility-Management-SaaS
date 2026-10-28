@@ -8,6 +8,10 @@ using Fms.Purchasing.Persistence;
 using Fms.Bookings.Persistence;
 using Fms.Reporting.Persistence;
 using Fms.Visitors.Persistence;
+using Fms.Leases.Persistence;
+using Fms.Projects.Persistence;
+using Fms.Energy.Persistence;
+using Fms.Compliance.Persistence;
 using Fms.Spaces.Persistence;
 using Fms.Vendors.Persistence;
 using Fms.Work.Persistence;
@@ -65,6 +69,10 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var spacesOwner = SpacesContext(OwnerConnectionString, null, platform: true)) await spacesOwner.Database.MigrateAsync();
             await using (var purchasingOwner = PurchasingContext(OwnerConnectionString, null, platform: true)) await purchasingOwner.Database.MigrateAsync();
             await using (var integrationOwner = IntegrationContext(OwnerConnectionString, null, platform: true)) await integrationOwner.Database.MigrateAsync();
+            await using (var leasesOwner = LeasesContext(OwnerConnectionString, null, platform: true)) await leasesOwner.Database.MigrateAsync();
+            await using (var projectsOwner = ProjectsContext(OwnerConnectionString, null, platform: true)) await projectsOwner.Database.MigrateAsync();
+            await using (var energyOwner = EnergyContext(OwnerConnectionString, null, platform: true)) await energyOwner.Database.MigrateAsync();
+            await using (var complianceOwner = ComplianceContext(OwnerConnectionString, null, platform: true)) await complianceOwner.Database.MigrateAsync();
             owner.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owner.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owner.SaveChangesAsync();
@@ -145,6 +153,42 @@ public sealed class SqlServerFixture : IAsyncLifetime
         return db;
     }
 
+    /// <summary>A Compliance context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public ComplianceDbContext Compliance(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = ComplianceContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
+    /// <summary>A Energy context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public EnergyDbContext Energy(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = EnergyContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
+    /// <summary>A Projects context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public ProjectsDbContext Projects(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = ProjectsContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
+    /// <summary>A Leases context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
+    public LeasesDbContext Leases(Guid? tenantId, bool platform = false)
+    {
+        var pending = new PendingWrites();
+        var db = LeasesContext(AppConnectionString, tenantId, platform, pending);
+        _pending.Add(db, pending);
+        return db;
+    }
+
     /// <summary>A Visitors context as the app would build it (restricted login, tenant session context, own pending buffer).</summary>
     public VisitorsDbContext Visitors(Guid? tenantId, bool platform = false)
     {
@@ -217,6 +261,46 @@ public sealed class SqlServerFixture : IAsyncLifetime
         if (platform) tenant.BeginPlatformScope();
         return new ReportingDbContext(
             new DbContextOptionsBuilder<ReportingDbContext>().UseSqlServer(connectionString, ReportingDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
+    }
+
+    private static ComplianceDbContext ComplianceContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new ComplianceDbContext(
+            new DbContextOptionsBuilder<ComplianceDbContext>().UseSqlServer(connectionString, ComplianceDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
+    }
+
+    private static EnergyDbContext EnergyContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new EnergyDbContext(
+            new DbContextOptionsBuilder<EnergyDbContext>().UseSqlServer(connectionString, EnergyDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
+    }
+
+    private static ProjectsDbContext ProjectsContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new ProjectsDbContext(
+            new DbContextOptionsBuilder<ProjectsDbContext>().UseSqlServer(connectionString, ProjectsDbContextOptions.Sql)
+                .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
+    }
+
+    private static LeasesDbContext LeasesContext(string connectionString, Guid? tenantId, bool platform, PendingWrites? pending = null)
+    {
+        var tenant = new TenantContext();
+        if (tenantId is { } id) tenant.SetTenant(id);
+        if (platform) tenant.BeginPlatformScope();
+        return new LeasesDbContext(
+            new DbContextOptionsBuilder<LeasesDbContext>().UseSqlServer(connectionString, LeasesDbContextOptions.Sql)
                 .AddInterceptors(new TenantSessionContextInterceptor(tenant)).Options, tenant, pending);
     }
 
@@ -325,6 +409,10 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await using (var spacesOwned = SpacesContext(owner, null, platform: true)) await spacesOwned.Database.MigrateAsync();
             await using (var purchasingOwned = PurchasingContext(owner, null, platform: true)) await purchasingOwned.Database.MigrateAsync();
             await using (var integrationOwned = IntegrationContext(owner, null, platform: true)) await integrationOwned.Database.MigrateAsync();
+            await using (var leasesOwned = LeasesContext(owner, null, platform: true)) await leasesOwned.Database.MigrateAsync();
+            await using (var projectsOwned = ProjectsContext(owner, null, platform: true)) await projectsOwned.Database.MigrateAsync();
+            await using (var energyOwned = EnergyContext(owner, null, platform: true)) await energyOwned.Database.MigrateAsync();
+            await using (var complianceOwned = ComplianceContext(owner, null, platform: true)) await complianceOwned.Database.MigrateAsync();
             owned.Tenants.Add(new Tenant { Id = TenantA, Name = "Tenant A", CreatedAt = DateTimeOffset.UtcNow });
             owned.Tenants.Add(new Tenant { Id = TenantB, Name = "Tenant B", CreatedAt = DateTimeOffset.UtcNow });
             await owned.SaveChangesAsync();

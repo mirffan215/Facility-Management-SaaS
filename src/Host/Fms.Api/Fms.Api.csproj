@@ -18,4 +18,16 @@
     <ProjectReference Include="..\..\Modules\Purchasing\Fms.Purchasing\Fms.Purchasing.csproj" />
     <ProjectReference Include="..\..\Modules\Integration\Fms.Integration\Fms.Integration.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Compliance\Fms.Compliance\Fms.Compliance.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Energy\Fms.Energy\Fms.Energy.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Projects\Fms.Projects\Fms.Projects.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Leases\Fms.Leases\Fms.Leases.csproj" />
+  </ItemGroup>
 </Project>
