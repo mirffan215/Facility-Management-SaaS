@@ -1,6 +1,6 @@
 # Threat model
 
-STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 9 (energy device route added).
+STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 10 (AI assistance added).
 
 ## What matters
 1. **Tenant isolation.** One organisation must never read or change another's data (SaaS). 
@@ -17,6 +17,7 @@ Signed-in staff (roles), vendor users (portal), visitors (a pass link, no accoun
 |---|---|---|---|
 | Browser to web tier | Spoofing, tampering, information disclosure on the wire | TLS terminated at the customer's or cloud load balancer (required; HSTS sent when forwarded as https); strict CSP, frame denial, no-referrer, nosniff on the web tier | nginx template; e2e "security headers"; `HardeningTests` |
 | Web tier to API | Tampering: forged client address to dodge limits or poison logs | Forwarded headers believed only from configured networks | `HardeningTests` (untrusted and trusted cases) |
+| Request text to AI model (prompt injection; leakage of personal data; cost abuse) | Tampering with a suggestion; information disclosure to a third party; denial of wallet | Off unless the operator configures a provider and the administrator turns it on; only the words of one record are sent, with e-mail addresses, web addresses and long numbers removed; the text is marked as untrusted data; the answer is checked against the real categories and priorities and shown as text; suggestions never change records; daily limit per organisation and hourly limit per person; key only in server configuration and sent only to an https address; usage log is append-only and holds no words | `AiRulesTests`; `AiApiTests` |
 | Device to readings route (`energy/ingest`) | Spoofing a meter; flooding with false readings; reaching another organisation | Per-device secret (256 random bits, SHA-256 stored, shown once, revocable); a device can post only for the meters it was tied to; same 401 for any bad secret; per-address budget; batch of at most 500; readings must be recent and not in the future; a device cannot void or edit anything | `EnergyApiTests`; `AttackSurfaceTests`; `HardeningTests` |
 | Anyone to API (anonymous routes) | Information disclosure by guessing a secret; denial of service | Only eleven anonymous routes, listed and locked by a test; secrets are 128 to 256 random bits, stored as SHA-256 hashes; every wrong secret gets the same answer; 60 requests a minute per address on secret routes | `AttackSurfaceTests`; `HardeningTests`; module tests |
 | Signed-in user to API | Spoofing, elevation | Tokens validated against the configured identity provider (issuer, audience, lifetime, signing key); default policy denies anonymous; each route names a permission; no self-approval, no self role change, verifier is never the worker | Authentication tests; `AttackSurfaceTests`; workflow and access tests |

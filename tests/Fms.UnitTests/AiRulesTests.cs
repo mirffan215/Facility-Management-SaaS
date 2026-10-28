@@ -182,3 +182,15 @@ public sealed class AiRulesTests
         Assert.False((await none.CompleteAsync(new AiRequest("s", "u", 1))).Ok);
     }
 }
+
+public sealed class RepeatMathTests
+{
+    [Fact]
+    public void The_average_gap_is_the_span_over_the_number_of_gaps()
+    {
+        var first = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        Assert.Equal(15.0, Fms.Work.Services.RepeatMath.AverageDaysBetween(first, first.AddDays(30), 3));
+        Assert.Equal(10.0, Fms.Work.Services.RepeatMath.AverageDaysBetween(first, first.AddDays(10), 2));
+        Assert.Null(Fms.Work.Services.RepeatMath.AverageDaysBetween(first, first, 1));
+    }
+}

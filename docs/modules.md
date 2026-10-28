@@ -19,6 +19,7 @@
 | Energy & Utilities | Meters, readings by hand, CSV and devices with revocable secrets, consumption and cost, tariffs, alarms (Phase 9). Not: BACnet/Modbus/MQTT |
 | Projects | Plans, milestones, budget lines; work orders and purchase orders charged to a project; budget vs committed vs spent (Phase 9). Not: dependencies, Gantt |
 | Leases | Rented and let-out leases, notice and break dates, computed rent schedule with rise, warnings (Phase 9). Not: accounting, IFRS 16, documents |
+| AI assistance | Optional suggestions (category and priority for requests, work order summaries) through a provider interface, off by default; repeat-problem hints without a model (Phase 10). Not: automatic actions, predictive maintenance |
 
 Later modules: Cleaning & Soft Services, Security Rounds, BIM/Digital Twin, AI (predictive maintenance, triage).
 

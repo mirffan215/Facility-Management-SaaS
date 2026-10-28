@@ -10,6 +10,7 @@
 7. **Reporting & Admin** (done; see [phase-7-summary](phase-7-summary.md)): fixed KPI pack with filters and CSV, read-only OData feed with revocable tokens, workflow designer (rules inside fixed safety limits, versioned), audit viewer with export, Administration hub. SLA and custom-field setup already existed from earlier phases.
 8. **Packaging & Licensing** (done, with stated limits; see [phase-8-summary](phase-8-summary.md)): signed offline license with module, user and expiry enforcement, hardening and security self-assessment (no external pen test yet), Helm chart, Docker Compose on-prem bundle, Azure Bicep, release pipeline, upgrade and rollback tooling.
 9. **Compliance, Energy, Projects, Leases** (done; see [phase-9-summary](phase-9-summary.md)): obligations and permits to work, energy readings with device secrets and alarms, projects with budget roll-up from work and purchasing, leases with rent schedule and deadline warnings. AI was deferred.
-10. **Later**: AI (predictive maintenance, triage) and the gaps listed in the phase summaries.
+10. **AI assistance** (done, with stated limits; see [phase-10-summary](phase-10-summary.md)): optional, off by default, provider interface with the Claude API first; category and priority suggestions for requests, work order summaries, repeat-problem hints.
+11. **Later**: the gaps listed in the phase summaries (and, for AI, feedback, assignee suggestions and predictive maintenance).
 
 Each phase ships with tests and updated docs. Do not start the next phase until told.

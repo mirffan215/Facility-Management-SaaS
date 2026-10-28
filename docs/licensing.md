@@ -16,7 +16,7 @@ dotnet run --project tools/Fms.LicenseTool -- sign --key /safe/offline/place/fms
 ```
 `--modules '*'` means everything. `--tenant` binds the license to one installation (the `FMS_TENANT_ID` in the bundle's `.env`); leave it out for an unbound license. `--grace-days` defaults to 30. Check a file with `fms-license inspect acme.license`.
 
-Modules: `work`, `pm`, `inventory`, `vendors`, `purchasing`, `spaces`, `bookings`, `visitors`, `reporting`, `compliance`, `energy`, `projects`, `leases`.
+Modules: `work`, `pm`, `inventory`, `vendors`, `purchasing`, `spaces`, `bookings`, `visitors`, `reporting`, `compliance`, `energy`, `projects`, `leases`, `ai`.
 
 ## Customer: install or renew
 Put the file where the API reads it:
