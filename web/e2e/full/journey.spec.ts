@@ -1901,7 +1901,7 @@ test('leases: a draft lease is activated, its rent schedule rises on schedule, t
   expect((await api('/leases', { method: 'POST', body: JSON.stringify({ reference: ref, title: 'Dup', kind: 'Occupied', counterparty: 'x', startOn: day(0), endOn: day(10), baseRent: 1 }) })).status).toBe(409);
 
   await expect(page.getByRole('row', { name: /^1 / })).toBeVisible();
-  await expect(page.getByRole('row').nth(1)).toContainText('10,000.00 SAR');
+  await expect(page.getByRole('row').nth(1)).toContainText('10,000 SAR');
   await page.getByRole('button', { name: 'Activate' }).click();
   await expect(page.getByText('Give notice by')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Activate' })).toHaveCount(0);
