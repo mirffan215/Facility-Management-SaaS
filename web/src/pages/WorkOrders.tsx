@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useWorkOrders } from '../api/hooks';
 import type { SlaState, WorkOrderStatus, WorkPriority } from '../api/types';
 import { Badge, Can, Field, Pager, QueryState, useEnumLabel } from '../components/ui';
+import { RepeatProblems } from '../components/RepeatProblems';
 import { usePrefs } from '../lib/prefs';
 
 export const PRIORITIES: WorkPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
@@ -81,6 +82,7 @@ export function WorkOrdersPage() {
           </Link>
         </Can>
       </div>
+      <RepeatProblems />
 
       <div className="tabs" role="tablist" aria-label={t('work.views')}>
         {['open', 'mine', 'assigned', 'overdue', 'sla', 'all'].map((v) => (

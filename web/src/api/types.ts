@@ -1643,3 +1643,5 @@ export interface AiSettings { available: boolean; enabled: boolean; triageEnable
 export interface AiTriageSuggestion { categoryId: string | null; categoryCode: string | null; categoryName: string | null; priority: WorkPriority | null; confidence: number; reason: string }
 export interface AiSummary { workOrderId: string; text: string }
 export interface AiUsage { usedToday: number; dailyLimit: number; last30Days: { feature: 'Triage' | 'Summary'; ok: number; failed: number; inputTokens: number; outputTokens: number }[] }
+
+export interface RepeatProblem { assetId: string; assetCode: string | null; assetName: string | null; count: number; emergencies: number; firstAt: string; lastAt: string; lastTitle: string; averageDaysBetween: number | null }

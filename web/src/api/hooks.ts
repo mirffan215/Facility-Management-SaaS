@@ -4,7 +4,7 @@ import type {
   AuditEntry,
   AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
   ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
-  AiSettings, AiStatus, AiUsage, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseSchedule, LeaseSummary, LeaseTotals,
+  AiSettings, AiStatus, AiUsage, RepeatProblem, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -570,4 +570,9 @@ export function useAiSettings() {
 export function useAiUsage() {
   const { api } = useAuth();
   return useQuery({ queryKey: ['ai', 'usage'], queryFn: () => api.get<AiUsage>('/ai/usage') });
+}
+
+export function useRepeatProblems(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['work-orders', 'repeat-problems'], enabled, queryFn: () => api.get<RepeatProblem[]>('/work-orders/repeat-problems') });
 }
