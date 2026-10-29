@@ -12,6 +12,7 @@
 9. **Compliance, Energy, Projects, Leases** (done; see [phase-9-summary](phase-9-summary.md)): obligations and permits to work, energy readings with device secrets and alarms, projects with budget roll-up from work and purchasing, leases with rent schedule and deadline warnings. AI was deferred.
 10. **AI assistance** (done, with stated limits; see [phase-10-summary](phase-10-summary.md)): optional, off by default, provider interface with the Claude API first; category and priority suggestions for requests, work order summaries, repeat-problem hints.
 11. **Closing gaps** (done, with stated limits; see [phase-11-summary](phase-11-summary.md)): work orders from alerts, a real rehearsal of the Compose bundle (five defects found and fixed), AI feedback and duplicate hints, malware scanning, contact-detail encryption, a shared rate counter.
-12. **Later**: the gaps listed in the phase summaries (a first Helm and Azure deployment, assignee suggestions, predictive maintenance, more encrypted fields).
+12. **Suggestions and field gaps** (done, with stated limits; see [phase-12-summary](phase-12-summary.md)): suggested people and vendors for a work order, early warnings from repair intervals and meter pace (rules, with their numbers), vendor contact details encrypted, permits and alert-raised jobs on the technician's phone.
+13. **Later**: the gaps listed in the phase summaries (a first Helm and Azure deployment, a model behind the suggestions, encrypting lease terms, the remaining mobile gaps).
 
 Each phase ships with tests and updated docs. Do not start the next phase until told.

@@ -1,6 +1,6 @@
 # Threat model
 
-STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 11 (scanning, field encryption, shared rate counter).
+STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 12 (vendor contact encryption, permits in the offline bundle).
 
 ## What matters
 1. **Tenant isolation.** One organisation must never read or change another's data (SaaS). 
@@ -36,6 +36,7 @@ Signed-in staff (roles), vendor users (portal), visitors (a pass link, no accoun
 - **No multi-factor or session policy of our own.** Sign-in is delegated to the customer's identity provider, which must enforce MFA and session length.
 - **Rate limits are per process.** With several API replicas each keeps its own count; the effective limit is higher by the replica count. A gateway-level limit is recommended for internet-facing installs.
 - **Token revocation depends on lifetime** for signed-in users (deactivating a user is checked on every request, so that case is immediate).
-- **Application-level column encryption is not implemented.** Sensitive fields are minimised instead (no identity-document numbers; visitor details anonymised after a retention period).
+- **Column-level encryption covers visitors' and vendors' contact details only** (when a key is configured). Users' sign-in e-mail, invitation e-mail, lease terms and everything else rely on database encryption (TDE). Sensitive fields are otherwise minimised (no identity-document numbers; visitor details anonymised after a retention period).
+- **Permit status on a phone can be stale.** The offline bundle shows permits as of the last download, labelled as such; permit actions are never queued and need a connection (ADR-0035).
 - **Worker is not licence-gated**, so an expired installation still sends notices.
 - **No external penetration test has been performed.**

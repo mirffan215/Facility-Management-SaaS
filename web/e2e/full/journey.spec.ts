@@ -455,6 +455,10 @@ test('helpdesk: a requester scans a label, the request is approved, assigned, do
   await expect(page.getByText('Approved', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('group', { name: 'Service level' })).toContainText('On track'); // approval started the clocks
   await page.getByRole('button', { name: 'Assign', exact: true }).click();
+  // Suggestions come with the dialog (rules over the last 180 days, the person decides).
+  await expect(page.getByRole('dialog').getByRole('group', { name: 'Suggested people' })).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('group', { name: 'Suggested people' }).getByRole('button').first()).toBeVisible();
+  await expectNoSeriousA11yIssues('assign dialog with suggestions');
   await page.getByRole('dialog').getByLabel('Assigned to').selectOption({ label: 'Tina Technician' });
   await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('Assigned', { exact: true }).first()).toBeVisible();
