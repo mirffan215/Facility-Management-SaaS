@@ -2342,5 +2342,21 @@
     "helpful": "Helpful",
     "notHelpful": "Not helpful",
     "thanks": "Thank you."
+  },
+  "suggest": {
+    "assigneesTitle": "Suggested people",
+    "vendorsTitle": "Suggested vendors",
+    "fromHistory": "From the last 180 days of work. Your choice.",
+    "fromContracts": "Vendors with a contract in force that covers this job.",
+    "sameAsset": "{{count}} on this asset",
+    "sameCategory": "{{count}} of this kind",
+    "samePlace": "{{count}} in this place",
+    "openJobs": "{{count}} jobs open now",
+    "free": "nothing open now",
+    "choose": "Choose",
+    "chooseX": "Choose {{name}}",
+    "underContract": "contract {{number}}",
+    "resolvesIn": "resolves within {{hours}} h",
+    "pastJobs": "{{count}} similar jobs done"
   }
 }

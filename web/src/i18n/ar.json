@@ -2342,5 +2342,21 @@
     "helpful": "مفيد",
     "notHelpful": "غير مفيد",
     "thanks": "شكرًا."
+  },
+  "suggest": {
+    "assigneesTitle": "أشخاص مقترحون",
+    "vendorsTitle": "موردون مقترحون",
+    "fromHistory": "من أعمال آخر 180 يومًا. القرار لك.",
+    "fromContracts": "موردون لديهم عقد ساري يغطي هذا العمل.",
+    "sameAsset": "{{count}} على هذا الأصل",
+    "sameCategory": "{{count}} من هذا النوع",
+    "samePlace": "{{count}} في هذا المكان",
+    "openJobs": "{{count}} أعمال مفتوحة الآن",
+    "free": "لا شيء مفتوح الآن",
+    "choose": "اختيار",
+    "chooseX": "اختيار {{name}}",
+    "underContract": "العقد {{number}}",
+    "resolvesIn": "يُنجز خلال {{hours}} ساعة",
+    "pastJobs": "أُنجز {{count}} عملًا مشابهًا"
   }
 }

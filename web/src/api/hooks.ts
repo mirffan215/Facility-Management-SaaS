@@ -4,7 +4,7 @@ import type {
   AuditEntry,
   AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
   ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
-  AiSettings, AiStatus, AiUsage, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
+  AiSettings, AiStatus, AiUsage, AssignmentSuggestions, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -593,4 +593,9 @@ export function useSimilarRequests(params: { locationId: string; assetId: string
     staleTime: 30_000,
     queryFn: () => api.get<SimilarRequest[]>('/work-orders/similar', { title, locationId: params.locationId || undefined, assetId: params.assetId ?? undefined }),
   });
+}
+
+export function useAssignmentSuggestions(id: string, enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['work-orders', 'suggestions', id], enabled, staleTime: 30_000, queryFn: () => api.get<AssignmentSuggestions>(`/work-orders/${id}/suggestions`) });
 }

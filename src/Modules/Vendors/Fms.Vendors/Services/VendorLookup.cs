@@ -40,6 +40,25 @@ public sealed class VendorLookup(VendorsDbContext db, IFacilityLookup facilities
         return false;
     }
 
+    public async Task<IReadOnlyList<VendorOffer>> OffersAsync(Guid? assetId, Guid? locationId, int priority, int max, CancellationToken ct = default)
+    {
+        var today = Common.Today(clock);
+        var contracts = await db.Contracts.AsNoTracking().Where(c => c.StartOn <= today && c.EndOn >= today).OrderByDescending(c => c.StartOn).Take(200).ToListAsync(ct);
+        var inForce = contracts.Where(c => ContractRules.InForce(c, today)).ToList();
+        if (inForce.Count == 0) return [];
+        var vendors = await VendorsAsync(inForce.Select(c => c.VendorId), ct);
+        var offers = new List<VendorOffer>();
+        foreach (var c in inForce)
+        {
+            if (!vendors.TryGetValue(c.VendorId, out var vendor) || !vendor.CanReceiveWork) continue;
+            if (!await CoversAsync(c.Id, assetId, locationId, ct)) continue;
+            offers.Add(new VendorOffer(vendor, new ContractRef(c.Id, c.VendorId, c.Number, c.Title, c.StartOn, c.EndOn, true), await SlaAsync(c.Id, priority, ct)));
+            if (offers.Count >= Math.Clamp(max, 1, 50)) break;
+        }
+
+        return offers;
+    }
+
     public async Task<ContractSlaRef?> SlaAsync(Guid contractId, int priority, CancellationToken ct = default)
     {
         var t = await db.SlaTargets.AsNoTracking().FirstOrDefaultAsync(x => x.ContractId == contractId && x.Priority == priority, ct);

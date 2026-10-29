@@ -213,3 +213,40 @@ public sealed class SimilarMathTests
     public void Shared_words_are_counted_ignoring_case(string a, string b, int expected) =>
         Assert.Equal(expected, Fms.Work.Services.SimilarMath.SharedWords(a, b));
 }
+
+public sealed class AssignmentRankerTests
+{
+    private static Fms.Work.Domain.CandidateStats C(string name, int asset = 0, int category = 0, int place = 0, int open = 0) => new(Guid.NewGuid(), name, asset, category, place, open);
+
+    [Fact]
+    public void The_same_asset_counts_most_then_the_kind_of_work_then_the_place_and_load_counts_against()
+    {
+        Assert.Equal(5 * 2 + 3 * 1 + 1 * 4 - 2 * 3, Fms.Work.Domain.AssignmentRanker.Score(C("A", asset: 2, category: 1, place: 4, open: 3)));
+        var ranked = Fms.Work.Domain.AssignmentRanker.Rank([C("Placeman", place: 2), C("Assetman", asset: 1), C("Categoryman", category: 1)]);
+        Assert.Equal(["Assetman", "Categoryman", "Placeman"], ranked.Select(r => r.Stats.Name).ToArray());
+    }
+
+    [Fact]
+    public void A_free_person_without_history_beats_a_busy_one_without_history_and_a_very_busy_expert_can_lose()
+    {
+        var ranked = Fms.Work.Domain.AssignmentRanker.Rank([C("Busy", open: 4), C("Free"), C("BusyExpert", asset: 1, open: 5)]);
+        Assert.Equal(["Free", "BusyExpert", "Busy"], ranked.Select(r => r.Stats.Name).ToArray()); // 0, 5-10, -8
+    }
+
+    [Fact]
+    public void Ties_go_to_the_lighter_load_then_the_name_and_the_list_is_cut()
+    {
+        var ranked = Fms.Work.Domain.AssignmentRanker.Rank([C("Zed"), C("Amy"), C("Bob", category: 1, open: 1), C("Cy", category: 1)], max: 3);
+        Assert.Equal(3, ranked.Count);
+        Assert.Equal(["Cy", "Bob", "Amy"], ranked.Select(r => r.Stats.Name).ToArray()); // 3, 1, 0 (Amy before Zed)
+    }
+
+    [Fact]
+    public void Vendors_with_a_target_come_first_quickest_first_then_by_past_jobs_then_name()
+    {
+        var v = (string n, int? mins, int past) => new Fms.Work.Domain.VendorStats(Guid.NewGuid(), n, "C-" + n, mins, past);
+        var ranked = Fms.Work.Domain.AssignmentRanker.RankVendors([v("NoTargetBusy", null, 9), v("Slow", 480, 0), v("Fast", 120, 0), v("NoTargetNone", null, 0), v("FastExperienced", 120, 3)]);
+        Assert.Equal(["FastExperienced", "Fast", "Slow"], ranked.Select(r => r.Name).ToArray());
+        Assert.Equal(["FastExperienced", "Fast", "Slow", "NoTargetBusy", "NoTargetNone"], Fms.Work.Domain.AssignmentRanker.RankVendors([v("NoTargetBusy", null, 9), v("Slow", 480, 0), v("Fast", 120, 0), v("NoTargetNone", null, 0), v("FastExperienced", 120, 3)], 10).Select(r => r.Name).ToArray());
+    }
+}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useContracts, usePermissions, useVendorAssignment, useVendors } from '../api/hooks';
+import { useAssignmentSuggestions, useContracts, usePermissions, useVendorAssignment, useVendors } from '../api/hooks';
 import type { WorkOrder } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Dialog } from '../components/InventoryBits';
@@ -62,6 +62,7 @@ function AssignVendorDialog({ order, onClose }: { order: WorkOrder; onClose: () 
   const [vendorId, setVendorId] = useState('');
   const [contractId, setContractId] = useState('');
   const contracts = useContracts({ vendorId: vendorId || undefined, pageSize: 100 }, !!vendorId);
+  const suggestions = useAssignmentSuggestions(order.id, true);
   const usable = contracts.data?.items.filter((c) => c.status === 'Active' || c.status === 'Expiring') ?? [];
   const save = useMutation({
     mutationFn: () => api.post(`/work-orders/${order.id}/vendor`, { vendorId: vendorId || null, contractId: contractId || null }),
@@ -71,6 +72,19 @@ function AssignVendorDialog({ order, onClose }: { order: WorkOrder; onClose: () 
   return (
     <Dialog title={t('vendors.giveToVendor')} onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
+        {suggestions.data && suggestions.data.vendors.length > 0 ? (
+          <div className="ai-box" role="group" aria-label={t('suggest.vendorsTitle')}>
+            <strong>{t('suggest.vendorsTitle')}</strong> <span className="muted">{t('suggest.fromContracts')}</span>
+            <ul className="plain">
+              {suggestions.data.vendors.map((v) => (
+                <li key={v.vendorId}>
+                  <bdi>{v.name}</bdi>: {t('suggest.underContract', { number: v.contractNumber })}{v.resolutionMinutes != null ? ` · ${t('suggest.resolvesIn', { hours: Math.round(v.resolutionMinutes / 60) })}` : ''}{v.pastJobs > 0 ? ` · ${t('suggest.pastJobs', { count: v.pastJobs })}` : ''}{' '}
+                  <button type="button" aria-label={t('suggest.chooseX', { name: v.name })} onClick={() => { setVendorId(v.vendorId); setContractId(v.contractId); }}>{t('suggest.choose')}</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <Field label={t('vendors.vendor')} error={error?.field('vendorId')} required>
           <select value={vendorId} onChange={(e) => { setVendorId(e.target.value); setContractId(''); }} autoFocus>
             <option value="">{t('common.choose')}</option>

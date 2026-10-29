@@ -1657,3 +1657,7 @@ export interface AiUsage { usedToday: number; dailyLimit: number; last30Days: { 
 export interface RepeatProblem { assetId: string; assetCode: string | null; assetName: string | null; count: number; emergencies: number; firstAt: string; lastAt: string; lastTitle: string; averageDaysBetween: number | null }
 
 export interface LeaseDocument { id: string; leaseId: string; fileName: string; contentType: string; sizeBytes: number; sha256: string; uploadedAt: string }
+
+export interface AssigneeSuggestion { userId: string; name: string; score: number; sameAsset: number; sameCategory: number; samePlace: number; openJobs: number }
+export interface VendorSuggestion { vendorId: string; name: string; contractId: string; contractNumber: string; resolutionMinutes: number | null; pastJobs: number }
+export interface AssignmentSuggestions { workOrderId: string; assignees: AssigneeSuggestion[]; vendors: VendorSuggestion[] }

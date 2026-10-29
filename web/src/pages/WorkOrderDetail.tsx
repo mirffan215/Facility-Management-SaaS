@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../api/client';
-import { useAssignees, usePermissions, useWorkOrder } from '../api/hooks';
+import { useAssignees, useAssignmentSuggestions, usePermissions, useWorkOrder } from '../api/hooks';
 import type { ClosureCode, WorkOrder, WorkOrderAction, WorkPriority } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, ErrorBanner, Field, QueryState, ReasonDialog, useEnumLabel } from '../components/ui';
@@ -272,6 +272,7 @@ function ActionDialog({ action, order, onClose }: { action: WorkOrderAction; ord
 function AssignDialog({ order, busy, error, onConfirm, onClose }: { order: WorkOrder; busy: boolean; error: unknown; onConfirm: (id: string) => void; onClose: () => void }) {
   const { t } = useTranslation();
   const people = useAssignees(true);
+  const suggestions = useAssignmentSuggestions(order.id, true);
   const [who, setWho] = useState(order.assignedTo ?? '');
   return (
     <div className="overlay" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
@@ -293,6 +294,19 @@ function AssignDialog({ order, busy, error, onConfirm, onClose }: { order: WorkO
               ))}
             </select>
           </Field>
+          {suggestions.data && suggestions.data.assignees.length > 0 ? (
+            <div className="ai-box" role="group" aria-label={t('suggest.assigneesTitle')}>
+              <strong>{t('suggest.assigneesTitle')}</strong> <span className="muted">{t('suggest.fromHistory')}</span>
+              <ul className="plain">
+                {suggestions.data.assignees.map((a) => (
+                  <li key={a.userId}>
+                    <bdi>{a.name}</bdi>: {a.sameAsset > 0 ? t('suggest.sameAsset', { count: a.sameAsset }) + ' · ' : ''}{a.sameCategory > 0 ? t('suggest.sameCategory', { count: a.sameCategory }) + ' · ' : ''}{a.samePlace > 0 ? t('suggest.samePlace', { count: a.samePlace }) + ' · ' : ''}{a.openJobs > 0 ? t('suggest.openJobs', { count: a.openJobs }) : t('suggest.free')}{' '}
+                    <button type="button" aria-label={t('suggest.chooseX', { name: a.name })} onClick={() => setWho(a.userId)}>{t('suggest.choose')}</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <ErrorBanner error={error ?? people.error} />
           <div className="actions">
             <button type="button" onClick={onClose}>

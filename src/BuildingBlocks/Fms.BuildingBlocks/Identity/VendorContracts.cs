@@ -9,6 +9,9 @@ public sealed record ContractRef(Guid Id, Guid VendorId, string Number, string T
 /// <summary>The contract's response and resolution targets for one priority (1 low to 4 urgent), in minutes.</summary>
 public sealed record ContractSlaRef(int Priority, int ResponseMinutes, int ResolutionMinutes);
 
+/// <summary>A vendor that could take a job, through a contract in force that covers it, with the contract's targets for the job's priority when it sets them.</summary>
+public sealed record VendorOffer(VendorRef Vendor, ContractRef Contract, ContractSlaRef? Sla);
+
 /// <summary>What other modules may ask the Vendors module (answered for the current tenant only).</summary>
 public interface IVendorLookup
 {
@@ -22,6 +25,9 @@ public interface IVendorLookup
     /// Whether the contract covers the asset: by the asset itself, its class, or the site it is in. A contract that lists no coverage is general and covers everything.
     /// </summary>
     Task<bool> CoversAsync(Guid contractId, Guid? assetId, Guid? locationId, CancellationToken ct = default);
+
+    /// <summary>The vendors that could take a job on this asset or in this place today: active, with a contract in force that covers it. Newest contract first, at most the number asked for.</summary>
+    Task<IReadOnlyList<VendorOffer>> OffersAsync(Guid? assetId, Guid? locationId, int priority, int max, CancellationToken ct = default);
 
     /// <summary>The contract's target for a priority, or null when it sets none.</summary>
     Task<ContractSlaRef?> SlaAsync(Guid contractId, int priority, CancellationToken ct = default);
