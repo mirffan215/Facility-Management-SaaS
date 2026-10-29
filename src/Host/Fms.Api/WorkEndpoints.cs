@@ -121,6 +121,7 @@ public static class WorkEndpoints
 
         g.MapGet("/{id:guid}/suggestions", async (Guid id, AssignmentSuggestionService s, CancellationToken ct) => (await s.SuggestAsync(id, ct)).ToHttp()).RequirePermission(Permissions.WorkOrdersAssign);
         g.MapGet("/similar", async (SimilarRequestService s, Guid? locationId, Guid? assetId, string? title, CancellationToken ct) => Results.Ok(await s.FindAsync(locationId, assetId, title, ct))).RequirePermission(Permissions.WorkOrdersRead);
+        g.MapGet("/predictions", async (PredictiveService s, Guid? assetId, CancellationToken ct) => Results.Ok(await s.ListAsync(assetId, ct))).RequireAnyPermission(Permissions.WorkOrdersManage, Permissions.WorkOrdersAssign);
         g.MapGet("/repeat-problems", async (RepeatProblemService s, int? days, int? minimum, CancellationToken ct) => Results.Ok(await s.ListAsync(days, minimum, ct))).RequireAnyPermission(Permissions.WorkOrdersManage, Permissions.WorkOrdersAssign);
         g.MapGet("/{id:guid}", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.GetAsync(id, ct)).ToHttp()).RequireAnyPermission(Everyone);
         g.MapPost("", async (CreateWorkOrderRequest r, WorkOrderService s, CancellationToken ct) =>

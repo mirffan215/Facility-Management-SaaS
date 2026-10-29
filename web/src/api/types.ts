@@ -1661,3 +1661,9 @@ export interface LeaseDocument { id: string; leaseId: string; fileName: string; 
 export interface AssigneeSuggestion { userId: string; name: string; score: number; sameAsset: number; sameCategory: number; samePlace: number; openJobs: number }
 export interface VendorSuggestion { vendorId: string; name: string; contractId: string; contractNumber: string; resolutionMinutes: number | null; pastJobs: number }
 export interface AssignmentSuggestions { workOrderId: string; assignees: AssigneeSuggestion[]; vendors: VendorSuggestion[] }
+
+export interface PredictiveHint {
+  kind: 'FailuresSpeedingUp' | 'MeterRunningFaster'; assetId: string; assetCode: string | null; assetName: string | null;
+  events: number | null; earlierGapDays: number | null; recentGapDays: number | null; lastAt: string | null; expectedBy: string | null;
+  meterName: string | null; unit: string | null; recentPerDay: number | null; priorPerDay: number | null; ratio: number | null; daysToService: number | null;
+}

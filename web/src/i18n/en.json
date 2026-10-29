@@ -496,6 +496,14 @@
     "similar": {
       "title": "Already reported?",
       "help": "Open requests from the last 30 days about the same asset or place with similar words."
+    },
+    "predict": {
+      "title": "Early warnings ({{count}})",
+      "help": "Worked out from repair requests and service meters with simple arithmetic, not a model. Each line shows the numbers it comes from; use your own judgement.",
+      "failures": "Repairs are getting closer together: {{events}} in the last year, the last gaps average {{recent}} days against {{earlier}} before. Last repair {{last}}; the next could be around {{next}}.",
+      "pace": "{{meter}} is running faster: {{recent}} {{unit}} a day lately against {{prior}} before (×{{ratio}}).",
+      "service": "About {{days}} days to the next service at this pace.",
+      "serviceDue": "The next service is already due."
     }
   },
   "slaState": {

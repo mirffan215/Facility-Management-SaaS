@@ -4,7 +4,7 @@ import type {
   AuditEntry,
   AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
   ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
-  AiSettings, AiStatus, AiUsage, AssignmentSuggestions, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
+  AiSettings, AiStatus, AiUsage, AssignmentSuggestions, PredictiveHint, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -598,4 +598,9 @@ export function useSimilarRequests(params: { locationId: string; assetId: string
 export function useAssignmentSuggestions(id: string, enabled: boolean) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['work-orders', 'suggestions', id], enabled, staleTime: 30_000, queryFn: () => api.get<AssignmentSuggestions>(`/work-orders/${id}/suggestions`) });
+}
+
+export function usePredictiveHints(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['work-orders', 'predictions'], enabled, queryFn: () => api.get<PredictiveHint[]>('/work-orders/predictions') });
 }
