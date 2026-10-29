@@ -13,6 +13,7 @@ import { ChecklistTab, CostsTab, FilesTab, SignaturesTab } from './WorkOrderEvid
 import { PartsTab } from './WorkParts';
 import { VendorRows } from './WorkVendor';
 import { SummaryPanel } from '../components/AiAssist';
+import { workSourceKey } from '../lib/workSource';
 
 const CLOSURE_CODES: ClosureCode[] = ['Fixed', 'NoFaultFound', 'TemporaryFix', 'PartsRequired', 'Duplicate', 'NotRequired'];
 
@@ -131,6 +132,7 @@ export function WorkOrderDetailPage() {
                 </>
               ) : null}
             </dl>
+            {o.sourceKind ? <p className="muted">{t('jobs.raisedBy', { source: t(workSourceKey(o.sourceKind)) })}</p> : null}
             {o.description ? <p className="preline"><bdi>{o.description}</bdi></p> : null}
 
             <h2>{t('work.history')}</h2>

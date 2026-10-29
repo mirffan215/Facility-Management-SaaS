@@ -221,6 +221,8 @@ export interface WorkOrder {
   allowed: WorkOrderAction[];
   rowVersion: string;
   sla: Sla;
+  /** What raised the job when it was not a person: e.g. 'energy.alarm', 'compliance.failed'. */
+  sourceKind?: string | null;
 }
 
 export interface WorkOrderEvent {
@@ -1667,3 +1669,5 @@ export interface PredictiveHint {
   events: number | null; earlierGapDays: number | null; recentGapDays: number | null; lastAt: string | null; expectedBy: string | null;
   meterName: string | null; unit: string | null; recentPerDay: number | null; priorPerDay: number | null; ratio: number | null; daysToService: number | null;
 }
+
+export interface WorkPermitRef { id: string; number: number; workOrderId: string; typeName: string; status: PermitStatus; locationName: string; plannedStart: string; plannedEnd: string }

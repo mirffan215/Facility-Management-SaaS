@@ -745,6 +745,17 @@
       "comment": "Comment",
       "signature": "Signature",
       "photo": "Photo"
+    },
+    "raisedBy": "Raised automatically: {{source}}.",
+    "permits": "Permits for this job",
+    "permitNotStarted": "A permit for this job is not started yet. Check it before you begin the work.",
+    "openPermit": "Open permit PTW-{{number}}",
+    "permitsAsOf": "Permit status as of the last download, {{when}}. Permits are changed only online, in Compliance.",
+    "permitsOffline": "No connection: permit status is as of the last download, {{when}}, and may have changed. Permits are changed only online.",
+    "source": {
+      "energyAlarm": "an energy alarm",
+      "failedInspection": "a failed inspection",
+      "other": "an automatic alert"
     }
   },
   "pm": {

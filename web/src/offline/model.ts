@@ -1,6 +1,6 @@
 import type {
   AttachmentKind, ChecklistItem, ChecklistResult, ClosureCode, CostKind, CostLine, SignatureRole, TimeEntry, WorkAttachment, WorkOrder, WorkOrderAction,
-  WorkOrderComment, WorkOrderEvent, WorkSignature,
+  WorkOrderComment, WorkOrderEvent, WorkPermitRef, WorkSignature,
 } from '../api/types';
 
 /** One job as the phone keeps it: what the server last said. */
@@ -14,6 +14,8 @@ export interface OfflineJob {
   time: TimeEntry[];
   costs: CostLine[];
   currencyCode: string | null;
+  /** Permits tied to the job as of the last download. Read-only here: a permit is never changed from the queue. Absent when the person may not read permits. */
+  permits?: WorkPermitRef[] | null;
 }
 
 export interface Snapshot {

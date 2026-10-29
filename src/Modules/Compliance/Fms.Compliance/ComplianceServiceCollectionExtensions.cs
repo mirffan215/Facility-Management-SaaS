@@ -20,6 +20,7 @@ public static class ComplianceServiceCollectionExtensions
         services.AddScoped<CompletionDocumentService>();
         services.AddScoped<PermitTypeService>();
         services.AddScoped<PermitService>();
+        services.AddScoped<Fms.BuildingBlocks.Identity.IWorkPermitLookup, WorkPermitLookup>();
         services.AddScoped<ComplianceAlerts>();
         services.AddSingleton<ComplianceMonitor>();
         services.AddHealthChecks().AddDbContextCheck<ComplianceDbContext>("compliance-db", tags: ["ready"]);

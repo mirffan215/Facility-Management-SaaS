@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { AttachmentKind, ChecklistResult, ClosureCode, CostKind, SignatureRole } from '../api/types';
+import { usePermissions } from '../api/hooks';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, ErrorBanner, Field, ReasonDialog, useEnumLabel } from '../components/ui';
+import { SummaryPanel } from '../components/AiAssist';
 import { preparePhoto } from '../offline/image';
 import { applyOps, completionBlocker, type OfflineJob, type Op, type Pending } from '../offline/model';
 import { useOffline } from '../offline/OfflineProvider';
 import { usePrefs } from '../lib/prefs';
+import { workSourceKey } from '../lib/workSource';
 import { priorityTone, workStatusTone } from './WorkOrders';
 import { AuthImage, SignaturePad } from './WorkOrderEvidence';
 
@@ -19,7 +22,7 @@ export function JobPage() {
   const { t } = useTranslation();
   const { displayName } = useAuth();
   const { date } = usePrefs();
-  const { snapshot, ops, ready, enqueue } = useOffline();
+  const { snapshot, ops, ready, enqueue, online } = useOffline();
   const statusLabel = useEnumLabel('workStatus');
   const priorityLabel = useEnumLabel('workPriority');
   const [dialog, setDialog] = useState<'hold' | 'complete' | null>(null);
@@ -49,6 +52,7 @@ export function JobPage() {
         {job.opIds.size > 0 ? <Badge tone="warn">{t('jobs.waiting')}</Badge> : null}
       </p>
       <p className="muted"><bdi>{o.assetName ?? ''}</bdi> <bdi>{o.locationName ?? ''}</bdi></p>
+      {o.sourceKind ? <p className="muted">{t('jobs.raisedBy', { source: t(workSourceKey(o.sourceKind)) })}</p> : null}
       {o.description ? <p className="preline"><bdi>{o.description}</bdi></p> : null}
       {o.statusReason && o.status === 'OnHold' ? <p className="banner">{t('work.reason', { reason: o.statusReason })}</p> : null}
       {o.sla.resolutionDueAt && o.sla.state !== 'None' ? <p className="muted">{t('work.resolveBy')}: {date(o.sla.resolutionDueAt, true)}</p> : null}
@@ -61,6 +65,8 @@ export function JobPage() {
       </div>
       {o.allowed.includes('Completed') && blocker ? <p className="banner" role="note">{t(blocker === 'checklist' ? 'jobs.blockedChecklist' : 'jobs.blockedSignature')}</p> : null}
 
+      <Permits job={job} fetchedAt={snapshot?.fetchedAt ?? 0} />
+      {online ? <SummaryPanel workOrderId={o.id} /> : null}
       <Checklist job={job} waiting={waiting} editable={o.status === 'InProgress' || o.status === 'OnHold'} />
       <Effort job={job} waiting={waiting} open={['InProgress', 'OnHold', 'Completed'].includes(o.status)} />
       <Photos job={job} ops={ops} waiting={waiting} open={!['Closed', 'Cancelled'].includes(o.status)} />
@@ -104,6 +110,36 @@ function CompleteDialog({ blocker, onCancel, onDone }: { blocker: 'checklist' | 
 }
 
 type View = OfflineJob & Pending;
+
+/**
+ * Permits tied to the job, as of the last download. They are shown, never changed, from here: a permit's lifecycle (approve, issue, start, close) is a safety record
+ * that needs the person and the people who sign it to see the current state, so it is not queued. The status can be out of date; the page says when it was fetched.
+ */
+function Permits({ job, fetchedAt }: { job: View; fetchedAt: number }) {
+  const { t } = useTranslation();
+  const { date } = usePrefs();
+  const { online } = useOffline();
+  const { can } = usePermissions();
+  const statusLabel = useEnumLabel('permitStatus');
+  if (!job.permits || job.permits.length === 0) return null;
+  const notStarted = job.permits.some((p) => p.status !== 'Started');
+  return (
+    <>
+      <h2>{t('jobs.permits')}</h2>
+      {job.order.allowed.includes('Started') && notStarted ? <p className="banner" role="note">{t('jobs.permitNotStarted')}</p> : null}
+      <ul className="plain" aria-label={t('jobs.permits')}>
+        {job.permits.map((p) => (
+          <li key={p.id}>
+            <strong>PTW-{String(p.number).padStart(4, '0')}</strong> · <bdi>{p.typeName}</bdi> <Badge tone={p.status === 'Started' ? 'ok' : 'warn'}>{statusLabel(p.status)}</Badge>
+            <div className="muted"><bdi>{p.locationName}</bdi> · {date(p.plannedStart, true)} – {date(p.plannedEnd, true)}</div>
+            {online && can('permits.read') ? <Link to={`/compliance?tab=permits&permit=${p.id}`}>{t('jobs.openPermit', { number: String(p.number).padStart(4, '0') })}</Link> : null}
+          </li>
+        ))}
+      </ul>
+      <p className="muted">{online ? t('jobs.permitsAsOf', { when: date(new Date(fetchedAt).toISOString(), true) }) : t('jobs.permitsOffline', { when: date(new Date(fetchedAt).toISOString(), true) })}</p>
+    </>
+  );
+}
 
 function Waiting({ on }: { on: boolean }) {
   const { t } = useTranslation();

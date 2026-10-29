@@ -253,4 +253,50 @@ public sealed class OfflineSyncApiTests(SqlServerFixture sql) : IDisposable
         Assert.Empty((await ReadAsync<OfflineJobsDto>(await foreign.GetAsync("/api/v1/work-orders/offline/jobs"))).Jobs);
         Assert.Single((await ReadAsync<OfflineJobsDto>(await job.Technician.GetAsync("/api/v1/work-orders/offline/jobs"))).Jobs);
     }
+
+    // ---------------- permits and alert-raised jobs in the bundle ----------------
+
+    private static async Task<Fms.Compliance.Services.PermitDto> PermitForAsync(Job job, string code, Guid? workOrderId)
+    {
+        var type = await ReadAsync<Fms.Compliance.Services.PermitTypeDto>(await PostAsync(job.Manager, "/api/v1/compliance/permit-types", new { code, name = "Hot work " + code, maxDurationHours = 8, exclusive = false, requiresIsolation = false, precautions = new[] { "Fire watch posted" } }));
+        var start = DateTimeOffset.UtcNow.AddHours(1);
+        return await ReadAsync<Fms.Compliance.Services.PermitDto>(await PostAsync(job.Technician, "/api/v1/permits", new { typeId = type.Id, locationId = job.Order.LocationId, workOrderId, description = "Weld the bracket", plannedStart = start, plannedEnd = start.AddHours(2) }));
+    }
+
+    [Fact]
+    public async Task The_bundle_carries_the_permits_in_play_for_each_job_and_drops_them_once_they_are_cancelled()
+    {
+        var job = await NewJobAsync(start: true);
+        var other = await NewJobAsync(start: true);
+        var permit = await PermitForAsync(job, "WLD", job.Order.Id);
+        await PermitForAsync(job, "UNL", null); // a permit not tied to any job is not in the bundle
+
+        var bundle = await ReadAsync<OfflineJobsDto>(await job.Technician.GetAsync("/api/v1/work-orders/offline/jobs"));
+        var carried = Assert.Single(Assert.Single(bundle.Jobs).Permits!);
+        Assert.Equal((permit.Id, permit.Number, "Requested", job.Order.Id), (carried.Id, carried.Number, carried.Status, carried.WorkOrderId));
+        Assert.Equal("Hot work WLD", carried.TypeName);
+
+        // Another organisation's technician never sees it, and a job without a permit carries an empty list.
+        Assert.Empty(Assert.Single((await ReadAsync<OfflineJobsDto>(await other.Technician.GetAsync("/api/v1/work-orders/offline/jobs"))).Jobs).Permits!);
+
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(job.Technician, $"/api/v1/permits/{permit.Id}/cancel", new { reason = "Not needed", rowVersion = permit.RowVersion })).StatusCode);
+        Assert.Empty(Assert.Single((await ReadAsync<OfflineJobsDto>(await job.Technician.GetAsync("/api/v1/work-orders/offline/jobs"))).Jobs).Permits!);
+    }
+
+    [Fact]
+    public async Task A_job_raised_by_an_alert_says_so_in_the_bundle_and_an_ordinary_one_does_not()
+    {
+        var job = await NewJobAsync(start: true);
+        await using (var platform = sql.Work(null, platform: true))
+        {
+            await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(platform.Database,
+                "UPDATE work.WorkOrders SET SourceKind = N'energy.alarm', SourceId = {1} WHERE Id = {0}", job.Order.Id, Guid.NewGuid());
+        }
+
+        var raised = Assert.Single((await ReadAsync<OfflineJobsDto>(await job.Technician.GetAsync("/api/v1/work-orders/offline/jobs"))).Jobs);
+        Assert.Equal("energy.alarm", raised.Order.SourceKind);
+
+        var ordinary = await NewJobAsync(start: true);
+        Assert.Null(Assert.Single((await ReadAsync<OfflineJobsDto>(await ordinary.Technician.GetAsync("/api/v1/work-orders/offline/jobs"))).Jobs).Order.SourceKind);
+    }
 }

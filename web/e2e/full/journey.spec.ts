@@ -638,6 +638,12 @@ test('offline: a technician works a whole job without a connection, and it all a
   expect((await api(`/work-orders/${wo.id}/assign`, { method: 'POST', body: JSON.stringify({ assigneeId: techId }) })).status).toBe(200);
   expect((await api(`/work-orders/${wo.id}/checklist`, { method: 'POST', body: JSON.stringify({ templateId: templates.find((t) => t.name === 'Pump inspection')!.id }) })).status).toBe(200);
 
+  // A permit-to-work is tied to the job, and the job was raised by an energy alarm: both travel to the phone.
+  const ptype = (await (await api('/compliance/permit-types', { method: 'POST', body: JSON.stringify({ code: `BO${SUFFIX}`, name: 'Boiler entry', maxDurationHours: 8, exclusive: false, requiresIsolation: false, precautions: ['Gas isolated'] }) })).json()) as { id: string };
+  const startsAt = new Date(Date.now() + 3_600_000);
+  const permitMade = await api('/permits', { method: 'POST', body: JSON.stringify({ typeId: ptype.id, locationId: site.id, workOrderId: wo.id, description: 'Enter the boiler house', plannedStart: startsAt.toISOString(), plannedEnd: new Date(startsAt.getTime() + 7_200_000).toISOString() }) });
+  expect(permitMade.status).toBe(201);
+
   // Signed in and online: the jobs are downloaded to the phone, and the app is saved by the service worker.
   const tech = await personaPage(browser, `tech-${SUFFIX.toLowerCase()}`, 'Tina Technician');
   await expect(tech.getByRole('heading', { name: 'My jobs' })).toBeVisible();
@@ -651,6 +657,12 @@ test('offline: a technician works a whole job without a connection, and it all a
   await expect(tech.getByRole('heading', { name: 'My jobs' })).toBeVisible();
   await expect(tech.getByRole('status')).toContainText('Offline');
   await tech.getByRole('link', { name: /Boiler tripping/ }).click();
+
+  // The permit is shown from the saved copy, with a plain warning that it can be out of date and is only changed online.
+  await expect(tech.getByRole('heading', { name: 'Permits for this job' })).toBeVisible();
+  await expect(tech.getByRole('list', { name: 'Permits for this job' }).getByText('Boiler entry')).toBeVisible();
+  await expect(tech.getByText('No connection: permit status is as of the last download')).toBeVisible();
+  await expect(tech.getByRole('note').filter({ hasText: 'not started yet' })).toBeVisible();
 
   const startedAt = Date.now();
   await tech.getByRole('button', { name: 'Start work' }).click();

@@ -557,7 +557,7 @@ public sealed class WorkOrderService(
             o.CategoryId, o.CategoryId is { } c ? categories.GetValueOrDefault(c) : null,
             o.RequestedBy, Person(o.RequestedBy), o.RequestedAt, o.AssignedTo, Person(o.AssignedTo),
             o.DueAt, WorkOrderRules.IsOverdue(o, now), o.StartedAt, o.CompletedAt, o.VerifiedAt, o.ClosedAt,
-            o.StatusReason, o.ClosureCode, o.ClosureNotes, WorkOrderRules.Allowed(o, actor, settings), Convert.ToBase64String(o.RowVersion), ToSla(o, now))).ToList();
+            o.StatusReason, o.ClosureCode, o.ClosureNotes, WorkOrderRules.Allowed(o, actor, settings), Convert.ToBase64String(o.RowVersion), ToSla(o, now), o.SourceKind)).ToList();
     }
 
     private static SlaDto ToSla(WorkOrder o, DateTimeOffset now)

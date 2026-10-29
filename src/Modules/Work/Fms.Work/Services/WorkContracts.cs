@@ -7,7 +7,7 @@ public sealed record WorkOrderDto(
     Guid LocationId, string? LocationName, Guid? AssetId, string? AssetName, Guid? CategoryId, string? CategoryName,
     Guid RequestedBy, string? RequestedByName, DateTimeOffset RequestedAt, Guid? AssignedTo, string? AssignedToName,
     DateTimeOffset? DueAt, bool IsOverdue, DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, DateTimeOffset? VerifiedAt, DateTimeOffset? ClosedAt,
-    string? StatusReason, ClosureCode? ClosureCode, string? ClosureNotes, IReadOnlyList<WorkOrderAction> Allowed, string RowVersion, SlaDto Sla);
+    string? StatusReason, ClosureCode? ClosureCode, string? ClosureNotes, IReadOnlyList<WorkOrderAction> Allowed, string RowVersion, SlaDto Sla, string? SourceKind = null);
 
 public sealed record SlaDto(SlaState State, DateTimeOffset? ResponseDueAt, DateTimeOffset? ResolutionDueAt, DateTimeOffset? RespondedAt, bool ResponseBreached, bool Paused);
 
@@ -113,7 +113,7 @@ public sealed class WorkOptions
 /// <summary>Everything a technician's phone needs to work one job without a connection.</summary>
 public sealed record OfflineJobDto(
     WorkOrderDto Order, IReadOnlyList<WorkOrderEventDto> Events, IReadOnlyList<WorkOrderCommentDto> Comments, IReadOnlyList<ChecklistItemDto> Checklist,
-    IReadOnlyList<SignatureDto> Signatures, IReadOnlyList<AttachmentDto> Attachments, IReadOnlyList<TimeEntryDto> Time, IReadOnlyList<CostLineDto> Costs, string? CurrencyCode);
+    IReadOnlyList<SignatureDto> Signatures, IReadOnlyList<AttachmentDto> Attachments, IReadOnlyList<TimeEntryDto> Time, IReadOnlyList<CostLineDto> Costs, string? CurrencyCode, IReadOnlyList<Fms.BuildingBlocks.Identity.WorkPermitRef>? Permits = null);
 
 /// <summary>The jobs assigned to the signed-in person that are still open, with the server's clock so the phone can correct its own.</summary>
 public sealed record OfflineJobsDto(DateTimeOffset ServerTime, IReadOnlyList<OfflineJobDto> Jobs, bool RequireCompletionSignature = false);

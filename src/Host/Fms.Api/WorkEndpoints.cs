@@ -45,7 +45,8 @@ public static class WorkEndpoints
             .RequireAnyPermission(Everyone);
 
         // A technician's phone downloads this to work without a connection (see ADR-0013).
-        g.MapGet("/offline/jobs", async (OfflineJobsService s, CancellationToken ct) => Results.Ok(await s.JobsAsync(ct)))
+        g.MapGet("/offline/jobs", async (OfflineJobsService s, HttpContext http, Microsoft.AspNetCore.Authorization.IAuthorizationService auth, CancellationToken ct) =>
+                Results.Ok(await s.JobsAsync((await auth.AuthorizeAsync(http.User, null, Permissions.PolicyName(Permissions.PermitsRead))).Succeeded, ct)))
             .RequirePermission(Permissions.WorkOrdersWork);
 
         g.MapGet("/{id:guid}/vendor", async (Guid id, WorkOrderService s, CancellationToken ct) => (await s.VendorAssignmentAsync(id, ct)).ToHttp(x => x is null ? Results.NoContent() : Results.Ok(x))).RequirePermission(Permissions.WorkOrdersRead);
