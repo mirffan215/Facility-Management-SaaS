@@ -11,7 +11,7 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "10.0.x" }
       - run: dotnet restore Fms.sln
@@ -34,7 +34,7 @@ jobs:
         slice: [1, 2, 3, 4]
     name: integration (${{ matrix.slice }} of 4)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "10.0.x" }
       - run: dotnet build tests/Fms.IntegrationTests -c Release
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: web } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm ci
@@ -57,7 +57,7 @@ jobs:
     # Real browser, web build, API, SQL Server and a fake OpenID Connect provider. See scripts/e2e-full.sh.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "10.0.x" }
       - uses: actions/setup-node@v4
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "10.0.x" }
       - uses: actions/setup-node@v4
@@ -90,7 +90,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -f Dockerfile.api -t fms-api .
       - run: docker build -f Dockerfile.migrator -t fms-migrator .
       - run: docker build -f Dockerfile.worker -t fms-worker .
@@ -112,7 +112,7 @@ jobs:
     # The chart, the Azure template and the on-premise scripts are checked on every change, so a release is never the first time they run.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: azure/setup-helm@v4
       - name: Helm lint and render
         run: |
