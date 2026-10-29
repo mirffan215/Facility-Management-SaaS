@@ -2377,5 +2377,17 @@
     "underContract": "contract {{number}}",
     "resolvesIn": "resolves within {{hours}} h",
     "pastJobs": "{{count}} similar jobs done"
+  },
+  "hints": {
+    "title": "Suggestions and early warnings",
+    "help": "How eagerly the suggested people and the early warnings speak. The defaults suit most organisations; change them if you see too many or too few.",
+    "historyDays": "Days of history for suggested people",
+    "historyDaysHint": "30 to 730. Finished work this far back counts as experience.",
+    "minFailures": "Repairs before a warning",
+    "minFailuresHint": "3 to 12 repairs on one asset in a year.",
+    "shrinkPercent": "Gap shrink (%)",
+    "shrinkPercentHint": "20 to 90. Warn when the recent gap is at most this share of the earlier gaps.",
+    "paceRisePercent": "Meter pace rise (%)",
+    "paceRisePercentHint": "110 to 500. Warn when a service meter runs at least this share of its earlier pace."
   }
 }

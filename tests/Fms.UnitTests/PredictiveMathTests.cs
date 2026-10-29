@@ -81,4 +81,18 @@ public sealed class PredictiveMathTests
         Assert.Equal(2, PredictiveMath.Median([3, 1, 2]));
         Assert.Equal(2.5, PredictiveMath.Median([4, 1, 2, 3]));
     }
+
+    [Fact]
+    public void Looser_and_stricter_thresholds_change_what_speaks()
+    {
+        var steady = At(145, 95, 55, 25, 0); // gaps 50, 40, 30, 25: recent 27.5 against median 45 = 61%
+        Assert.Null(PredictiveMath.Failures(steady));
+        Assert.NotNull(PredictiveMath.Failures(steady, new HintThresholds(ShrinkPercent: 65)));
+        Assert.Null(PredictiveMath.Failures(At(150, 90, 30, 10, 0), new HintThresholds(MinFailures: 6)));
+
+        var readings = new List<MeterValue> { R(43, 0), R(14.5, 285), R(10, 1000), R(0, 1200) }; // 10 a day, then 20: ratio 2
+        Assert.NotNull(PredictiveMath.Pace(readings, Now));
+        Assert.NotNull(PredictiveMath.Pace(readings, Now, new HintThresholds(PaceRisePercent: 200)));
+        Assert.Null(PredictiveMath.Pace(readings, Now, new HintThresholds(PaceRisePercent: 250)));
+    }
 }

@@ -14,9 +14,8 @@ public sealed record VendorSuggestionDto(Guid VendorId, string Name, Guid Contra
 public sealed record AssignmentSuggestionsDto(Guid WorkOrderId, IReadOnlyList<AssigneeSuggestionDto> Assignees, IReadOnlyList<VendorSuggestionDto> Vendors);
 
 /// <summary>Suggests who could take an open work order, and which vendor under contract could, from history and contracts. Rules, not a model; the dispatcher decides.</summary>
-public sealed class AssignmentSuggestionService(WorkDbContext db, IUserDirectory users, TimeProvider clock, IVendorLookup? vendors = null)
+public sealed class AssignmentSuggestionService(WorkDbContext db, IUserDirectory users, TimeProvider clock, HintSettingsService hints, IVendorLookup? vendors = null)
 {
-    public const int HistoryDays = 180;
     private static readonly WorkOrderStatus[] Open = [WorkOrderStatus.Requested, WorkOrderStatus.Approved, WorkOrderStatus.Assigned];
     private static readonly WorkOrderStatus[] Done = [WorkOrderStatus.Completed, WorkOrderStatus.Verified, WorkOrderStatus.Closed];
     private static readonly WorkOrderStatus[] OnTheirPlate = [WorkOrderStatus.Assigned, WorkOrderStatus.InProgress, WorkOrderStatus.OnHold];
@@ -29,7 +28,7 @@ public sealed class AssignmentSuggestionService(WorkDbContext db, IUserDirectory
 
         var people = (await users.WithPermissionAsync(Permissions.WorkOrdersWork, ct)).ToList();
         var ids = people.Select(p => p.Id).ToList();
-        var since = clock.GetUtcNow().AddDays(-HistoryDays);
+        var since = clock.GetUtcNow().AddDays(-(await hints.LoadAsync(ct)).HistoryDays);
         var history = await db.WorkOrders.AsNoTracking()
             .Where(w => w.AssignedTo != null && ids.Contains(w.AssignedTo.Value) && Done.Contains(w.Status) && w.RequestedAt >= since && w.Id != wo.Id
                         && (w.ClosureCode == null || (w.ClosureCode != ClosureCode.Duplicate && w.ClosureCode != ClosureCode.NotRequired)))

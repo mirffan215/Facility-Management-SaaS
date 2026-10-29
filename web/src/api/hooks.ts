@@ -4,7 +4,7 @@ import type {
   AuditEntry,
   AlarmEvent, AlarmRule, Consumption, EnergyDevice, EnergyMeter, EnergyReading, Tariff,
   ComplianceSummary, Obligation, ObligationDetail, Permit, PermitDetail, PermitType,
-  AiSettings, AiStatus, AiUsage, AssignmentSuggestions, PredictiveHint, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
+  AiSettings, AiStatus, AiUsage, AssignmentSuggestions, HintSettings, PredictiveHint, RepeatProblem, SimilarRequest, LicenseStatus, ProjectCosts, ProjectDetail, ProjectSummary, Lease, LeaseDocument, LeaseSchedule, LeaseSummary, LeaseTotals,
   SystemInfo,
   Workflow,
   WorkflowVersion,
@@ -603,4 +603,9 @@ export function useAssignmentSuggestions(id: string, enabled: boolean) {
 export function usePredictiveHints(enabled: boolean) {
   const { api } = useAuth();
   return useQuery({ queryKey: ['work-orders', 'predictions'], enabled, queryFn: () => api.get<PredictiveHint[]>('/work-orders/predictions') });
+}
+
+export function useHintSettings(enabled: boolean) {
+  const { api } = useAuth();
+  return useQuery({ queryKey: ['work-orders', 'hint-settings'], enabled, queryFn: () => api.get<HintSettings>('/work-orders/hint-settings') });
 }

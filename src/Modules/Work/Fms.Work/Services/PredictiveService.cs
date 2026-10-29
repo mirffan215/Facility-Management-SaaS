@@ -21,7 +21,7 @@ public sealed record PredictiveHintDto(
 /// Early warnings from two plain rules: repairs on an asset coming closer together, and a service meter climbing faster than before.
 /// Neither is a model and neither needs AI switched on; a hint says what it saw and the person decides what to do.
 /// </summary>
-public sealed class PredictiveService(WorkDbContext db, IFacilityLookup facilities, TimeProvider clock)
+public sealed class PredictiveService(WorkDbContext db, IFacilityLookup facilities, HintSettingsService hints, TimeProvider clock)
 {
     public const int FailureWindowDays = 365;
     public const int MaxPlans = 200;
@@ -30,13 +30,14 @@ public sealed class PredictiveService(WorkDbContext db, IFacilityLookup faciliti
     public async Task<IReadOnlyList<PredictiveHintDto>> ListAsync(Guid? assetId, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
-        var hints = new List<PredictiveHintDto>();
-        hints.AddRange(await FailureHintsAsync(assetId, now, ct));
-        hints.AddRange(await MeterHintsAsync(assetId, now, ct));
-        return hints.OrderBy(h => h.ExpectedBy ?? DateTimeOffset.MaxValue).ThenBy(h => h.DaysToService ?? int.MaxValue).Take(MaxHints).ToList();
+        var thresholds = await hints.LoadAsync(ct);
+        var found = new List<PredictiveHintDto>();
+        found.AddRange(await FailureHintsAsync(assetId, now, thresholds, ct));
+        found.AddRange(await MeterHintsAsync(assetId, now, thresholds, ct));
+        return found.OrderBy(h => h.ExpectedBy ?? DateTimeOffset.MaxValue).ThenBy(h => h.DaysToService ?? int.MaxValue).Take(MaxHints).ToList();
     }
 
-    private async Task<List<PredictiveHintDto>> FailureHintsAsync(Guid? assetId, DateTimeOffset now, CancellationToken ct)
+    private async Task<List<PredictiveHintDto>> FailureHintsAsync(Guid? assetId, DateTimeOffset now, HintThresholds thresholds, CancellationToken ct)
     {
         var since = now.AddDays(-FailureWindowDays);
         var rows = await db.WorkOrders.AsNoTracking()
@@ -45,7 +46,7 @@ public sealed class PredictiveService(WorkDbContext db, IFacilityLookup faciliti
             .OrderByDescending(w => w.RequestedAt).Take(5000)
             .Select(w => new { AssetId = w.AssetId!.Value, w.RequestedAt }).ToListAsync(ct);
         var found = rows.GroupBy(r => r.AssetId)
-            .Select(g => (Asset: g.Key, Trend: PredictiveMath.Failures(g.Select(x => x.RequestedAt).ToList())))
+            .Select(g => (Asset: g.Key, Trend: PredictiveMath.Failures(g.Select(x => x.RequestedAt).ToList(), thresholds)))
             .Where(x => x.Trend is not null).Take(MaxHints).ToList();
         var assets = await facilities.AssetsAsync(found.Select(f => f.Asset), ct);
         return found.Select(f =>
@@ -56,20 +57,20 @@ public sealed class PredictiveService(WorkDbContext db, IFacilityLookup faciliti
         }).ToList();
     }
 
-    private async Task<List<PredictiveHintDto>> MeterHintsAsync(Guid? assetId, DateTimeOffset now, CancellationToken ct)
+    private async Task<List<PredictiveHintDto>> MeterHintsAsync(Guid? assetId, DateTimeOffset now, HintThresholds thresholds, CancellationToken ct)
     {
         var plans = await db.PmPlans.AsNoTracking()
             .Where(p => p.IsActive && p.MeterId != null && (assetId == null || p.AssetId == assetId))
             .Join(db.PmSchedules.Where(s => !s.IsArchived && s.MeterInterval != null && s.MeterName != null), p => p.ScheduleId, s => s.Id,
                 (p, s) => new { p.AssetId, p.MeterId, p.LastServiceMeterValue, Name = s.MeterName!, Interval = s.MeterInterval!.Value })
             .Take(MaxPlans).ToListAsync(ct);
-        var hints = new List<PredictiveHintDto>();
+        var found = new List<PredictiveHintDto>();
         foreach (var plan in plans)
         {
             var meter = await facilities.FindMeterAsync(plan.AssetId, plan.Name, ct);
             if (meter is null || !meter.IsCumulative) continue;
             var readings = await facilities.ReadingsSinceAsync(meter.Id, now.AddDays(-(PredictiveMath.RecentDays + PredictiveMath.PriorDays)), ct);
-            if (PredictiveMath.Pace(readings, now) is not { } pace) continue;
+            if (PredictiveMath.Pace(readings, now, thresholds) is not { } pace) continue;
             int? days = null;
             if (plan.LastServiceMeterValue is { } baseline && readings.Count > 0)
             {
@@ -78,10 +79,10 @@ public sealed class PredictiveService(WorkDbContext db, IFacilityLookup faciliti
             }
 
             var asset = (await facilities.AssetsAsync([plan.AssetId], ct)).GetValueOrDefault(plan.AssetId);
-            hints.Add(new PredictiveHintDto(HintKind.MeterRunningFaster, plan.AssetId, asset?.Code, asset?.Name, null, null, null, null, null,
+            found.Add(new PredictiveHintDto(HintKind.MeterRunningFaster, plan.AssetId, asset?.Code, asset?.Name, null, null, null, null, null,
                 meter.Name, meter.Unit, pace.RecentPerDay, pace.PriorPerDay, pace.Ratio, days));
         }
 
-        return hints;
+        return found;
     }
 }

@@ -163,6 +163,18 @@ public sealed class WorkSettings : ITenantOwned
     /// <summary>Own labour rate per hour, frozen onto each time entry when it is recorded. Zero means labour is not costed.</summary>
     public decimal LabourRatePerHour { get; set; }
 
+    /// <summary>How far back finished work counts as experience when suggesting who should take a job.</summary>
+    public int HintHistoryDays { get; set; } = 180;
+
+    /// <summary>Repairs on one asset in the last year before the early warning about shrinking gaps can speak.</summary>
+    public int HintMinFailures { get; set; } = 4;
+
+    /// <summary>The recent repair gap, as a percentage of the earlier median gap, at or below which the warning speaks.</summary>
+    public int HintShrinkPercent { get; set; } = 50;
+
+    /// <summary>A meter's recent daily pace, as a percentage of the month before, at or above which the warning speaks.</summary>
+    public int HintPaceRisePercent { get; set; } = 150;
+
     [Timestamp]
     public byte[] RowVersion { get; set; } = [];
 }

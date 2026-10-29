@@ -28,6 +28,7 @@ public static class WorkServiceCollectionExtensions
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkAiSource, WorkAiSource>();
         services.AddScoped<RepeatProblemService>();
         services.AddScoped<PredictiveService>();
+        services.AddScoped<HintSettingsService>();
         services.AddScoped<SimilarRequestService>();
         services.AddScoped<AssignmentSuggestionService>();
         services.AddScoped<Fms.BuildingBlocks.Identity.IWorkOrderFromSource, WorkOrderFromSource>();

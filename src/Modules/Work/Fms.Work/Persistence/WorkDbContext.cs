@@ -64,6 +64,10 @@ public sealed class WorkDbContext(DbContextOptions<WorkDbContext> options, ITena
 
         b.Entity<WorkSettings>().Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
         b.Entity<WorkSettings>().Property(x => x.LabourRatePerHour).HasPrecision(12, 2);
+        b.Entity<WorkSettings>().Property(x => x.HintHistoryDays).HasDefaultValue(180);
+        b.Entity<WorkSettings>().Property(x => x.HintMinFailures).HasDefaultValue(4);
+        b.Entity<WorkSettings>().Property(x => x.HintShrinkPercent).HasDefaultValue(50);
+        b.Entity<WorkSettings>().Property(x => x.HintPaceRisePercent).HasDefaultValue(150);
 
         b.Entity<ChecklistTemplate>(e =>
         {

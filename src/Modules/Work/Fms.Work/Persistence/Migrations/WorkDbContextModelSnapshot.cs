@@ -1246,6 +1246,26 @@ namespace Fms.Work.Persistence.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<int>("HintHistoryDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(180);
+
+                    b.Property<int>("HintMinFailures")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(4);
+
+                    b.Property<int>("HintPaceRisePercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(150);
+
+                    b.Property<int>("HintShrinkPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(50);
+
                     b.Property<decimal>("LabourRatePerHour")
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)");

@@ -8,6 +8,7 @@ import type { AssetClass, CustomFieldDefinition, CustomFieldTarget, CustomFieldT
 import { useAuth } from '../auth/AuthContext';
 import { Badge, Can, ErrorBanner, Field, QueryState, useEnumLabel } from '../components/ui';
 import { usePrefs } from '../lib/prefs';
+import { HintSettingsForm } from '../components/HintSettingsForm';
 import { SlaSection } from './SlaSetup';
 import { WorkflowSection } from './WorkflowDesigner';
 import { ChecklistsSection } from './ChecklistSetup';
@@ -268,6 +269,8 @@ function WorkSection() {
           </fieldset>
         ) : null}
       </QueryState>
+
+      <Can permission="workorders.manage"><HintSettingsForm /></Can>
 
       <h2>{t('work.categories')}</h2>
       <Can permission="workorders.manage">

@@ -272,6 +272,8 @@ export interface WorkSettings {
   requireCompletionSignature: boolean;
 }
 
+export interface HintSettings { historyDays: number; minFailures: number; shrinkPercent: number; paceRisePercent: number; rowVersion: string | null }
+
 export interface Assignee {
   id: string;
   displayName: string | null;

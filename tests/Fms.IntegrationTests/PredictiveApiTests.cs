@@ -143,4 +143,54 @@ public sealed class PredictiveApiTests : IDisposable
         Assert.Empty(await HintsAsync(b.Manager));
         Assert.Empty(await HintsAsync(b.Manager, $"?assetId={asset.Id}"));
     }
+
+    [Fact]
+    public async Task The_thresholds_start_at_the_defaults_are_checked_saved_and_change_what_is_flagged()
+    {
+        var rig = await NewRigAsync();
+        var asset = await NewAssetAsync(rig, "Chiller 1");
+        foreach (var d in new[] { 150, 90, 30, 10, 0 }) await RepairAsync(rig, asset, d);
+        Assert.Single(await HintsAsync(rig.Manager));
+
+        var start = await ReadAsync<HintSettingsDto>(await rig.Manager.GetAsync("/api/v1/work-orders/hint-settings"));
+        Assert.Equal((180, 4, 50, 150), (start.HistoryDays, start.MinFailures, start.ShrinkPercent, start.PaceRisePercent));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await PutAsync(rig.Manager, "/api/v1/work-orders/hint-settings", new { historyDays = 10, minFailures = 4, shrinkPercent = 50, paceRisePercent = 150, rowVersion = start.RowVersion })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await PutAsync(rig.Manager, "/api/v1/work-orders/hint-settings", new { historyDays = 180, minFailures = 2, shrinkPercent = 50, paceRisePercent = 150, rowVersion = start.RowVersion })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await PutAsync(rig.Manager, "/api/v1/work-orders/hint-settings", new { historyDays = 180, minFailures = 4, shrinkPercent = 50, rowVersion = start.RowVersion })).StatusCode);
+
+        // Asking for six repairs before speaking silences the asset that has five.
+        var saved = await ReadAsync<HintSettingsDto>(await PutAsync(rig.Manager, "/api/v1/work-orders/hint-settings", new { historyDays = 365, minFailures = 6, shrinkPercent = 50, paceRisePercent = 150, rowVersion = start.RowVersion }));
+        Assert.Equal((365, 6), (saved.HistoryDays, saved.MinFailures));
+        Assert.NotNull(saved.RowVersion);
+        Assert.Empty(await HintsAsync(rig.Manager));
+
+        var work = await ReadAsync<WorkSettingsDto>(await rig.Manager.GetAsync("/api/v1/work-orders/settings"));
+        Assert.True(work.RequireApproval); // the lifecycle switches of the same row are untouched
+        Assert.True(work.RequireVerification);
+
+        var restored = await ReadAsync<HintSettingsDto>(await PutAsync(rig.Manager, "/api/v1/work-orders/hint-settings", new { historyDays = 180, minFailures = 4, shrinkPercent = 50, paceRisePercent = 150, rowVersion = saved.RowVersion }));
+        Assert.Single(await HintsAsync(rig.Manager));
+        Assert.Equal(4, restored.MinFailures);
+
+        // A stale copy is refused.
+        Assert.Equal(HttpStatusCode.Conflict, (await PutAsync(rig.Manager, "/api/v1/work-orders/hint-settings", new { historyDays = 200, minFailures = 4, shrinkPercent = 50, paceRisePercent = 150, rowVersion = saved.RowVersion })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Only_managers_change_the_thresholds_dispatchers_read_them_and_each_organisation_has_its_own()
+    {
+        var a = await NewRigAsync();
+        var b = await NewRigAsync();
+        var start = await ReadAsync<HintSettingsDto>(await a.Manager.GetAsync("/api/v1/work-orders/hint-settings"));
+        var body = new { historyDays = 90, minFailures = 5, shrinkPercent = 40, paceRisePercent = 200, rowVersion = start.RowVersion };
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await PutAsync(a.Technician, "/api/v1/work-orders/hint-settings", body)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await PutAsync(a.Viewer, "/api/v1/work-orders/hint-settings", body)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await a.Technician.GetAsync("/api/v1/work-orders/hint-settings")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await PutAsync(a.Manager, "/api/v1/work-orders/hint-settings", body)).StatusCode);
+
+        Assert.Equal(90, (await ReadAsync<HintSettingsDto>(await a.Manager.GetAsync("/api/v1/work-orders/hint-settings"))).HistoryDays);
+        Assert.Equal(180, (await ReadAsync<HintSettingsDto>(await b.Manager.GetAsync("/api/v1/work-orders/hint-settings"))).HistoryDays);
+    }
 }
