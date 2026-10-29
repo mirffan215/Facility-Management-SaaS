@@ -35,7 +35,7 @@ public sealed class GuestAccessService(PlatformDbContext db, ICurrentUser user, 
             Kind = kind, TargetId = targetId, Email = email.Trim(), TokenHash = Hash(token), CreatedBy = user.UserId, CreatedAt = now, ExpiresAt = now + lifetime,
         };
         db.GuestInvitations.Add(invitation);
-        db.PendingAudit(user, "guest.invited", nameof(GuestInvitation), invitation.Id.ToString(), JsonSerializer.Serialize(new { kind, targetId, email = invitation.Email, invitation.ExpiresAt }));
+        db.PendingAudit(user, "guest.invited", nameof(GuestInvitation), invitation.Id.ToString(), JsonSerializer.Serialize(new { kind, targetId, email = MaskEmail(invitation.Email), invitation.ExpiresAt }));
         await db.SaveChangesAsync(ct);
         return new CreatedGuestInvitation(ToRef(invitation), token);
     }
@@ -138,6 +138,13 @@ public sealed class GuestAccessService(PlatformDbContext db, ICurrentUser user, 
                join t in db.Tenants on g.TenantId equals t.Id
                where g.Provider == provider && g.Subject == subject && t.IsActive
                select (Guid?)t.Id).FirstOrDefaultAsync(ct);
+
+    /// <summary>The audit trail is permanent and readable by auditors, so it keeps enough to recognise an address (first letter and domain), not the address.</summary>
+    public static string MaskEmail(string email)
+    {
+        var at = email.LastIndexOf('@');
+        return at <= 0 ? "***" : email[0] + "***" + email[at..];
+    }
 
     private static GuestInvitationRef ToRef(GuestInvitation i) => new(i.Id, i.Kind, i.TargetId, i.Email, i.CreatedAt, i.ExpiresAt, i.AcceptedAt, i.RevokedAt);
 

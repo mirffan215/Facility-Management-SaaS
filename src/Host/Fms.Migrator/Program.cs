@@ -150,7 +150,7 @@ if (args.Contains("--encrypt-existing"))
         return 5;
     }
 
-    int visits, vendors, contacts;
+    int visits, vendors, contacts, leases, invitations;
     using (tenantContext.BeginPlatformScope())
     {
         var current = FieldEncryption.Current.CurrentKeyId!;
@@ -178,12 +178,24 @@ if (args.Contains("--encrypt-existing"))
             if (c.Phone is not null) vendorsDb.Entry(c).Property(x => x.Phone).IsModified = true;
         }
 
+        var leaseRows = await leasesDb.Leases.FromSqlRaw("SELECT * FROM leases.Leases WHERE (Notes IS NOT NULL AND Notes NOT LIKE {0}) OR (TerminationReason IS NOT NULL AND TerminationReason NOT LIKE {0})", pattern).AsTracking().ToListAsync();
+        foreach (var l in leaseRows)
+        {
+            if (l.Notes is not null) leasesDb.Entry(l).Property(x => x.Notes).IsModified = true;
+            if (l.TerminationReason is not null) leasesDb.Entry(l).Property(x => x.TerminationReason).IsModified = true;
+        }
+
+        var invitationRows = await db.GuestInvitations.FromSqlRaw("SELECT * FROM dbo.GuestInvitations WHERE Email NOT LIKE {0}", pattern).AsTracking().ToListAsync();
+        foreach (var i in invitationRows) db.Entry(i).Property(x => x.Email).IsModified = true;
+
         await visitorsDb.SaveChangesAsync();
         await vendorsDb.SaveChangesAsync();
-        (visits, vendors, contacts) = (visitRows.Count, vendorRows.Count, contactRows.Count);
+        await leasesDb.SaveChangesAsync();
+        await db.SaveChangesAsync();
+        (visits, vendors, contacts, leases, invitations) = (visitRows.Count, vendorRows.Count, contactRows.Count, leaseRows.Count, invitationRows.Count);
     }
 
-    Console.WriteLine($"Protected the contact details of {visits} visit(s), {vendors} vendor(s) and {contacts} vendor contact(s) with key '{FieldEncryption.Current.CurrentKeyId}'.");
+    Console.WriteLine($"Protected the contact details of {visits} visit(s), {vendors} vendor(s) and {contacts} vendor contact(s), the free text of {leases} lease(s) and {invitations} invitation(s) with key '{FieldEncryption.Current.CurrentKeyId}'.");
     return 0;
 }
 

@@ -183,8 +183,8 @@ namespace Fms.Platform.Persistence.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
+                        .HasMaxLength(1600)
+                        .HasColumnType("nvarchar(1600)");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("datetimeoffset");

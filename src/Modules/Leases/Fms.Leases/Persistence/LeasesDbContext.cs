@@ -1,5 +1,6 @@
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.BuildingBlocks.Security;
 using Fms.Leases.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,8 +35,9 @@ public sealed class LeasesDbContext(DbContextOptions<LeasesDbContext> options, I
             e.Property(x => x.BaseRent).HasPrecision(19, 2);
             e.Property(x => x.EscalationPercent).HasPrecision(5, 2);
             e.Property(x => x.Deposit).HasPrecision(19, 2);
-            e.Property(x => x.Notes).HasMaxLength(2000);
-            e.Property(x => x.TerminationReason).HasMaxLength(500);
+            // Free text of the lease is encrypted when a key is configured; the stored form is longer than the text, so the columns are unbounded.
+            e.Property(x => x.Notes).HasConversion(FieldEncryption.Converter("leases.Leases.Notes"));
+            e.Property(x => x.TerminationReason).HasConversion(FieldEncryption.Converter("leases.Leases.TerminationReason"));
             e.Property(x => x.LastAlertKey).HasMaxLength(40);
             e.HasIndex(x => new { x.TenantId, x.Reference }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.Status, x.EndOn });

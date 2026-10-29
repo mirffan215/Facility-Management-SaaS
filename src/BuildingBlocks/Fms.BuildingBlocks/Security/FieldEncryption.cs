@@ -100,4 +100,8 @@ public static class FieldEncryption
     /// <summary>A converter for one column. The column's name binds the value to it.</summary>
     public static ValueConverter<string?, string?> Converter(string purpose) =>
         new(v => Current.Protect(v, purpose), v => Current.Unprotect(v, purpose));
+
+    /// <summary>The same for a column that cannot be null.</summary>
+    public static ValueConverter<string, string> RequiredConverter(string purpose) =>
+        new(v => Current.Protect(v, purpose)!, v => Current.Unprotect(v, purpose)!);
 }

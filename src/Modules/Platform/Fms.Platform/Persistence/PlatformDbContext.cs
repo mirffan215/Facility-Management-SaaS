@@ -1,3 +1,4 @@
+using Fms.BuildingBlocks.Security;
 using Fms.BuildingBlocks.Audit;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
@@ -60,7 +61,7 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
         {
             e.ToTable("GuestInvitations");
             e.Property(x => x.Kind).HasMaxLength(30).IsRequired();
-            e.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(1600).IsRequired().HasConversion(FieldEncryption.RequiredConverter("platform.GuestInvitations.Email"));
             e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
             e.Property(x => x.AcceptedProvider).HasMaxLength(64);
             e.Property(x => x.AcceptedSubject).HasMaxLength(200);

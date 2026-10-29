@@ -1,6 +1,10 @@
 using System.Diagnostics;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.Leases.Domain;
+using Fms.Leases.Persistence;
+using Fms.Platform.Domain;
+using Fms.Platform.Persistence;
 using Fms.Vendors.Domain;
 using Fms.Vendors.Persistence;
 using Fms.Visitors.Domain;
@@ -204,6 +208,34 @@ public sealed class MigratorTests(SqlServerFixture sql)
             await vdb.SaveChangesAsync();
         }
 
+        var leaseId = Guid.NewGuid();
+        await using (var ldb = new LeasesDbContext(new DbContextOptionsBuilder<LeasesDbContext>().UseSqlServer(connection, LeasesDbContextOptions.Sql).AddInterceptors(new TenantSessionContextInterceptor(context)).Options, context))
+        {
+            ldb.Leases.Add(new Lease { Id = leaseId, TenantId = tenant, Reference = "L1", Title = "HQ", Counterparty = "Landlord", StartOn = new DateOnly(2026, 1, 1), EndOn = new DateOnly(2027, 1, 1), Notes = "Rent review 2027", TerminationReason = "Moved", CreatedAt = DateTimeOffset.UtcNow });
+            await ldb.SaveChangesAsync();
+        }
+
+        var invitationId = Guid.NewGuid();
+        await using (var pdb = new PlatformDbContext(new DbContextOptionsBuilder<PlatformDbContext>().UseSqlServer(connection).AddInterceptors(new TenantSessionContextInterceptor(context)).Options, context))
+        {
+            pdb.GuestInvitations.Add(new GuestInvitation { Id = invitationId, TenantId = tenant, Kind = "Vendor", TargetId = vendorId, Email = "ops@coolair.test", TokenHash = new string('b', 64), CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = DateTimeOffset.UtcNow.AddDays(7) });
+            await pdb.SaveChangesAsync();
+        }
+
+        async Task<string[]> StoredOther()
+        {
+            await using var conn = new SqlConnection(connection);
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand("EXEC sp_set_session_context N'IsPlatform', 1; SELECT l.Notes, l.TerminationReason, l.Counterparty, i.Email FROM leases.Leases l, dbo.GuestInvitations i WHERE l.Id = @l AND i.Id = @i", conn);
+            cmd.Parameters.AddWithValue("@l", leaseId);
+            cmd.Parameters.AddWithValue("@i", invitationId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            Assert.True(await reader.ReadAsync());
+            return Enumerable.Range(0, 4).Select(reader.GetString).ToArray();
+        }
+
+        Assert.Equal(["Rent review 2027", "Moved", "Landlord", "ops@coolair.test"], await StoredOther());
+
         async Task<string[]> StoredVendor()
         {
             await using var conn = new SqlConnection(connection);
@@ -245,16 +277,23 @@ public sealed class MigratorTests(SqlServerFixture sql)
         Assert.StartsWith("enc1:k1:", phone);
         var vendorValues = await StoredVendor();
         Assert.All(vendorValues, v => Assert.StartsWith("enc1:k1:", v));
+        var other = await StoredOther();
+        Assert.StartsWith("enc1:k1:", other[0]);
+        Assert.StartsWith("enc1:k1:", other[1]);
+        Assert.Equal("Landlord", other[2]); // searched, left readable
+        Assert.StartsWith("enc1:k1:", other[3]);
 
         var second = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", env);
         Assert.Contains("0 visit(s), 0 vendor(s) and 0 vendor contact(s)", second.Output); // already protected with the current key: nothing to do
         Assert.Equal((email, phone), await Stored());
         Assert.Equal(vendorValues, await StoredVendor());
+        Assert.Equal(other, await StoredOther());
 
         // After a rotation to a new key the same command re-protects everything with it.
         var rotated = new Dictionary<string, string> { ["Encryption__Keys__k1"] = key, ["Encryption__Keys__k2"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)), ["Encryption__CurrentKeyId"] = "k2" };
         var third = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", rotated);
         Assert.Contains("1 visit(s), 1 vendor(s) and 1 vendor contact(s)", third.Output);
         Assert.All(await StoredVendor(), v => Assert.StartsWith("enc1:k2:", v));
+        Assert.StartsWith("enc1:k2:", (await StoredOther())[3]);
     }
 }

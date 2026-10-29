@@ -202,3 +202,15 @@ public sealed class ClamAvScannerTests
         Assert.Equal(clean, (await Scanner(clamd.Port).ScanAsync("x"u8.ToArray())).IsClean);
     }
 }
+
+public sealed class MaskEmailTests
+{
+    [Theory]
+    [InlineData("omar@coolair.test", "o***@coolair.test")]
+    [InlineData("a@b.test", "a***@b.test")]
+    [InlineData("first.last+tag@sub.example.com", "f***@sub.example.com")]
+    [InlineData("no-at-sign", "***")]
+    [InlineData("@leading.test", "***")]
+    public void The_audit_keeps_the_first_letter_and_the_domain_only(string address, string masked) =>
+        Assert.Equal(masked, Fms.Platform.Services.GuestAccessService.MaskEmail(address));
+}

@@ -200,8 +200,7 @@ namespace Fms.Leases.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Notes")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("NoticeDays")
                         .HasColumnType("int");
@@ -236,8 +235,7 @@ namespace Fms.Leases.Persistence.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("TerminationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()

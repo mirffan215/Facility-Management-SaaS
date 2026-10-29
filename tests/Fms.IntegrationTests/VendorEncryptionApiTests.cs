@@ -121,4 +121,48 @@ public sealed class VendorEncryptionApiTests(SqlServerFixture sql) : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/vendors/{vendor.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/vendors/{vendor.Id}/contacts")).StatusCode);
     }
+
+    [Fact]
+    public async Task Lease_notes_and_termination_reason_and_invitation_addresses_are_stored_unreadable_and_read_back()
+    {
+        var api = Start(("k1", Key1));
+        var tenant = await NewTenantAsync();
+        var manager = await api.ClientAsync(tenant, SystemRoles.FacilityManager);
+        var site = await ReadAsync<LocationDto>(await PostAsync(manager, "/api/v1/locations", new { type = "Site", code = FacilitiesScope.Code("S"), name = "HQ" }));
+        string D(int days) => DateOnly.FromDateTime(DateTime.UtcNow.AddDays(days)).ToString("yyyy-MM-dd");
+        var lease = await ReadAsync<Fms.Leases.Services.LeaseDto>(await PostAsync(manager, "/api/v1/leases", new
+        {
+            reference = "L" + Guid.NewGuid().ToString("N")[..8], title = "Head office", kind = "Occupied", counterparty = "Al Noor Properties", locationId = site.Id,
+            startOn = D(-100), endOn = D(265), noticeDays = 60, currencyCode = "SAR", baseRent = 10000, frequency = "Monthly", notes = "Landlord agreed a rent review in 2027",
+        }));
+        var activated = await ReadAsync<Fms.Leases.Services.LeaseDto>(await PostAsync(manager, $"/api/v1/leases/{lease.Id}/activate", new { rowVersion = lease.RowVersion }));
+        var ended = await ReadAsync<Fms.Leases.Services.LeaseDto>(await PostAsync(manager, $"/api/v1/leases/{lease.Id}/terminate", new { on = D(-1), reason = "Moved to the new campus", rowVersion = activated.RowVersion }));
+
+        await using (var db = sql.Leases(tenant))
+        {
+            async Task<string?> One(string column) => (await (column switch
+            {
+                "Notes" => db.Database.SqlQueryRaw<string>("SELECT Notes AS Value FROM leases.Leases WHERE Id = {0}", lease.Id),
+                "TerminationReason" => db.Database.SqlQueryRaw<string>("SELECT TerminationReason AS Value FROM leases.Leases WHERE Id = {0}", lease.Id),
+                _ => db.Database.SqlQueryRaw<string>("SELECT Counterparty AS Value FROM leases.Leases WHERE Id = {0}", lease.Id),
+            }).ToListAsync()).SingleOrDefault();
+            Assert.StartsWith("enc1:k1:", await One("Notes"));
+            Assert.StartsWith("enc1:k1:", await One("TerminationReason"));
+            Assert.Equal("Al Noor Properties", await One("Counterparty")); // searched, so left readable
+        }
+
+        var read = await ReadAsync<Fms.Leases.Services.LeaseDto>(await manager.GetAsync($"/api/v1/leases/{lease.Id}"));
+        Assert.Equal(("Landlord agreed a rent review in 2027", "Moved to the new campus"), (read.Notes, read.TerminationReason));
+        Assert.Equal(ended.TerminationReason, read.TerminationReason);
+
+        var vendor = await ReadAsync<VendorDto>(await PostAsync(manager, "/api/v1/vendors", new { code = FacilitiesScope.Code("V"), name = "CoolAir" }));
+        var invited = await ReadAsync<InvitationCreatedDto>(await PostAsync(manager, $"/api/v1/vendors/{vendor.Id}/invitations", new { email = "ops@coolair.test" }));
+        await using (var platform = sql.App(tenant))
+            Assert.StartsWith("enc1:k1:", await platform.Database.SqlQueryRaw<string>("SELECT Email AS Value FROM dbo.GuestInvitations WHERE Id = {0}", invited.Invitation.Id).SingleAsync());
+        Assert.Equal("ops@coolair.test", invited.Invitation.Email);
+
+        // The invitation still works: the address is read back to fill the new user's profile.
+        var guest = api.GuestClient();
+        Assert.Equal(HttpStatusCode.OK, (await PostAsync(guest, "/api/v1/portal/invitations/accept", new { token = invited.Token })).StatusCode);
+    }
 }
