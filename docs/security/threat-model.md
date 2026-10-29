@@ -1,6 +1,6 @@
 # Threat model
 
-STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 10 (AI assistance added).
+STRIDE walk of the trust boundaries. Written by the team that built the system, not by an outside tester; the [pen-test brief](pentest-brief.md) is how an independent view is obtained. Last reviewed in Phase 11 (scanning, field encryption, shared rate counter).
 
 ## What matters
 1. **Tenant isolation.** One organisation must never read or change another's data (SaaS). 

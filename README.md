@@ -23,6 +23,7 @@ Status: design phase. See [docs/](docs/).
 - [Phase 8 summary](docs/phase-8-summary.md) (licensing, hardening, packaging, upgrades)
 - [Phase 9 summary](docs/phase-9-summary.md) (compliance and permits, energy, projects, leases)
 - [Phase 10 summary](docs/phase-10-summary.md) (AI assistance: optional, off by default)
+- [Phase 11 summary](docs/phase-11-summary.md) (work orders from alerts, deployment rehearsal, security follow-ups)
 - [Deployment guide](docs/deployment.md), [licensing](docs/licensing.md), [upgrading](docs/upgrading.md), [security documents](docs/security/)
 - [ADRs](docs/adr/)
 

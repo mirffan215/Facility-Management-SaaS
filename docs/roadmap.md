@@ -11,6 +11,7 @@
 8. **Packaging & Licensing** (done, with stated limits; see [phase-8-summary](phase-8-summary.md)): signed offline license with module, user and expiry enforcement, hardening and security self-assessment (no external pen test yet), Helm chart, Docker Compose on-prem bundle, Azure Bicep, release pipeline, upgrade and rollback tooling.
 9. **Compliance, Energy, Projects, Leases** (done; see [phase-9-summary](phase-9-summary.md)): obligations and permits to work, energy readings with device secrets and alarms, projects with budget roll-up from work and purchasing, leases with rent schedule and deadline warnings. AI was deferred.
 10. **AI assistance** (done, with stated limits; see [phase-10-summary](phase-10-summary.md)): optional, off by default, provider interface with the Claude API first; category and priority suggestions for requests, work order summaries, repeat-problem hints.
-11. **Later**: the gaps listed in the phase summaries (and, for AI, feedback, assignee suggestions and predictive maintenance).
+11. **Closing gaps** (done, with stated limits; see [phase-11-summary](phase-11-summary.md)): work orders from alerts, a real rehearsal of the Compose bundle (five defects found and fixed), AI feedback and duplicate hints, malware scanning, contact-detail encryption, a shared rate counter.
+12. **Later**: the gaps listed in the phase summaries (a first Helm and Azure deployment, assignee suggestions, predictive maintenance, more encrypted fields).
 
 Each phase ships with tests and updated docs. Do not start the next phase until told.

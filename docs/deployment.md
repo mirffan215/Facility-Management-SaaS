@@ -53,9 +53,19 @@ Before production: restrict the SQL server's network (private endpoint or firewa
 | `License__Path` / `License__Text` | license file location, or its text |
 | `Storage__Provider` | `Local`, `AzureBlob` (`Storage__AzureBlob__AccountUrl`, `__Container`) or `S3` |
 | `Security__TrustedProxyCidrs__N` | networks whose forwarded client address is believed |
-| `Security__RateLimit__*` | `Enabled`, `PerUserPerMinute`, `AnonymousPerMinute`, `SecretRoutesPerMinute` |
+| `Security__RateLimit__*` | `Enabled`, `PerUserPerMinute`, `AnonymousPerMinute`, `SecretRoutesPerMinute`, `Shared` (count the secret-address routes in the database so the limit holds across **all** API servers; turn it on when you run more than one) |
+| `Scanning__*` | uploads are scanned for malware by a ClamAV daemon when `Provider` is `ClamAv` (`Host`, `Port` 3310, `TimeoutSeconds`, `FailClosed` true by default: an unreachable scanner refuses uploads). Default `None` accepts every file that passes the type check |
+| `Encryption__*` | column-level encryption of visitors' e-mail and phone: `Keys__<id>` (32 random bytes, base64), `CurrentKeyId`, `Required` (refuse to start without a key). Keep the keys in your key vault or secret store, never in the database. Without a key those columns are stored readable. See below |
+| `Ai__*` | AI assistance is available only when `Provider` is `Claude` with `ApiKey` (and optionally `Endpoint`, `Model`, `TimeoutSeconds`, `MaxOutputTokens`); each organisation's administrator then switches it on. Default `None` |
 | `Email__*` | `Provider` (`None`/`Smtp`), `Host`, `Port`, `User`, `Password`, `From` |
 | `Facilities__PublicBaseUrl` | the address QR labels point at |
+
+## Encrypting contact details
+1. Make a key: `openssl rand -base64 32`. Store it in your secret store. Set `Encryption__Keys__k1=<key>` and `Encryption__CurrentKeyId=k1` on the API, the worker and the migrator, and (for production) `Encryption__Required=true`.
+2. Restart. New and changed visits are now stored unreadable.
+3. Protect what was stored before: run the migrator once with `--encrypt-existing` (it prints how many visits it protected). Running it again does nothing.
+4. **Rotate** by adding a second key (`k2`), making it current, restarting, and running `--encrypt-existing` again. Keep `k1` for as long as any value is written with it; a value whose key is missing cannot be read, and the system says so rather than showing garbage.
+5. **Lose the keys and the contact details are gone.** Back the keys up separately from the database backups.
 
 ## After installing
 Sign in as the administrator, open **Administration → License** to check the license, and **Users** to add people. Health: `/health/live` and `/health/ready`. System and version: `/api/v1/system/info`. Logs are structured JSON on standard output.
