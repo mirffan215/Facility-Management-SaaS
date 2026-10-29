@@ -1,3 +1,4 @@
+using Fms.BuildingBlocks.Security;
 using Fms.BuildingBlocks.Messaging;
 using Fms.BuildingBlocks.Cloud;
 using Fms.BuildingBlocks.Deployment;
@@ -44,6 +45,8 @@ builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantCon
 builder.Services.AddSingleton<ICurrentUser, BackgroundUser>();
 builder.Services.AddFmsDeployment(o => builder.Configuration.GetSection(DeploymentOptions.SectionName).Bind(o), l => builder.Configuration.GetSection(Fms.BuildingBlocks.Licensing.LicenseOptions.SectionName).Bind(l));
 builder.Services.AddFmsStorage(builder.Configuration);
+builder.Services.AddFmsFileScanning(builder.Configuration);
+FieldEncryption.Configure(builder.Configuration);
 builder.Services.AddFmsPlatform(connectionString);
 builder.Services.AddFmsFacilities(connectionString);
 builder.Services.AddFmsWork(connectionString);

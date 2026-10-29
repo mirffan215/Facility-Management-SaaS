@@ -1,3 +1,4 @@
+using Fms.BuildingBlocks.Security;
 using Fms.BuildingBlocks.Deployment;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
@@ -136,6 +137,37 @@ Console.WriteLine("Applying migrations...");
 foreach (var (name, context) in contexts)
 {
     await context.Database.MigrateAsync();
+}
+
+// Encrypts what was stored readable before a key was configured, and re-encrypts anything written with an older key after a rotation.
+// Run with: Fms.Migrator --encrypt-existing (and the Encryption:* settings). It changes no data other than the protected columns.
+FieldEncryption.Configure(config);
+if (args.Contains("--encrypt-existing"))
+{
+    if (!FieldEncryption.IsEnabled)
+    {
+        Console.Error.WriteLine("Nothing to do: set Encryption:Keys and Encryption:CurrentKeyId first.");
+        return 5;
+    }
+
+    var changed = 0;
+    using (tenantContext.BeginPlatformScope())
+    {
+        var current = FieldEncryption.Current.CurrentKeyId!;
+        var pattern = KeyRing.Prefix + current + ":%";
+        var rows = await visitorsDb.Visits.FromSqlRaw("SELECT * FROM visitors.Visits WHERE (VisitorEmail IS NOT NULL AND VisitorEmail NOT LIKE {0}) OR (VisitorPhone IS NOT NULL AND VisitorPhone NOT LIKE {0})", pattern).AsTracking().ToListAsync();
+        foreach (var v in rows)
+        {
+            if (v.VisitorEmail is not null) visitorsDb.Entry(v).Property(x => x.VisitorEmail).IsModified = true;
+            if (v.VisitorPhone is not null) visitorsDb.Entry(v).Property(x => x.VisitorPhone).IsModified = true;
+            changed++;
+        }
+
+        await visitorsDb.SaveChangesAsync();
+    }
+
+    Console.WriteLine($"Protected the contact details of {changed} visit(s) with key '{FieldEncryption.Current.CurrentKeyId}'.");
+    return 0;
 }
 
 static async Task<bool> DatabaseExists(DbContext context) => await context.Database.CanConnectAsync();

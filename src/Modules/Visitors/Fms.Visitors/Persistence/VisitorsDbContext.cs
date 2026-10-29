@@ -1,4 +1,5 @@
 using Fms.BuildingBlocks.Persistence;
+using Fms.BuildingBlocks.Security;
 using Fms.BuildingBlocks.Tenancy;
 using Fms.Visitors.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -26,8 +27,9 @@ public sealed class VisitorsDbContext(DbContextOptions<VisitorsDbContext> option
             e.Property(x => x.SiteName).HasMaxLength(200).IsRequired();
             e.Property(x => x.VisitorName).HasMaxLength(200).IsRequired();
             e.Property(x => x.VisitorCompany).HasMaxLength(200);
-            e.Property(x => x.VisitorEmail).HasMaxLength(320);
-            e.Property(x => x.VisitorPhone).HasMaxLength(40);
+            // Contact details are encrypted at rest when the operator has configured a key. A value is several times longer than the text, so the columns are wide.
+            e.Property(x => x.VisitorEmail).HasMaxLength(1600).HasConversion(FieldEncryption.Converter("visitors.Visits.VisitorEmail"));
+            e.Property(x => x.VisitorPhone).HasMaxLength(400).HasConversion(FieldEncryption.Converter("visitors.Visits.VisitorPhone"));
             e.Property(x => x.Purpose).HasMaxLength(500);
             e.Property(x => x.PassHash).HasMaxLength(64).IsRequired();
             e.Property(x => x.CancelReason).HasMaxLength(500);

@@ -1,4 +1,8 @@
 using System.Diagnostics;
+using Fms.BuildingBlocks.Persistence;
+using Fms.BuildingBlocks.Tenancy;
+using Fms.Visitors.Domain;
+using Fms.Visitors.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using static Fms.IntegrationTests.SqlServerFixture;
@@ -9,7 +13,7 @@ namespace Fms.IntegrationTests;
 [Collection(SqlCollection.Name)]
 public sealed class MigratorTests(SqlServerFixture sql)
 {
-    private (int ExitCode, string Output) RunMigrator(string database, Guid tenant, string admin, string extraArgs = "")
+    private (int ExitCode, string Output) RunMigrator(string database, Guid tenant, string admin, string extraArgs = "", IDictionary<string, string>? env = null)
     {
         // Run it from its own build output, where its full dependency set lives (the project reference builds it first).
         var baseDir = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar));
@@ -25,6 +29,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
         info.Environment["FMS_INITIAL_ADMIN"] = admin;
         info.Environment["FMS_APP_LOGIN"] = "fms_mig_app";
         info.Environment["FMS_APP_LOGIN_PASSWORD"] = "Mig#Passw0rd!2026";
+        foreach (var (k, v) in env ?? new Dictionary<string, string>()) info.Environment[k] = v;
 
         using var process = Process.Start(info)!;
         var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
@@ -166,5 +171,57 @@ public sealed class MigratorTests(SqlServerFixture sql)
         var run = RunMigrator(database, tenant, "corp:alice");
         Assert.Equal(4, run.ExitCode);
         Assert.Contains("Refusing to run", run.Output);
+    }
+
+    [Fact]
+    public async Task Encrypt_existing_protects_details_stored_readable_before_a_key_was_set_once_and_changes_nothing_else()
+    {
+        var database = "FmsEnc" + Guid.NewGuid().ToString("N")[..8];
+        var tenant = Guid.NewGuid();
+        Assert.True(RunMigrator(database, tenant, "corp:alice").ExitCode == 0);
+
+        var connection = new SqlConnectionStringBuilder(sql.OwnerConnectionString) { InitialCatalog = database }.ConnectionString;
+        var context = new TenantContext();
+        context.SetTenant(tenant);
+        var id = Guid.NewGuid();
+        await using (var db = new VisitorsDbContext(new DbContextOptionsBuilder<VisitorsDbContext>().UseSqlServer(connection, VisitorsDbContextOptions.Sql).AddInterceptors(new TenantSessionContextInterceptor(context)).Options, context))
+        {
+            db.Visits.Add(new Visit
+            {
+                Id = id, TenantId = tenant, HostId = Guid.NewGuid(), HostName = "Host", SiteId = Guid.NewGuid(), SiteName = "HQ", VisitorName = "Layla", VisitorEmail = "layla@acme.test", VisitorPhone = "0501234567",
+                ExpectedAt = DateTimeOffset.UtcNow.AddHours(1), PassHash = new string('a', 64), CreatedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        async Task<(string? Email, string? Phone)> Stored()
+        {
+            await using var conn = new SqlConnection(connection);
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand("EXEC sp_set_session_context N'IsPlatform', 1; SELECT VisitorEmail, VisitorPhone FROM visitors.Visits WHERE Id = @id", conn);
+            cmd.Parameters.AddWithValue("@id", id);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            Assert.True(await reader.ReadAsync());
+            return (reader.GetString(0), reader.GetString(1));
+        }
+
+        Assert.Equal(("layla@acme.test", "0501234567"), await Stored());
+
+        var withoutKey = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing");
+        Assert.Equal(5, withoutKey.ExitCode);
+        Assert.Equal(("layla@acme.test", "0501234567"), await Stored());
+
+        var key = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        var env = new Dictionary<string, string> { ["Encryption__Keys__k1"] = key, ["Encryption__CurrentKeyId"] = "k1" };
+        var first = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", env);
+        Assert.True(first.ExitCode == 0, first.Output);
+        Assert.Contains("1 visit(s)", first.Output);
+        var (email, phone) = await Stored();
+        Assert.StartsWith("enc1:k1:", email);
+        Assert.StartsWith("enc1:k1:", phone);
+
+        var second = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", env);
+        Assert.Contains("0 visit(s)", second.Output); // already protected with the current key: nothing to do
+        Assert.Equal((email, phone), await Stored());
     }
 }

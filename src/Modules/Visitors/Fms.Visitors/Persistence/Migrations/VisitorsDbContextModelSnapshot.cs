@@ -222,8 +222,8 @@ namespace Fms.Visitors.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("VisitorEmail")
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
+                        .HasMaxLength(1600)
+                        .HasColumnType("nvarchar(1600)");
 
                     b.Property<string>("VisitorName")
                         .IsRequired()
@@ -231,8 +231,8 @@ namespace Fms.Visitors.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("VisitorPhone")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
 
                     b.Property<bool>("WatchlistMatch")
                         .HasColumnType("bit");
