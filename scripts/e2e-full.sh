@@ -72,6 +72,16 @@ for url in http://localhost:9099/__health http://localhost:5080/health/ready htt
   for i in $(seq 1 60); do curl -fs "$url" >/dev/null 2>&1 && break; sleep 1; done
 done
 
+# ZAP_BASELINE=1 runs an OWASP ZAP baseline scan (passive, spidering the signed-out web app and the API's anonymous surface) against the stack instead of the browser tests.
+# The report lands in $LOGS. Findings do not fail the run (-I): they are read and triaged, see docs/security/zap.md.
+if [ -n "${ZAP_BASELINE:-}" ]; then
+  mkdir -p "$LOGS/zap" && chmod 777 "$LOGS/zap"
+  docker run --rm --network host -v "$LOGS/zap":/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable \
+    zap-baseline.py -t http://localhost:5173 -J zap.json -r zap.html -w zap.md -I || true
+  echo "ZAP report: $LOGS/zap/zap.html"
+  exit 0
+fi
+
 cd web
 # Use the preinstalled browsers on dev boxes that have them; CI installs its own with `npx playwright install chromium`.
 if [ -z "${PLAYWRIGHT_BROWSERS_PATH:-}" ] && [ -d /opt/pw-browsers ]; then export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers; fi

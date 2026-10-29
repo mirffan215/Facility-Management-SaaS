@@ -1,0 +1,36 @@
+name: ZAP baseline
+
+# A passive OWASP ZAP scan of the running stack (the production web image in front of the API). Not part of every pull request: it takes a while and
+# its findings need reading, not gating. Run it by hand before a release, or let the weekly run collect a report.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Web dependencies
+        run: npm ci
+        working-directory: web
+      - name: Start the stack and scan it
+        run: ZAP_BASELINE=1 E2E_LOGS="$RUNNER_TEMP/fms" scripts/e2e-full.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: ${{ runner.temp }}/fms/zap
+          if-no-files-found: warn

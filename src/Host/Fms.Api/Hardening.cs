@@ -31,6 +31,12 @@ public sealed class SecurityOptions
 
         /// <summary>Requests per minute from one address to routes protected only by a secret in the address (visitor passes, calendar feeds, the data feed). This is what makes guessing a secret impractical.</summary>
         public int SecretRoutesPerMinute { get; set; } = 60;
+
+        /// <summary>
+        /// Count requests to the secret-address routes in the database, so the limit holds across all servers of a deployment instead of per server. Costs one small write per such request.
+        /// Turn on when more than one API server runs.
+        /// </summary>
+        public bool Shared { get; set; }
     }
 }
 
@@ -92,6 +98,37 @@ public static class Hardening
 
     private static RateLimitPartition<string> Fixed(string key, int perMinute) =>
         RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, perMinute), Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true });
+
+    /// <summary>
+    /// With <see cref="SecurityOptions.RateLimitOptions.Shared"/> on, secret-address routes are also limited by a counter all servers share. The per-server limiter still runs after it.
+    /// If the counter cannot be reached the request goes on (and the per-server limit still applies): a counter fault must not close the public pages.
+    /// </summary>
+    public static IApplicationBuilder UseFmsSharedRateLimit(this IApplicationBuilder app) =>
+        app.Use(async (context, next) =>
+        {
+            var limits = context.RequestServices.GetRequiredService<IOptions<SecurityOptions>>().Value.RateLimit;
+            if (limits.Enabled && limits.Shared && IsSecretRoute(context.Request.Path.Value))
+            {
+                try
+                {
+                    var (allowed, retry) = await context.RequestServices.GetRequiredService<Fms.Platform.Services.SharedRateLimiter>()
+                        .HitAsync("secret:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown"), limits.SecretRoutesPerMinute, context.RequestAborted);
+                    if (!allowed)
+                    {
+                        context.Response.Headers.RetryAfter = retry.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        await Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Too many requests", detail: "Slow down and try again shortly.",
+                            extensions: new Dictionary<string, object?> { ["code"] = "rate_limited" }).ExecuteAsync(context);
+                        return;
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("SharedRateLimit").LogWarning("The shared rate limit counter could not be used: {Kind}", ex.GetType().Name);
+                }
+            }
+
+            await next(context);
+        });
 
     /// <summary>Headers every API response carries. The API only ever sends data, so the strictest policy that still works is used.</summary>
     public static IApplicationBuilder UseFmsSecurityHeaders(this IApplicationBuilder app) =>

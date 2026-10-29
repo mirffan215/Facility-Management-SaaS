@@ -84,6 +84,7 @@ app.UseSerilogRequestLogging(o => o.Logger = app.Services.GetRequiredService<Ser
 app.UseStatusCodePages();
 app.UseMiddleware<LicenseEnforcementMiddleware>();
 app.UseAuthentication();
+app.UseFmsSharedRateLimit();
 app.UseRateLimiter();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseMiddleware<UserProvisioningMiddleware>();
