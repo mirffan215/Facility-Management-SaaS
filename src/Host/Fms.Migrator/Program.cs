@@ -150,23 +150,40 @@ if (args.Contains("--encrypt-existing"))
         return 5;
     }
 
-    var changed = 0;
+    int visits, vendors, contacts;
     using (tenantContext.BeginPlatformScope())
     {
         var current = FieldEncryption.Current.CurrentKeyId!;
         var pattern = KeyRing.Prefix + current + ":%";
-        var rows = await visitorsDb.Visits.FromSqlRaw("SELECT * FROM visitors.Visits WHERE (VisitorEmail IS NOT NULL AND VisitorEmail NOT LIKE {0}) OR (VisitorPhone IS NOT NULL AND VisitorPhone NOT LIKE {0})", pattern).AsTracking().ToListAsync();
-        foreach (var v in rows)
+
+        // Touching a protected property makes EF write it again, which encrypts it with the current key.
+        var visitRows = await visitorsDb.Visits.FromSqlRaw("SELECT * FROM visitors.Visits WHERE (VisitorEmail IS NOT NULL AND VisitorEmail NOT LIKE {0}) OR (VisitorPhone IS NOT NULL AND VisitorPhone NOT LIKE {0})", pattern).AsTracking().ToListAsync();
+        foreach (var v in visitRows)
         {
             if (v.VisitorEmail is not null) visitorsDb.Entry(v).Property(x => x.VisitorEmail).IsModified = true;
             if (v.VisitorPhone is not null) visitorsDb.Entry(v).Property(x => x.VisitorPhone).IsModified = true;
-            changed++;
+        }
+
+        var vendorRows = await vendorsDb.Vendors.FromSqlRaw("SELECT * FROM vendors.Vendors WHERE (Email IS NOT NULL AND Email NOT LIKE {0}) OR (Phone IS NOT NULL AND Phone NOT LIKE {0})", pattern).AsTracking().ToListAsync();
+        foreach (var v in vendorRows)
+        {
+            if (v.Email is not null) vendorsDb.Entry(v).Property(x => x.Email).IsModified = true;
+            if (v.Phone is not null) vendorsDb.Entry(v).Property(x => x.Phone).IsModified = true;
+        }
+
+        var contactRows = await vendorsDb.Contacts.FromSqlRaw("SELECT * FROM vendors.Contacts WHERE (Email IS NOT NULL AND Email NOT LIKE {0}) OR (Phone IS NOT NULL AND Phone NOT LIKE {0})", pattern).AsTracking().ToListAsync();
+        foreach (var c in contactRows)
+        {
+            if (c.Email is not null) vendorsDb.Entry(c).Property(x => x.Email).IsModified = true;
+            if (c.Phone is not null) vendorsDb.Entry(c).Property(x => x.Phone).IsModified = true;
         }
 
         await visitorsDb.SaveChangesAsync();
+        await vendorsDb.SaveChangesAsync();
+        (visits, vendors, contacts) = (visitRows.Count, vendorRows.Count, contactRows.Count);
     }
 
-    Console.WriteLine($"Protected the contact details of {changed} visit(s) with key '{FieldEncryption.Current.CurrentKeyId}'.");
+    Console.WriteLine($"Protected the contact details of {visits} visit(s), {vendors} vendor(s) and {contacts} vendor contact(s) with key '{FieldEncryption.Current.CurrentKeyId}'.");
     return 0;
 }
 

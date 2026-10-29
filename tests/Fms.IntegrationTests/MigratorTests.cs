@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.Vendors.Domain;
+using Fms.Vendors.Persistence;
 using Fms.Visitors.Domain;
 using Fms.Visitors.Persistence;
 using Microsoft.Data.SqlClient;
@@ -194,6 +196,27 @@ public sealed class MigratorTests(SqlServerFixture sql)
             await db.SaveChangesAsync();
         }
 
+        var vendorId = Guid.NewGuid();
+        await using (var vdb = new VendorsDbContext(new DbContextOptionsBuilder<VendorsDbContext>().UseSqlServer(connection, VendorsDbContextOptions.Sql).AddInterceptors(new TenantSessionContextInterceptor(context)).Options, context))
+        {
+            vdb.Vendors.Add(new Vendor { Id = vendorId, TenantId = tenant, Code = "V1", Name = "CoolAir", Email = "ops@coolair.test", Phone = "0111234567", CreatedAt = DateTimeOffset.UtcNow });
+            vdb.Contacts.Add(new VendorContact { TenantId = tenant, VendorId = vendorId, Name = "Omar", Email = "omar@coolair.test", Phone = "0507654321", IsPrimary = true });
+            await vdb.SaveChangesAsync();
+        }
+
+        async Task<string[]> StoredVendor()
+        {
+            await using var conn = new SqlConnection(connection);
+            await conn.OpenAsync();
+            await using var cmd = new SqlCommand("EXEC sp_set_session_context N'IsPlatform', 1; SELECT v.Email, v.Phone, c.Email, c.Phone FROM vendors.Vendors v JOIN vendors.Contacts c ON c.VendorId = v.Id WHERE v.Id = @id", conn);
+            cmd.Parameters.AddWithValue("@id", vendorId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            Assert.True(await reader.ReadAsync());
+            return Enumerable.Range(0, 4).Select(reader.GetString).ToArray();
+        }
+
+        Assert.Equal(["ops@coolair.test", "0111234567", "omar@coolair.test", "0507654321"], await StoredVendor());
+
         async Task<(string? Email, string? Phone)> Stored()
         {
             await using var conn = new SqlConnection(connection);
@@ -210,18 +233,28 @@ public sealed class MigratorTests(SqlServerFixture sql)
         var withoutKey = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing");
         Assert.Equal(5, withoutKey.ExitCode);
         Assert.Equal(("layla@acme.test", "0501234567"), await Stored());
+        Assert.Equal("ops@coolair.test", (await StoredVendor())[0]);
 
         var key = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
         var env = new Dictionary<string, string> { ["Encryption__Keys__k1"] = key, ["Encryption__CurrentKeyId"] = "k1" };
         var first = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", env);
         Assert.True(first.ExitCode == 0, first.Output);
-        Assert.Contains("1 visit(s)", first.Output);
+        Assert.Contains("1 visit(s), 1 vendor(s) and 1 vendor contact(s)", first.Output);
         var (email, phone) = await Stored();
         Assert.StartsWith("enc1:k1:", email);
         Assert.StartsWith("enc1:k1:", phone);
+        var vendorValues = await StoredVendor();
+        Assert.All(vendorValues, v => Assert.StartsWith("enc1:k1:", v));
 
         var second = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", env);
-        Assert.Contains("0 visit(s)", second.Output); // already protected with the current key: nothing to do
+        Assert.Contains("0 visit(s), 0 vendor(s) and 0 vendor contact(s)", second.Output); // already protected with the current key: nothing to do
         Assert.Equal((email, phone), await Stored());
+        Assert.Equal(vendorValues, await StoredVendor());
+
+        // After a rotation to a new key the same command re-protects everything with it.
+        var rotated = new Dictionary<string, string> { ["Encryption__Keys__k1"] = key, ["Encryption__Keys__k2"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)), ["Encryption__CurrentKeyId"] = "k2" };
+        var third = RunMigrator(database, tenant, "corp:alice", "--encrypt-existing", rotated);
+        Assert.Contains("1 visit(s), 1 vendor(s) and 1 vendor contact(s)", third.Output);
+        Assert.All(await StoredVendor(), v => Assert.StartsWith("enc1:k2:", v));
     }
 }

@@ -361,8 +361,8 @@ namespace Fms.Vendors.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
+                        .HasMaxLength(1600)
+                        .HasColumnType("nvarchar(1600)");
 
                     b.Property<string>("ErpAccount")
                         .HasMaxLength(50)
@@ -389,8 +389,8 @@ namespace Fms.Vendors.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
 
                     b.Property<string>("RegistrationNumber")
                         .HasMaxLength(30)
@@ -437,8 +437,8 @@ namespace Fms.Vendors.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(320)
-                        .HasColumnType("nvarchar(320)");
+                        .HasMaxLength(1600)
+                        .HasColumnType("nvarchar(1600)");
 
                     b.Property<bool>("IsPrimary")
                         .HasColumnType("bit");
@@ -449,8 +449,8 @@ namespace Fms.Vendors.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
 
                     b.Property<string>("Role")
                         .HasMaxLength(100)

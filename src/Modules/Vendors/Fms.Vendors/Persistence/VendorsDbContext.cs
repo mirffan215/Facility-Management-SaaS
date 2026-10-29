@@ -1,5 +1,6 @@
 using Fms.BuildingBlocks.Persistence;
 using Fms.BuildingBlocks.Tenancy;
+using Fms.BuildingBlocks.Security;
 using Fms.Vendors.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,8 +33,9 @@ public sealed class VendorsDbContext(DbContextOptions<VendorsDbContext> options,
             e.Property(x => x.StatusReason).HasMaxLength(500);
             e.Property(x => x.TaxNumber).HasMaxLength(30);
             e.Property(x => x.RegistrationNumber).HasMaxLength(30);
-            e.Property(x => x.Email).HasMaxLength(320);
-            e.Property(x => x.Phone).HasMaxLength(40);
+            // Contact details are encrypted at rest when the operator has configured a key. A stored value is several times longer than the text, so the columns are wide.
+            e.Property(x => x.Email).HasMaxLength(1600).HasConversion(FieldEncryption.Converter("vendors.Vendors.Email"));
+            e.Property(x => x.Phone).HasMaxLength(400).HasConversion(FieldEncryption.Converter("vendors.Vendors.Phone"));
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.Country).HasMaxLength(2);
             e.Property(x => x.PaymentTerms).HasMaxLength(200);
@@ -48,8 +50,8 @@ public sealed class VendorsDbContext(DbContextOptions<VendorsDbContext> options,
             e.ToTable("Contacts");
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.Role).HasMaxLength(100);
-            e.Property(x => x.Email).HasMaxLength(320);
-            e.Property(x => x.Phone).HasMaxLength(40);
+            e.Property(x => x.Email).HasMaxLength(1600).HasConversion(FieldEncryption.Converter("vendors.Contacts.Email"));
+            e.Property(x => x.Phone).HasMaxLength(400).HasConversion(FieldEncryption.Converter("vendors.Contacts.Phone"));
             e.HasIndex(x => new { x.TenantId, x.VendorId });
         });
 
