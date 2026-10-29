@@ -26,7 +26,7 @@ jobs:
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
       - name: A release must not trust the development license key
         run: scripts/check-release-keys.sh
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with: { dotnet-version: "10.0.x" }
       - run: dotnet build Fms.sln -c Release -p:Version=${{ steps.v.outputs.version }}
       - run: dotnet test tests/Fms.UnitTests --no-build -c Release
