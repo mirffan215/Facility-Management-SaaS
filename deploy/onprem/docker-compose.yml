@@ -1,5 +1,9 @@
 # Facility Management System, on-premise (Docker Compose). Run through ./install.sh and ./upgrade.sh rather than by hand.
 # One organisation, local file storage, your SQL Server (or the bundled one for evaluation). TLS is terminated by your own load balancer or reverse proxy in front of "web".
+# A fixed project name: the containers and volumes (database, files, backups) belong to "fms" whatever the folder of the bundle is called, so an upgrade
+# run from the next version's folder finds the same data instead of starting an empty second installation.
+name: fms
+
 x-hardening: &hardening
   read_only: true
   cap_drop: ["ALL"]
@@ -34,10 +38,15 @@ services:
       FMS_APP_LOGIN: fms_app
       FMS_APP_LOGIN_PASSWORD: ${FMS_APP_LOGIN_PASSWORD:?copy .env.example to .env}
       FMS_INITIAL_ADMIN: ${FMS_INITIAL_ADMIN:-}
+    # Waits for the bundled SQL Server (and starts it); ignored when the database is your own and the "sql" service is not enabled.
+    depends_on:
+      sql: { condition: service_healthy, required: false }
     profiles: ["migrate"]
   api:
     image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-api:${FMS_VERSION:?set FMS_VERSION in .env}
     <<: *hardening
+    depends_on:
+      sql: { condition: service_healthy, required: false }
     environment:
       ConnectionStrings__Default: ${FMS_APP_CONNECTION:-Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True}
       Deployment__Mode: OnPrem
@@ -57,6 +66,8 @@ services:
   worker:
     image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-worker:${FMS_VERSION:?set FMS_VERSION in .env}
     <<: *hardening
+    depends_on:
+      sql: { condition: service_healthy, required: false }
     environment:
       ConnectionStrings__Default: ${FMS_APP_CONNECTION:-Server=sql;Database=Fms;User Id=fms_app;Password=${FMS_APP_LOGIN_PASSWORD};TrustServerCertificate=True}
       Deployment__Mode: OnPrem
@@ -72,8 +83,8 @@ services:
   web:
     image: ${FMS_REGISTRY:-ghcr.io/mirffan215}/fms-web:${FMS_VERSION:?set FMS_VERSION in .env}
     <<: *hardening
-    # nginx needs a few writable places (its pid file, cache and the rendered configuration).
-    tmpfs: ["/tmp:size=64m", "/var/cache/nginx:size=128m", "/etc/nginx/conf.d:size=8m"]
+    # nginx needs a few writable places (its pid file, cache and the rendered configuration). They belong to its own unprivileged user (101): a tmpfs is root's by default.
+    tmpfs: ["/tmp:size=64m", "/var/cache/nginx:size=128m,uid=101,gid=101", "/etc/nginx/conf.d:size=8m,uid=101,gid=101"]
     depends_on: [api]
     environment:
       API_UPSTREAM: http://api:8080

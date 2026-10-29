@@ -75,6 +75,18 @@ jobs:
             web/test-results
             /tmp/fms-e2e/*.log
 
+  onprem-rehearsal:
+    # Installs the Compose bundle with the bundled SQL Server, upgrades it with the backup, enters data, rolls back, and checks the data is gone. Images are built from the real Dockerfiles.
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: scripts/rehearse-onprem.sh
+
   docker:
     runs-on: ubuntu-latest
     steps:

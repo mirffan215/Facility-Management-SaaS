@@ -35,6 +35,8 @@ BACKUP=""
 if uses_bundled_sql; then
   say "Backing up the database (inside the bundled SQL Server)"
   BACKUP="fms-before-$NEW-$(date -u +%Y%m%d-%H%M%S).bak"
+  # A new volume is owned by root, and SQL Server runs as its own user: give it the backup folder before it writes there.
+  compose exec -T -u 0 sql sh -c 'mkdir -p /var/opt/mssql/backup && chown mssql:root /var/opt/mssql/backup && chmod 770 /var/opt/mssql/backup' || die "could not prepare the backup folder; nothing was changed."
   compose exec -T sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$(env_get MSSQL_SA_PASSWORD)" -b \
     -Q "BACKUP DATABASE [Fms] TO DISK = N'/var/opt/mssql/backup/$BACKUP' WITH COMPRESSION, CHECKSUM, INIT" || die "the backup failed; nothing was changed."
   compose exec -T sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$(env_get MSSQL_SA_PASSWORD)" -b \

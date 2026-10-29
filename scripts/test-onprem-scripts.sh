@@ -40,7 +40,12 @@ printf 'FMS_VERSION=0.8.0\nFMS_TENANT_ID=x\nFMS_PUBLIC_URL=u\nFMS_AUTH_AUTHORITY
 out=$(./upgrade.sh --yes 2>&1); check "upgrade refuses a downgrade" "$(echo "$out" | grep -c 'refusing to go from 0.8.0 down to 0.7.0')" 1
 echo 0.8.0 > VERSION
 out=$(./upgrade.sh --yes 2>&1); check "upgrade refuses the same version" "$(echo "$out" | grep -c 'already installed')" 1
-out=$(./install.sh 2>&1); check "install refuses an installed system" "$(echo "$out" | grep -c 'Use ./upgrade.sh')" 1
+echo 0.8.0 > .installed-version
+out=$(./install.sh 2>&1); check "install refuses a finished installation" "$(echo "$out" | grep -c 'already holds an installed system')" 1
+rm -f .installed-version
+sed -i 's/^FMS_VERSION=.*/FMS_VERSION=0.7.9/' .env
+out=$(./install.sh 2>&1); check "install refuses an .env that names another version" "$(echo "$out" | grep -c 'Use ./upgrade.sh')" 1
+sed -i 's/^FMS_VERSION=.*/FMS_VERSION=0.8.0/' .env
 out=$(./rollback.sh x.bak 0.9.0 2>&1); check "rollback must run from the target version's folder" "$(echo "$out" | grep -c 'not 0.9.0')" 1
 out=$(./rollback.sh '../etc/passwd' 0.8.0 2>&1); check "rollback rejects a path as backup name" "$(echo "$out" | grep -c 'plain file name')" 1
 rm -rf "$work"
